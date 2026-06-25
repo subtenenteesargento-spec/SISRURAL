@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>SISRURAL – Casa Branca/SP</title>
+<meta name="theme-color" content="#070c17">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SISRURAL">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#070c17;--sf:#0c1520;--s2:#101d2e;--bd:#192840;
+  --q1:#22d3ee;--q2:#fb923c;--q3:#4ade80;--q4:#c084fc;
+  --tx:#e2eaf4;--mu:#4e6a87;--ac:#ffd700;
+  --gr:#22c55e;--re:#ef4444;--ye:#f59e0b;
+}
+
+/* ── LAYOUT: body é coluna flex, mapa cresce para preencher */
+html,body{
+  height:100%;width:100%;overflow:hidden;
+  font-family:'Inter',sans-serif;
+  background:var(--bg);color:var(--tx);
+  display:flex;flex-direction:column;
+}
+
+/* TOPBAR – altura fixa */
+.topbar{
+  flex-shrink:0;
+  height:52px;
+  background:rgba(7,12,23,.97);
+  border-bottom:1px solid var(--bd);
+  display:flex;align-items:center;gap:10px;padding:0 14px;
+  z-index:100;
+}
+.tb-shield{width:32px;height:32px;border-radius:8px;flex-shrink:0;
+  background:linear-gradient(135deg,#1a3a5c,#0d1f35);
+  border:1.5px solid var(--ac);display:flex;align-items:center;justify-content:center;font-size:16px}
+.tb-text h1{font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;letter-spacing:.8px;line-height:1.1}
+.tb-text h1 em{color:var(--ac);font-style:normal}
+.tb-text p{font-size:9px;color:var(--mu);font-family:'JetBrains Mono',monospace;letter-spacing:.3px}
+.tb-clock{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--ac);font-weight:600;flex-shrink:0}
+
+/* TABS – altura fixa */
+.qtabs{
+  flex-shrink:0;
+  display:grid;grid-template-columns:repeat(4,1fr);
+  background:rgba(7,12,23,.95);
+  border-bottom:1px solid var(--bd);
+  z-index:100;
+}
+.qtab{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:6px 2px;cursor:pointer;
+  border-bottom:3px solid transparent;gap:1px;
+  -webkit-user-select:none;user-select:none;
+}
+.qtab.active{border-bottom-color:var(--qc);background:rgba(255,255,255,.04)}
+.qtab-ico{font-size:16px;line-height:1}
+.qtab-label{font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;color:var(--qc);letter-spacing:.5px}
+.qtab-sub{font-family:'JetBrains Mono',monospace;font-size:7px;color:var(--mu);letter-spacing:1px}
+.qtab .pb{font-size:6px;font-family:'JetBrains Mono',monospace;padding:1px 3px;border-radius:3px;font-weight:700}
+.pA{background:rgba(239,68,68,.15);color:#ef4444}
+.pM{background:rgba(245,158,11,.15);color:#f59e0b}
+.pN{background:rgba(34,197,94,.15);color:#22c55e}
+
+/* MAPA – flex:1 ocupa todo espaço restante */
+#map{flex:1;min-height:0;position:relative;z-index:1}
+
+/* BOTÕES FLUTUANTES */
+.map-btns{
+  position:absolute;right:10px;top:10px;z-index:500;
+  display:flex;flex-direction:column;gap:6px;
+  pointer-events:all;
+}
+.mbtn{
+  width:40px;height:40px;border-radius:10px;
+  background:rgba(7,12,23,.93);border:1px solid var(--bd);
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;cursor:pointer;transition:border-color .15s;
+  -webkit-user-select:none;user-select:none;
+}
+.mbtn.on{border-color:var(--ac)}
+.mbtn:active{transform:scale(.92)}
+#bAdd{border-color:var(--gr);color:var(--gr);font-size:22px;font-weight:900}
+
+/* BOTTOM SHEET */
+.sheet-bg{
+  position:absolute;inset:0;z-index:400;
+  background:rgba(0,0,0,.5);
+  opacity:0;pointer-events:none;transition:opacity .3s;
+}
+.sheet-bg.open{opacity:1;pointer-events:all}
+.sheet{
+  position:absolute;left:0;right:0;bottom:0;z-index:450;
+  background:var(--sf);
+  border-radius:18px 18px 0 0;
+  border-top:1px solid var(--bd);
+  transform:translateY(calc(100% - 72px));
+  transition:transform .35s cubic-bezier(.32,.72,0,1);
+  max-height:78%;
+  display:flex;flex-direction:column;
+}
+.sheet.open{transform:translateY(0)}
+.sheet-handle-area{
+  flex-shrink:0;padding:8px 0 4px;
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+  cursor:pointer;-webkit-user-select:none;user-select:none;
+}
+.sh{width:38px;height:4px;border-radius:2px;background:var(--bd)}
+.sheet-peek{display:flex;align-items:center;gap:10px;padding:0 14px 6px}
+.peek-qname{font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:var(--qc,#fff);letter-spacing:.5px}
+.peek-stats{margin-left:auto;display:flex;gap:6px}
+.peek-stat{display:flex;flex-direction:column;align-items:center;background:rgba(255,255,255,.05);border-radius:7px;padding:3px 8px}
+.peek-stat .v{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:var(--ac)}
+.peek-stat .l{font-size:7px;color:var(--mu);text-transform:uppercase;letter-spacing:1px}
+
+.sheet-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:20px}
+.sheet-body::-webkit-scrollbar{display:none}
+
+/* SECOES */
+.sec-hdr{padding:8px 14px 5px;display:flex;align-items:center;gap:7px}
+.sec-hdr-line{flex:1;height:1px;background:var(--bd)}
+.sec-hdr-txt{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--mu);letter-spacing:2px;text-transform:uppercase;white-space:nowrap}
+.div-tags{padding:0 14px 6px;display:flex;flex-wrap:wrap;gap:5px}
+.dtag{display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.05);border:1px solid var(--bd);border-radius:5px;padding:3px 8px;font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--tx)}
+.road-list{padding:0 14px 6px;display:flex;flex-wrap:wrap;gap:5px}
+.rtag{display:inline-flex;align-items:center;gap:4px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:5px;padding:4px 9px;font-size:9px;font-family:'JetBrains Mono',monospace;color:#fbbf24;cursor:pointer}
+
+/* PROP CARD */
+.prop-list{padding:0 10px;display:flex;flex-direction:column;gap:5px}
+.prop-card{background:var(--s2);border-radius:10px;border:1px solid var(--bd);padding:10px 12px;display:flex;gap:10px;align-items:flex-start;cursor:pointer;-webkit-user-select:none;user-select:none}
+.prop-card:active{background:rgba(255,255,255,.05)}
+.prop-card.hl{border-color:var(--qc,#fff)}
+.prop-ico-w{width:38px;height:38px;border-radius:9px;flex-shrink:0;background:rgba(255,255,255,.06);border:1.5px solid var(--qc,#fff);display:flex;align-items:center;justify-content:center;font-size:18px}
+.prop-info{flex:1;min-width:0}
+.prop-name{font-size:12px;font-weight:600;color:var(--tx);line-height:1.2;margin-bottom:2px}
+.prop-type{font-size:9px;color:var(--mu);font-family:'JetBrains Mono',monospace;margin-bottom:4px}
+.prop-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px}
+.prop-addr{font-size:8px;color:var(--mu);margin-top:2px}
+.prop-arrow{color:var(--mu);font-size:18px;align-self:center}
+.nav-btn{display:inline-flex;align-items:center;gap:3px;font-size:8px;color:var(--ac);text-decoration:none;margin-top:3px;background:rgba(255,215,0,.08);border:1px solid rgba(255,215,0,.2);border-radius:4px;padding:2px 6px}
+
+/* REF CARD */
+.ref-card{background:rgba(255,255,255,.04);border-radius:10px;border:1.5px solid var(--ref-col,#ffd700);padding:10px 12px;display:flex;gap:10px;align-items:flex-start;cursor:pointer;margin:0 10px 6px;position:relative;-webkit-user-select:none;user-select:none}
+.ref-card::before{content:'ÂNCORA';position:absolute;top:5px;right:8px;font-family:'JetBrains Mono',monospace;font-size:6px;font-weight:700;color:var(--ref-col,#ffd700);letter-spacing:2px;opacity:.7}
+.ref-ico-w{width:38px;height:38px;border-radius:9px;flex-shrink:0;background:rgba(255,215,0,.07);border:2px solid var(--ref-col,#ffd700);display:flex;align-items:center;justify-content:center;font-size:20px}
+.ref-info{flex:1;min-width:0}
+.ref-name{font-size:11px;font-weight:700;color:var(--ref-col,#ffd700);line-height:1.2;margin-bottom:2px;padding-right:50px}
+.ref-nota{font-size:8px;color:var(--mu);font-family:'JetBrains Mono',monospace;line-height:1.5;margin-bottom:4px}
+.ref-btns{display:flex;gap:5px;flex-wrap:wrap}
+.ref-btn{display:inline-flex;align-items:center;gap:3px;font-size:8px;border-radius:4px;padding:3px 8px;font-family:'JetBrains Mono',monospace;font-weight:700;text-decoration:none}
+.ref-btn-maps{background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.3);color:#ffd700}
+.ref-btn-nav{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#4ade80}
+.ref-gps{font-size:7px;color:var(--mu);font-family:'JetBrains Mono',monospace;margin-top:3px}
+
+/* POPUP Leaflet */
+.leaflet-popup-content-wrapper{background:var(--s2);border:1px solid var(--bd);border-radius:10px;color:var(--tx);box-shadow:0 4px 20px rgba(0,0,0,.6)}
+.leaflet-popup-tip{background:var(--s2)}
+.leaflet-popup-content{margin:10px 14px;font-family:'Inter',sans-serif}
+.pt{font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;margin-bottom:3px}
+.ps{font-size:9px;color:var(--mu);font-family:'JetBrains Mono',monospace;letter-spacing:.5px;margin-bottom:6px}
+.pr{display:flex;justify-content:space-between;gap:10px;font-size:10px;padding:3px 0;border-top:1px solid var(--bd)}
+.pr span:first-child{color:var(--mu);flex-shrink:0}
+.pr span:last-child{text-align:right}
+.pop-rating{font-size:11px;color:var(--ac);margin-bottom:4px}
+
+/* TOAST */
+.toast{position:absolute;bottom:90px;left:50%;transform:translateX(-50%);z-index:600;background:rgba(7,12,23,.95);border:1px solid var(--bd);border-radius:8px;padding:5px 14px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--mu);white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .3s}
+.toast.show{opacity:1}
+
+/* MODAL OVERLAY */
+.modal-over{display:none;position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.8);align-items:flex-end;justify-content:center;padding-bottom:0}
+.modal-over.open{display:flex}
+.modal-box{background:var(--s2);border:1.5px solid var(--bd);border-radius:18px 18px 0 0;width:100%;max-width:500px;padding:22px 18px 32px;max-height:90vh;overflow-y:auto}
+.modal-box.center{border-radius:18px;margin:auto;padding:26px 22px}
+.field-lbl{font-size:9px;color:var(--mu);font-family:'JetBrains Mono',monospace;letter-spacing:1px;display:block;margin-bottom:4px;margin-top:12px}
+.field-inp{width:100%;background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:10px 12px;color:var(--tx);font-size:13px;font-family:'Inter',sans-serif;outline:none}
+.field-inp:focus{border-color:var(--gr)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn-primary{display:block;width:100%;background:linear-gradient(135deg,#15803d,var(--gr));border-radius:10px;padding:13px;text-align:center;cursor:pointer;color:#fff;font-size:14px;font-weight:700;font-family:'Rajdhani',sans-serif;letter-spacing:.5px;margin-top:14px;-webkit-user-select:none;user-select:none}
+.btn-secondary{display:block;width:100%;background:rgba(255,255,255,.05);border:1px solid var(--bd);border-radius:10px;padding:11px;text-align:center;cursor:pointer;color:var(--mu);font-size:13px;margin-top:8px;-webkit-user-select:none;user-select:none}
+.gps-btn{display:block;width:100%;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:10px;text-align:center;cursor:pointer;font-size:11px;color:var(--gr);font-family:'JetBrains Mono',monospace;font-weight:700;letter-spacing:.5px;margin-top:12px;-webkit-user-select:none;user-select:none}
+.msg-box{display:none;font-size:11px;font-family:'JetBrains Mono',monospace;padding:8px 12px;border-radius:6px;text-align:center;margin-top:10px}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="tb-shield">🛡️</div>
+  <div class="tb-text">
+    <h1>SIS<em>RURAL</em> · CASA BRANCA<span style="color:var(--mu);font-size:10px;font-weight:400"> /SP</span></h1>
+    <p>Patrulhamento Rural · 4 Quadrantes · Dados reais Google Maps</p>
+  </div>
+  <div class="tb-clock" id="clk">--:--</div>
+</div>
+
+<!-- ASSINATURA -->
+<div style="flex-shrink:0;background:linear-gradient(90deg,rgba(255,215,0,.12),rgba(255,215,0,.06),rgba(255,215,0,.12));border-bottom:1px solid rgba(255,215,0,.25);padding:3px 14px;display:flex;align-items:center;justify-content:center;gap:8px">
+  <span style="font-size:10px">🏅</span>
+  <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#ffd700;font-weight:700;letter-spacing:1.5px;text-shadow:0 0 12px rgba(255,215,0,.5)">Criado pelo 1º Sgt PM 109139-5 POZZER</span>
+  <span style="font-size:10px">🏅</span>
+</div>
+
+<!-- TABS -->
+<div class="qtabs">
+  <div class="qtab active" style="--qc:var(--q1)" onclick="selQ(1)" id="tab1">
+    <span class="qtab-ico">🔵</span><span class="qtab-label">ALFA</span>
+    <span class="qtab-sub">NOROESTE</span><span class="pb pA">▲ ALTA</span>
+  </div>
+  <div class="qtab" style="--qc:var(--q2)" onclick="selQ(2)" id="tab2">
+    <span class="qtab-ico">🟠</span><span class="qtab-label">BRAVO</span>
+    <span class="qtab-sub">NORDESTE</span><span class="pb pM">◆ MÉD</span>
+  </div>
+  <div class="qtab" style="--qc:var(--q3)" onclick="selQ(3)" id="tab3">
+    <span class="qtab-ico">🟢</span><span class="qtab-label">CHARLIE</span>
+    <span class="qtab-sub">SUDOESTE</span><span class="pb pN">● NOR</span>
+  </div>
+  <div class="qtab" style="--qc:var(--q4)" onclick="selQ(4)" id="tab4">
+    <span class="qtab-ico">🟣</span><span class="qtab-label">DELTA</span>
+    <span class="qtab-sub">SUDESTE</span><span class="pb pM">◆ MÉD</span>
+  </div>
+</div>
+
+<!-- CONTAINER DO MAPA (flex:1) -->
+<div id="map">
+  <!-- Botões flutuantes dentro do mapa -->
+  <div class="map-btns">
+    <div class="mbtn on" id="bSat" onclick="togSat()" title="Satélite/Mapa">🛰</div>
+    <div class="mbtn on" id="bRoads" onclick="togLayer('roads')" title="Rodovias">🛣</div>
+    <div class="mbtn on" id="bProps" onclick="togLayer('props')" title="Fazendas">🏡</div>
+    <div class="mbtn on" id="bRef" onclick="togLayer('refs')" title="Referências">⭐</div>
+    <div class="mbtn on" id="bDirt" onclick="togLayer('dirt')" title="Estradas de terra">🟫</div>
+    <div class="mbtn on" id="bUser" onclick="togLayer('user')" title="Pontos PM">📌</div>
+    <div class="mbtn" id="bAdd" onclick="openAdd()" title="Cadastrar fazenda">＋</div>
+    <div class="mbtn" id="bQR" onclick="openQR()" title="QR Code">📲</div>
+    <div class="mbtn" id="bInstall" onclick="instalarApp()" title="Instalar aplicativo">⬇️</div>
+    <div class="mbtn" id="bRst" onclick="rv()" title="Visão geral">⟲</div>
+  </div>
+  <!-- Sheet backdrop -->
+  <div class="sheet-bg" id="sbg" onclick="closeSheet()"></div>
+  <!-- Bottom sheet -->
+  <div class="sheet" id="sheet">
+    <div class="sheet-handle-area" onclick="togSheet()">
+      <div class="sh"></div>
+      <div class="sheet-peek">
+        <div class="peek-qname" id="pName">Q1 – ALFA · NOROESTE</div>
+        <div class="peek-stats">
+          <div class="peek-stat"><div class="v" id="pArea">264</div><div class="l">km²</div></div>
+          <div class="peek-stat"><div class="v" id="pDiag">23,5</div><div class="l">km diag</div></div>
+          <div class="peek-stat"><div class="v" id="pProps">0</div><div class="l">props</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="sheet-body">
+      <div class="sec-hdr"><div class="sec-hdr-line"></div><div class="sec-hdr-txt">🗺 Divisas do setor</div><div class="sec-hdr-line"></div></div>
+      <div class="div-tags" id="sDivisas"></div>
+      <div class="sec-hdr"><div class="sec-hdr-line"></div><div class="sec-hdr-txt">🛣 Rodovias principais</div><div class="sec-hdr-line"></div></div>
+      <div class="road-list" id="sRoads"></div>
+      <div class="sec-hdr"><div class="sec-hdr-line"></div><div class="sec-hdr-txt">🟫 Vicinais / Estradas de terra</div><div class="sec-hdr-line"></div></div>
+      <div class="div-tags" id="sDirt"></div>
+      <div class="sec-hdr"><div class="sec-hdr-line"></div><div class="sec-hdr-txt">⭐ Ponto de Referência Âncora</div><div class="sec-hdr-line"></div></div>
+      <div id="sRef"></div>
+      <div class="sec-hdr"><div class="sec-hdr-line"></div><div class="sec-hdr-txt">🏡 Propriedades – Google Maps</div><div class="sec-hdr-line"></div></div>
+      <div class="prop-list" id="sProps"></div>
+      <div style="height:10px"></div>
+    </div>
+  </div>
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+</div>
+
+<!-- MODAL ADICIONAR -->
+<div class="modal-over" id="mAdd">
+  <div class="modal-box">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <span style="font-size:22px">📌</span>
+      <div>
+        <div style="font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;color:var(--gr)">Nova Fazenda / Ponto PM</div>
+        <div style="font-size:9px;color:var(--mu);font-family:'JetBrains Mono',monospace;letter-spacing:1px">SISRURAL · 1º SGT POZZER · 2ª CIA</div>
+      </div>
+      <div onclick="closeAdd()" style="margin-left:auto;font-size:22px;cursor:pointer;color:var(--mu);line-height:1">×</div>
+    </div>
+
+    <!-- GPS STATUS BAR -->
+    <div id="gpsBar" style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.25);border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px">
+      <span id="gpsIco" style="font-size:20px">📡</span>
+      <div style="flex:1;min-width:0">
+        <div id="gpsTxt" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--gr);font-weight:700">Obtendo localização GPS…</div>
+        <div id="gpsCoord" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--mu);margin-top:1px">Aguarde…</div>
+      </div>
+      <div id="gpsRetry" onclick="captGPS()" style="display:none;font-size:9px;color:var(--gr);cursor:pointer;border:1px solid rgba(34,197,94,.3);border-radius:5px;padding:3px 8px;font-family:'JetBrains Mono',monospace;white-space:nowrap">↺ Tentar novamente</div>
+    </div>
+
+    <!-- MINI MAPA PREVIEW -->
+    <div id="miniMapWrap" style="border-radius:10px;overflow:hidden;margin-bottom:12px;border:1px solid var(--bd);display:none">
+      <div id="miniMap" style="height:140px;width:100%"></div>
+      <div style="background:rgba(34,197,94,.08);padding:5px 10px;font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--gr)">📍 Confirme sua posição no mapa acima</div>
+    </div>
+
+    <label class="field-lbl">NOME DA FAZENDA / SÍTIO *</label>
+    <input class="field-inp" id="aNome" placeholder="Ex: Faz. Santa Luzia">
+
+    <label class="field-lbl">TIPO / ATIVIDADE</label>
+    <input class="field-inp" id="aTipo" placeholder="Ex: Grãos / Pecuária / Laranja">
+
+    <div class="grid2">
+      <div>
+        <label class="field-lbl">LATITUDE *</label>
+        <input class="field-inp" id="aLat" type="number" step="0.00001" placeholder="-21.7800" oninput="updateMiniMap()">
+      </div>
+      <div>
+        <label class="field-lbl">LONGITUDE *</label>
+        <input class="field-inp" id="aLng" type="number" step="0.00001" placeholder="-47.0852" oninput="updateMiniMap()">
+      </div>
+    </div>
+
+    <label class="field-lbl">ENDEREÇO / REFERÊNCIA</label>
+    <input class="field-inp" id="aEnd" placeholder="Ex: Vicinal p/ Tambaú, km 8">
+
+    <label class="field-lbl">TELEFONE DO PROPRIETÁRIO</label>
+    <input class="field-inp" id="aTel" type="tel" placeholder="(19) 99999-0000">
+
+    <div style="display:flex;align-items:center;gap:8px;margin-top:12px">
+      <input id="aDirt" type="checkbox" checked style="accent-color:var(--ye);width:16px;height:16px">
+      <label for="aDirt" style="font-size:11px;color:var(--tx);cursor:pointer">🟫 Acesso por estrada de terra</label>
+    </div>
+
+    <div class="msg-box" id="aMsg"></div>
+    <div class="btn-primary" onclick="salvar()">✅ SALVAR PONTO NO SISRURAL</div>
+    <div class="btn-secondary" onclick="closeAdd()">Cancelar</div>
+  </div>
+</div>
+
+<!-- MODAL QR CODE -->
+<div class="modal-over" id="mQR" onclick="closeQR()" style="align-items:center">
+  <div class="modal-box center" onclick="event.stopPropagation()" style="max-width:320px;text-align:center">
+    <div style="font-size:32px;margin-bottom:6px">📲</div>
+    <div style="font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;color:var(--ac);margin-bottom:2px">ACESSO SISRURAL</div>
+    <div style="font-size:9px;color:var(--mu);font-family:'JetBrains Mono',monospace;letter-spacing:2px;margin-bottom:16px">ESCANEIE COM A CÂMERA</div>
+    <div id="qrWrap" style="background:#fff;padding:12px;border-radius:12px;display:inline-block;margin-bottom:14px"></div>
+    <div style="font-size:9px;color:var(--mu);font-family:'JetBrains Mono',monospace;margin-bottom:16px">SISRURAL · 2ª CIA PM · Casa Branca/SP</div>
+    <div class="btn-secondary" onclick="closeQR()">Fechar</div>
+  </div>
+</div>
+
+<script>
+// ── CLOCK
+(function tick(){
+  document.getElementById('clk').textContent=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  setTimeout(tick,10000);
+})();
+
+// ── DADOS GEOGRÁFICOS
+const CX=-21.7771,CY=-47.0852;
+// Limites reais do município Casa Branca/SP – cobrindo todo o território (IBGE 864 km²)
+const N=-21.570,S=-22.000,W=-47.280,E=-46.900;
+const MX=(N+S)/2,MY=(W+E)/2;
+const QC=['#22d3ee','#fb923c','#4ade80','#c084fc'];
+
+const QDATA=[
+  {id:1,nome:'Q1 – ALFA · NOROESTE',km:{ns:23.9,lo:19.6,area:217,diag:30.9},
+    divisas:['N: Mococa (Rio Mogi Pardo)','W: Tambaú (SP-340 Norte)','Contém: Distrito Lagoa Branca'],
+    roads:['SP-340 Norte (→ Mococa)','Vic. Lagoa Branca','Est. Vic. Profª Laura B. Nunes','Ferrovia FCA/Vale'],
+    roadKeys:['sp340N','vicLagoa','vicLauraNunes','rail'],
+    dirt:['Est. do Rocheto (acesso Faz. Três Marias)','Vicinal s/ nome km 6 → Tambaú','Est. da Cabanha (acesso Batemarco)']},
+  {id:2,nome:'Q2 – BRAVO · NORDESTE',km:{ns:23.9,lo:19.6,area:217,diag:30.9},
+    divisas:['NE: Mococa (Rio Pardo)','E: SJ do Rio Pardo (SP-350)','Contém: Pomar Jabuticaba (maior SP)'],
+    roads:['SP-350 (→ SJ.Rio Pardo)','SP-340 (trecho NE)','Vic. Venda Branca'],
+    roadKeys:['sp350','sp340N','vicVenda'],
+    dirt:['Vicinal FAZ BOA VISTA (jabuticaba)','Vicinal do Pomar (s/ nome)','Est. acesso Faz. Casa Branca']},
+  {id:3,nome:'Q3 – CHARLIE · SUDOESTE',km:{ns:23.9,lo:19.6,area:217,diag:30.9},
+    divisas:['W: Tambaú (SP-340 Sul)','SW: São Simão','S: Aguaí (limite sul)'],
+    roads:['SP-340 Sul (→ Tambaú)','SP-215 (→ Vargem Grande do Sul)','Vic. SW'],
+    roadKeys:['sp340S','sp215','vicSW'],
+    dirt:['Est. Lagoa Branca–Venda Branca (vicinal)','Acesso Faz. Prudente do Morro','Vicinal s/ nome → São Simão']},
+  {id:4,nome:'Q4 – DELTA · SUDESTE',km:{ns:23.9,lo:19.6,area:217,diag:30.9},
+    divisas:['SE: Itobi (ex-distrito)','SE: Santa Cruz das Palmeiras','S: Aguaí'],
+    roads:['SP-350 Sul (→ Itobi)','Est. Municipal Venda Branca','Vic. S.Cruz Palmeiras'],
+    roadKeys:['sp350','vicVendaB','vicSE'],
+    dirt:['Est. Lagoa Branca–Venda Branca KM 8-15','Acesso Faz. Cachoeirinha','Est. Pomar Jabuticaba SE']},
+];
+
+const PROPS=[
+  // Q1 NW
+  {nm:'Faz. Três Marias (Rocheto)',tp:'Grãos/Batata/Maquinário',ico:'🌾',lat:-21.7430544,lng:-47.1301689,r:4.7,rc:43,ph:null,end:'Est. Vicinal p/ Tambaú, Km 6',dirt:true,gmaps:'https://www.google.com/maps/dir/?api=1&destination=-21.7430544,-47.1301689&travelmode=driving'},
+  {nm:'Faz. Boa Vista Rocheto',tp:'Agropecuária/Grãos',ico:'🌾',lat:-21.7599106,lng:-47.1693823,r:5.0,rc:2,ph:'+55 19 98310-6666',end:'Vicinal – Rural NW',dirt:true,gmaps:'https://www.google.com/maps/dir/?api=1&destination=-21.7599106,-47.1693823&travelmode=driving'},
+  {nm:'Sítio Água Boa',tp:'Produtor rural/Horticultura',ico:'🌿',lat:-21.7182992,lng:-47.1921095,r:null,rc:null,ph:null,end:'Est. Vicinal – NW (15 km)',dirt:true,gmaps:'https://www.google.com/maps/dir/?api=1&destination=-21.7182992,-47.1921095&travelmode=driving'},
+  {nm:'Faz. São José do Jardim',tp:'Café/Laranja/Rural',ico:'🏡',lat:-21.6499463,lng:-47.1527269,r:5.0,rc:2,ph:null,end:'Zona Rural NW – próx. Mococa',dirt:true,gmaps:'https://www.google.com/maps/dir/?api=1&destination=-21.6499463,-47.1527269&travelmode=driving'},
+  {nm:'Cabanha Batemarco',tp:'Criação de Animais',ico:'🐄',lat:-21.7536107,lng:-47.0862222,r:1.0,rc:1,ph:'+55 19 3679-8104',end:'Est. Rural Municipal – NW',dirt:false,gmaps:'https://www.google.com/maps/dir/?api=1&destination=-21.7536107,-47.0862222&travelmode=driving'},
+  {nm:'Faz. Santa Gertrudes',tp:'Pecuária/Grãos',ico:'🐄',lat:-21.6920,lng:-47.1640,r:null,rc:null,ph:null,end:'Vicinal s/ nome – NW, 12 km',dirt:true,gmaps:'https://www.google.com/maps/dir/?api=1&destination=-21.6920,-47.1640&travelmode=driving'},
+  {nm:'Faz. Lagoa do Cedro',tp:'Laranja/Batatinha/Pivô',ico:'🍊',lat:-21.6350,lng:-47.1200,r:null,rc:null,ph:null,end:'Est. Rocheto – NW, próx. Rio Mogi Pardo',dirt:true,gmaps:'https://www.google.com/maps/dir/?api=1&destination=-21.6350,-47.1200&travelmode=driving'},
+  // Q2 NE
+  {nm:'Fazenda Casa Branca',tp:'Propriedade Rural',ico:'🌾',lat:-21.6746261,lng:-47.0613497,r:null,rc:null,ph:null,end:'Zona Rural NE',dirt:false,gmaps:'https://www.google.com/maps/dir/?api=1&destination=-21.6746261,-47.0613497&travelmode=driving'},
+  {nm:'A Boa Terra Orgânicos',tp:'Produção Orgânica/Loja',ico:'🥦',lat:-21.750647,lng:-46.9942499,r:4.9,rc:51,ph:null,end:'Rod. SP-350 – NE',dirt:false,gmaps:'https://www.google.com/maps/dir/?api=1&destination=-21.750647,-46.9942499&travelmode=driving'},
+  {nm:'Pomar Boa Vista (Jabuticaba)',tp:'Maior pomar SP/Agroturismo',ico:'🍇',lat:-21.7108,lng:-47.0090,r:4.9,rc:30,ph:null,end:'Rod. SP-350, km 8 de CB',dirt:false,gmaps:'https://www.google.com/maps/dir/?api=1&destination=-21.7108,-47.0090&travelmode=driving'},
+  {nm:'Faz. Santa Cruz (Venda Branca)',tp:'Laranja/Café/Pecuária',ico:'🌾',lat:-21.6920,lng:-46.9850,r:null,rc:null,ph:null,end:'Vicinal Venda Branca – NE',dirt:true,gmaps:'https://www.google.com/maps/dir/?api=1&destination=-21.6920,-46.9850&travelmode=driving'},
+  {nm:'Faz. São Joaquim',tp:'Grãos/Soja/Milho',ico:'🌽',lat:-21.7300,lng:-46.9600,r:null,rc:null,ph:null,end:'Vicinal – NE, próx. SJ Rio Pardo',dirt:true,gmaps:'https://www.google.com/maps/dir/?api=1&destination=-21.7300,-46.9600&travelmode=driving'},
+  {nm:'Sítio Recanto Verde',tp:'Horticultura/Frutas',ico:'🌿',lat:-21.6600,lng:-47.0300,r:null,rc:null,ph:null,end:'Est. Vicinal – NE, 10 km',dirt:true,gmaps:'https://www.google.com/maps/dir/?api=1&destination=-21.6600,-47.0300&travelmode=driving'},
+  // Q3 SW
+  {nm:'Faz. Prudente do Morro',tp:'Pecuária/Grãos/Eventos',ico:'🐄',lat:-21.8071512,lng:-47.1819968,r:4.8,rc:12,ph:'+55 19 99819-2980',end:'Vicinal – SW, 14 km',dirt:true,gmaps:'https://www.google.com/maps/dir/?api=1&destination=-21.8071512,-47.1819968&travelmode=driving'},
+  {nm:'Faz. Venda Branca (SW)',tp:'Laranja/Rural',ico:'🏡',lat:-21.9554313,lng:-47.1250425,r:null,rc:null,ph:null,end:'Venda Branca – SW',dirt:true,gmaps:'https://www.google.com/maps/dir/?api=1&destination=-21.9554313,-47.1250425&travelmode=driving'},
+  {nm:'Faz. Cachoeirinha Comercial',tp:'Agropecuária/Pivô',ico:'🏭',lat:-21.9453160,lng:-47.1155059,r:null,rc:null,ph:'+55 19 3607-2010',end:'Est. Lagoa Branca–Venda Branca',dirt:true,gmaps:'https://www.google.com/maps/dir/?api=1&destination=-21.9453160,-47.1155059&travelmode=driving'},
+  {nm:'Fazenda Paraíso',tp:'Pecuária/Soja',ico:'🌾',lat:-21.9578085,lng:-47.1066324,r:4.8,rc:17,ph:'+55 19 3607-2065',end:'Zona Rural SW – Venda Branca',dirt:true,gmaps:'https://www.google.com/maps/dir/?api=1&destination=-21.9578085,-47.1066324&travelmode=driving'},
+  {nm:'Faz. Santo Antônio (SW)',tp:'Cana/Laranja',ico:'🌾',lat:-21.8600,lng:-47.1600,r:null,rc:null,ph:null,end:'Vicinal SW – 18 km',dirt:true,gmaps:'https://www.google.com/maps/dir/?api=1&destination=-21.8600,-47.1600&travelmode=driving'},
+  {nm:'Faz. São Benedito do Morro',tp:'Pecuária/Grãos',ico:'🐄',lat:-21.9100,lng:-47.1900,r:null,rc:null,ph:null,end:'Vicinal SW – próx. Tambaú',dirt:true,gmaps:'https://www.google.com/maps/dir/?api=1&destination=-21.9100,-47.1900&travelmode=driving'},
+  // Q4 SE
+  {nm:'Fazenda Cachoeirinha',tp:'Pecuária/Rural',ico:'🌿',lat:-21.9144116,lng:-47.0871129,r:5.0,rc:2,ph:null,end:'Estrada – Venda Branca SE',dirt:true,gmaps:'https://www.google.com/maps/dir/?api=1&destination=-21.9144116,-47.0871129&travelmode=driving'},
+  {nm:'Seu Pé de Jabuticaba',tp:'Pomar/Agroturismo',ico:'🍇',lat:-21.8924463,lng:-47.0115315,r:4.8,rc:51,ph:'+55 19 97138-4382',end:'FAZ BOA VISTA – Lagoa Branca SE',dirt:false,gmaps:'https://www.google.com/maps/dir/?api=1&destination=-21.8924463,-47.0115315&travelmode=driving'},
+  {nm:'Faz. São Carlos',tp:'Ecoturismo/Aves',ico:'🦜',lat:-21.8221875,lng:-47.0391719,r:4.7,rc:18,ph:null,end:'Zona Rural SE – 7 km',dirt:false,gmaps:'https://www.google.com/maps/dir/?api=1&destination=-21.8221875,-47.0391719&travelmode=driving'},
+  {nm:'Sítio Refúgio dos Pássaros',tp:'Sítio/Eventos/Eco',ico:'🌿',lat:-21.8031755,lng:-47.0637221,r:5.0,rc:43,ph:'+55 19 99299-7439',end:'Est. Velha p/ Lagoa Branca',dirt:false,gmaps:'https://www.google.com/maps/dir/?api=1&destination=-21.8031755,-47.0637221&travelmode=driving'},
+  {nm:'Chácara Recanto Casa Branca',tp:'Hospedagem Rural',ico:'🏠',lat:-21.8330426,lng:-47.0678296,r:4.0,rc:13,ph:'+55 19 99363-3062',end:'SP-340 km 231 – Lagoa Branca',dirt:false,gmaps:'https://www.google.com/maps/dir/?api=1&destination=-21.8330426,-47.0678296&travelmode=driving'},
+  {nm:'Faz. Casa Blanca',tp:'Rural/Gestão',ico:'🏡',lat:-21.9502747,lng:-47.0728602,r:5.0,rc:1,ph:null,end:'Lagoa Branca – SE',dirt:true,gmaps:'https://www.google.com/maps/dir/?api=1&destination=-21.9502747,-47.0728602&travelmode=driving'},
+  {nm:'Faz. Santa Veridiana (séc.XIX)',tp:'Laranja/Pecuária/Histórica',ico:'🏛',lat:-21.8750,lng:-47.0450,r:null,rc:null,ph:null,end:'Vicinal – SE, 12 km',dirt:true,gmaps:'https://www.google.com/maps/dir/?api=1&destination=-21.8750,-47.0450&travelmode=driving'},
+  {nm:'Faz. Boa Esperança (SE)',tp:'Grãos/Soja/Pivô',ico:'🌾',lat:-21.9300,lng:-46.9700,r:null,rc:null,ph:null,end:'Vicinal – SE, próx. Itobi',dirt:true,gmaps:'https://www.google.com/maps/dir/?api=1&destination=-21.9300,-46.9700&travelmode=driving'},
+];
+
+function classQ(lat,lng){const n=lat>MX,w=lng<MY;return n&&w?1:n&&!w?2:!n&&w?3:4;}
+PROPS.forEach(p=>{p.q=classQ(p.lat,p.lng);});
+
+const FARM_REFS=[
+  {q:1,nm:'REF-Q1 · Faz. Lagoa do Cedro',lat:-21.6920,lng:-47.1640,
+   nota:'Âncora NW: 12 km via Est. do Rocheto (terra). Corredor vicinal divisa Mococa/Tambaú.',
+   maps:'https://www.google.com/maps/search/?api=1&query=-21.6920,-47.1640',
+   nav:'https://www.google.com/maps/dir/?api=1&destination=-21.6920,-47.1640&travelmode=driving',
+   ico:'⭐',col:'#22d3ee',km:'12 km de CB'},
+  {q:2,nm:'REF-Q2 · Pomar Boa Vista',lat:-21.7108,lng:-47.0090,
+   nota:'Âncora NE: maior pomar jabuticaba SP. SP-350 km 8 – placas visíveis. Muito movimento em safra.',
+   maps:'https://www.google.com/maps/search/?api=1&query=-21.7108,-47.0090',
+   nav:'https://www.google.com/maps/dir/?api=1&destination=-21.7108,-47.0090&travelmode=driving',
+   ico:'⭐',col:'#fb923c',km:'8 km de CB'},
+  {q:3,nm:'REF-Q3 · Faz. Prudente do Morro',lat:-21.8071512,lng:-47.1819968,
+   nota:'Âncora SW: 14 km de CB (terra). Referência consolidada. Corredor SW → Tambaú/São Simão.',
+   maps:'https://www.google.com/maps/search/?api=1&query=-21.8071512,-47.1819968',
+   nav:'https://www.google.com/maps/dir/?api=1&destination=-21.8071512,-47.1819968&travelmode=driving',
+   ico:'⭐',col:'#4ade80',km:'14 km de CB'},
+  {q:4,nm:'REF-Q4 · Faz. São Carlos',lat:-21.8221875,lng:-47.0391719,
+   nota:'Âncora SE: 7 km de CB, acesso pavimentado. Corredor SP-340/SP-350 Sul.',
+   maps:'https://www.google.com/maps/search/?api=1&query=-21.8221875,-47.0391719',
+   nav:'https://www.google.com/maps/dir/?api=1&destination=-21.8221875,-47.0391719&travelmode=driving',
+   ico:'⭐',col:'#c084fc',km:'7 km de CB'},
+];
+
+// ── MAPA
+const map=L.map('map',{center:[CX,CY],zoom:10,zoomControl:false});
+L.control.zoom({position:'bottomright'}).addTo(map);
+
+const osmT=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM',maxZoom:19});
+const satT=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'© Esri',maxZoom:19});
+const satLbl=L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{opacity:.8,maxZoom:19});
+let satOn=false; osmT.addTo(map);
+
+// ── QUADRANTES
+const quadsG=L.layerGroup().addTo(map);
+const qPoly={};
+[[1,[[N,W],[N,MY],[MX,MY],[MX,W]]],[2,[[N,MY],[N,E],[MX,E],[MX,MY]]],[3,[[MX,W],[MX,MY],[S,MY],[S,W]]],[4,[[MX,MY],[MX,E],[S,E],[S,MY]]]].forEach(([id,c])=>{
+  const col=QC[id-1],qd=QDATA[id-1];
+  const p=L.polygon(c,{color:col,weight:2,fillColor:col,fillOpacity:.10,dashArray:'6 4',opacity:.85});
+  p.on('click',()=>{selQ(id);openSheet();});
+  p.bindPopup(`<div class="pt" style="color:${col}">Q${id} – ${['ALFA','BRAVO','CHARLIE','DELTA'][id-1]}</div><div class="ps">~${qd.km.area} km² · diagonal ${qd.km.diag} km</div><div class="pr"><span>Extensão</span><span>${qd.km.ns}km N-S × ${qd.km.lo}km L-O</span></div>`,{maxWidth:240});
+  quadsG.addLayer(p); qPoly[id]=p;
+});
+L.polyline([[N,MY],[S,MY]],{color:'#fff',weight:1,opacity:.25,dashArray:'8 5'}).addTo(quadsG);
+L.polyline([[MX,W],[MX,E]],{color:'#fff',weight:1,opacity:.25,dashArray:'8 5'}).addTo(quadsG);
+
+// ── RODOVIAS
+const RDS={
+  sp340N:{nm:'SP-340 Norte (→ Mococa)',c:'#fbbf24',w:4,pts:[[-21.618,-47.140],[-21.660,-47.110],[-21.695,-47.094],[-21.735,-47.090],[-21.777,-47.085],[-21.840,-47.037],[-21.890,-46.993]]},
+  sp340S:{nm:'SP-340 Sul (→ Tambaú)',c:'#fbbf24',w:4,pts:[[-21.777,-47.085],[-21.830,-47.152],[-21.870,-47.183],[-21.955,-47.240]]},
+  sp350:{nm:'SP-350 (→ Itobi/SJ.Rio Pardo)',c:'#fbbf24',w:4,pts:[[-21.777,-47.085],[-21.733,-47.003],[-21.710,-46.973],[-21.678,-46.945],[-21.618,-46.912]]},
+  sp215:{nm:'SP-215 (→ Vargem Grande do Sul)',c:'#fbbf24',w:4,pts:[[-21.862,-47.230],[-21.820,-47.165],[-21.777,-47.085],[-21.718,-47.004],[-21.688,-46.963]]},
+  vicLagoa:{nm:'Vicinal – Lagoa Branca',c:'#64748b',w:2.5,d:'6 4',pts:[[-21.655,-47.115],[-21.625,-47.105],[-21.617,-47.095]]},
+  vicLauraNunes:{nm:'Est. Vic. Profª Laura B. Nunes',c:'#64748b',w:2.5,d:'6 4',pts:[[-21.618,-47.094],[-21.660,-47.095],[-21.690,-47.080]]},
+  vicVenda:{nm:'Vicinal – Venda Branca',c:'#64748b',w:2.5,d:'6 4',pts:[[-21.745,-47.032],[-21.712,-47.007],[-21.673,-46.973]]},
+  vicVendaB:{nm:'Est. Municipal Venda Branca',c:'#64748b',w:2.5,d:'6 4',pts:[[-21.750,-47.085],[-21.810,-47.020],[-21.880,-46.970]]},
+  vicSW:{nm:'Vicinal – Área SW',c:'#64748b',w:2.5,d:'6 4',pts:[[-21.810,-47.100],[-21.860,-47.058],[-21.910,-47.160]]},
+  vicSE:{nm:'Vicinal – S.Cruz Palmeiras',c:'#64748b',w:2.5,d:'6 4',pts:[[-21.830,-47.008],[-21.900,-46.994],[-21.924,-46.980]]},
+  rail:{nm:'Ferrovia FCA/Vale – Mogiana',c:'#334155',w:2.5,d:'4 4',pts:[[-21.790,-47.148],[-21.777,-47.085],[-21.718,-46.958],[-21.686,-46.937]]},
+};
+const roadsG=L.layerGroup().addTo(map);
+Object.entries(RDS).forEach(([k,r])=>{
+  const pl=L.polyline(r.pts,{color:r.c,weight:r.w,opacity:.9,dashArray:r.d||null});
+  pl.bindPopup(`<div class="pt" style="color:${r.c}">${r.nm}</div><div class="ps">DER-SP · RENOVIAS</div>`,{maxWidth:220});
+  roadsG.addLayer(pl);
+  const mid=r.pts[Math.floor(r.pts.length/2)];
+  roadsG.addLayer(L.marker(mid,{icon:L.divIcon({className:'',html:`<div style="background:rgba(7,12,23,.9);border:1px solid ${r.c};border-radius:4px;padding:1px 6px;font-family:'JetBrains Mono',monospace;font-size:8px;color:${r.c};white-space:nowrap;pointer-events:none">${r.nm.split('(')[0].split('–')[0].trim()}</div>`,iconAnchor:[35,7]})}));
+});
+
+// ── ESTRADAS DE TERRA
+const DIRTS=[
+  {nm:'Est. Rocheto – Faz. Três Marias',maps:'https://www.google.com/maps/search/?api=1&query=-21.743,-47.130',pts:[[-21.770,-47.090],[-21.743,-47.130],[-21.740,-47.145]]},
+  {nm:'Vicinal s/nome NW km 6 → Tambaú',maps:'https://www.google.com/maps/search/?api=1&query=-21.718,-47.192',pts:[[-21.770,-47.090],[-21.730,-47.135],[-21.718,-47.192]]},
+  {nm:'Est. Cabanha Batemarco',maps:'https://www.google.com/maps/search/?api=1&query=-21.7536,-47.0862',pts:[[-21.777,-47.085],[-21.754,-47.086]]},
+  {nm:'Vicinal Pomar Boa Vista',maps:'https://www.google.com/maps/search/?api=1&query=-21.711,-47.009',pts:[[-21.752,-47.000],[-21.733,-46.998],[-21.711,-47.009]]},
+  {nm:'Acesso Faz. Casa Branca NE',maps:'https://www.google.com/maps/search/?api=1&query=-21.6746,-47.0613',pts:[[-21.680,-47.070],[-21.675,-47.063],[-21.675,-47.055]]},
+  {nm:'Est. Lagoa Branca–Venda Branca Km1-8',maps:'https://www.google.com/maps/search/?api=1&query=-21.835,-47.068',pts:[[-21.777,-47.085],[-21.810,-47.068],[-21.835,-47.068]]},
+  {nm:'Acesso Faz. Prudente do Morro',maps:'https://www.google.com/maps/search/?api=1&query=-21.8072,-47.1820',pts:[[-21.790,-47.150],[-21.807,-47.182]]},
+  {nm:'Est. Lagoa Branca–Venda Branca Km8-15',maps:'https://www.google.com/maps/search/?api=1&query=-21.880,-47.110',pts:[[-21.835,-47.068],[-21.865,-47.095],[-21.910,-47.115]]},
+  {nm:'Vicinal SE – Faz. São Carlos',maps:'https://www.google.com/maps/search/?api=1&query=-21.8222,-47.0392',pts:[[-21.803,-47.064],[-21.822,-47.039]]},
+  {nm:'Vicinal SE – Faz. Cachoeirinha',maps:'https://www.google.com/maps/search/?api=1&query=-21.9144,-47.0871',pts:[[-21.870,-47.060],[-21.900,-47.083],[-21.914,-47.087]]},
+];
+const dirtG=L.layerGroup().addTo(map);
+DIRTS.forEach(dr=>{
+  const pl=L.polyline(dr.pts,{color:'#92400e',weight:2.5,opacity:.9,dashArray:'4 3'});
+  pl.bindPopup(`<div class="pt" style="color:#d97706">🟫 ${dr.nm}</div><div class="ps">ESTRADA DE TERRA / VICINAL</div><div class="pr"><span>Navegar</span><span><a href="${dr.maps}" target="_blank" style="color:#ffd700">📍 Abrir Maps ↗</a></span></div>`,{maxWidth:250});
+  dirtG.addLayer(pl);
+});
+
+// ── MARCADORES FAZENDAS
+const propsG=L.layerGroup().addTo(map);
+const propMks=[];
+PROPS.forEach((p,i)=>{
+  const col=QC[p.q-1],big=p.r&&p.r>=4.7,sz=big?30:24;
+  const mk=L.marker([p.lat,p.lng],{icon:L.divIcon({className:'',
+    html:`<div style="background:rgba(7,12,23,.93);border:2px solid ${col};border-radius:50% 50% 50% 0;transform:rotate(-45deg);width:${sz}px;height:${sz}px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,.6)"><span style="transform:rotate(45deg);font-size:${big?14:11}px">${p.ico}</span></div>`,
+    iconAnchor:[sz/2,sz]})});
+  const dtag=p.dirt?'🟫 terra':'🛣 asfalto';
+  mk.bindPopup(`<div class="pt" style="color:${col}">${p.ico} ${p.nm}</div><div class="ps">Q${p.q}·${['ALFA','BRAVO','CHARLIE','DELTA'][p.q-1]} · ${p.tp}</div>${p.r?`<div class="pop-rating">${'★'.repeat(Math.floor(p.r))} ${p.r} (${p.rc})</div>`:''}<div class="pr"><span>Endereço</span><span>${p.end}</span></div><div class="pr"><span>Acesso</span><span>${dtag}</span></div>${p.ph?`<div class="pr"><span>Tel</span><span><a href="tel:${p.ph}" style="color:var(--ac)">${p.ph}</a></span></div>`:''}<div class="pr"><span>GPS</span><span>${Math.abs(p.lat).toFixed(4)}°S ${Math.abs(p.lng).toFixed(4)}°W</span></div><div class="pr"><span>Navegar</span><span><a href="${p.gmaps}" target="_blank" style="color:#4ade80;font-weight:700">🧭 Abrir Maps ↗</a></span></div>`,{maxWidth:280});
+  propsG.addLayer(mk); propMks.push(mk);
+});
+
+// ── REF MARKERS
+const refsG=L.layerGroup().addTo(map);
+const refMks=[];
+FARM_REFS.forEach((f,i)=>{
+  const mk=L.marker([f.lat,f.lng],{icon:L.divIcon({className:'',
+    html:`<div style="position:relative;display:inline-block"><div style="background:rgba(7,12,23,.96);border:2.5px solid ${f.col};border-radius:10px;padding:4px 9px;display:flex;align-items:center;gap:5px;box-shadow:0 0 16px ${f.col}55;white-space:nowrap"><span style="font-size:15px">${f.ico}</span><span style="font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;color:${f.col}">${f.nm.split('·')[1]?.trim()||f.nm}</span></div><div style="position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:7px solid ${f.col}"></div></div>`,
+    iconAnchor:[70,40]})});
+  mk.bindPopup(`<div class="pt" style="color:${f.col}">${f.ico} ${f.nm}</div><div class="ps">ÂNCORA TÁTICA Q${f.q} · ${f.km}</div><div class="pr"><span>Nota</span><span>${f.nota}</span></div><div class="pr"><span>GPS</span><span>${Math.abs(f.lat).toFixed(4)}°S ${Math.abs(f.lng).toFixed(4)}°W</span></div><div class="pr"><span>Ver no Maps</span><span><a href="${f.maps}" target="_blank" style="color:#ffd700">📍 Abrir ↗</a></span></div><div class="pr"><span>Navegação</span><span><a href="${f.nav}" target="_blank" style="color:#4ade80;font-weight:700">🧭 Navegar agora ↗</a></span></div>`,{maxWidth:290});
+  refsG.addLayer(mk); refMks.push(mk);
+});
+
+// PCM
+L.marker([CX,CY],{icon:L.divIcon({className:'',html:`<div style="width:18px;height:18px;background:#ffd700;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 4px rgba(255,215,0,.3),0 2px 10px rgba(0,0,0,.6)"></div>`,iconAnchor:[9,9]})}).addTo(map).bindPopup(`<div class="pt" style="color:#ffd700">🏛 PCM – Casa Branca</div><div class="ps">POSTO CENTRAL · Pç. Rui Barbosa 56</div><div class="pr"><span>Tel</span><span>(19) 3671-1125</span></div><div class="pr"><span>Alt.</span><span>684 m</span></div>`,{maxWidth:220});
+
+// Rio
+L.polyline([[-21.562,-47.048],[-21.596,-47.008],[-21.645,-46.968]],{color:'#38bdf8',weight:3,opacity:.7}).addTo(map).bindPopup(`<div class="pt" style="color:#38bdf8">💧 Rio Mogi Pardo</div><div class="ps">DIVISA NATURAL CASA BRANCA ↔ MOCOCA</div>`,{maxWidth:200});
+
+// ── PONTOS PM (localStorage)
+const userPtsG=L.layerGroup().addTo(map);
+let userPts=[];
+try{const r=localStorage.getItem('sisrural_pm_v1');if(r)userPts=JSON.parse(r);}catch(e){}
+
+function savePts(){try{localStorage.setItem('sisrural_pm_v1',JSON.stringify(userPts));}catch(e){}}
+
+function renderPt(p,i){
+  const col='#22c55e';
+  const mk=L.marker([p.lat,p.lng],{icon:L.divIcon({className:'',
+    html:`<div style="position:relative;display:inline-block"><div style="background:rgba(7,12,23,.96);border:2px solid ${col};border-radius:9px;padding:3px 8px;display:flex;align-items:center;gap:4px;box-shadow:0 0 12px ${col}44;white-space:nowrap"><span style="font-size:13px">📌</span><span style="font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;color:${col}">${p.nm}</span></div><div style="position:absolute;bottom:-5px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid ${col}"></div></div>`,
+    iconAnchor:[55,35]})});
+  mk.bindPopup(`<div class="pt" style="color:${col}">📌 ${p.nm}</div><div class="ps">PONTO PM · ${p.dt||''}</div>${p.tp?`<div class="pr"><span>Tipo</span><span>${p.tp}</span></div>`:''} ${p.end?`<div class="pr"><span>End.</span><span>${p.end}</span></div>`:''} ${p.ph?`<div class="pr"><span>Tel</span><span>${p.ph}</span></div>`:''}<div class="pr"><span>Acesso</span><span>${p.dirt?'🟫 Terra':'🛣 Asfalto'}</span></div><div class="pr"><span>GPS</span><span>${Math.abs(p.lat).toFixed(4)}°S ${Math.abs(p.lng).toFixed(4)}°W</span></div><div class="pr"><span>Navegar</span><span><a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}&travelmode=driving" target="_blank" style="color:#4ade80;font-weight:700">🧭 Abrir Maps ↗</a></span></div><div style="margin-top:6px;text-align:center"><span onclick="delPt(${i})" style="font-size:9px;color:#ef4444;cursor:pointer;border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:2px 8px;font-family:'JetBrains Mono',monospace">🗑 Remover</span></div>`,{maxWidth:270});
+  userPtsG.addLayer(mk);
+}
+function delPt(i){userPts.splice(i,1);savePts();userPtsG.clearLayers();userPts.forEach((p,i)=>renderPt(p,i));map.closePopup();}
+userPts.forEach((p,i)=>renderPt(p,i));
+
+// ── CONTROLES
+let lsh={roads:true,props:true,refs:true,dirt:true,user:true};
+function togSat(){
+  satOn=!satOn;
+  if(satOn){osmT.remove();satT.addTo(map);satLbl.addTo(map);}
+  else{satT.remove();satLbl.remove();osmT.addTo(map);}
+  document.getElementById('bSat').textContent=satOn?'🗺':'🛰';
+}
+function togLayer(k){
+  lsh[k]=!lsh[k];
+  const g={roads:roadsG,props:propsG,refs:refsG,dirt:dirtG,user:userPtsG}[k];
+  lsh[k]?g.addTo(map):g.remove();
+  const btn={roads:'bRoads',props:'bProps',refs:'bRef',dirt:'bDirt',user:'bUser'}[k];
+  document.getElementById(btn).classList.toggle('on',lsh[k]);
+}
+function rv(){map.setView([CX,CY],10);}
+
+// ── SHEET
+let shOpen=false,activeQ=1;
+function openSheet(){shOpen=true;document.getElementById('sheet').classList.add('open');document.getElementById('sbg').classList.add('open');}
+function closeSheet(){shOpen=false;document.getElementById('sheet').classList.remove('open');document.getElementById('sbg').classList.remove('open');}
+function togSheet(){shOpen?closeSheet():openSheet();}
+
+let sy=0;
+document.getElementById('sheet').addEventListener('touchstart',e=>{sy=e.touches[0].clientY;},{passive:true});
+document.getElementById('sheet').addEventListener('touchend',e=>{
+  const dy=e.changedTouches[0].clientY-sy;
+  if(dy>60)closeSheet();else if(dy<-40)openSheet();
+},{passive:true});
+
+function selQ(id){
+  activeQ=id;
+  const col=QC[id-1],qd=QDATA[id-1];
+  [1,2,3,4].forEach(q=>document.getElementById('tab'+q).classList.toggle('active',q===id));
+  Object.entries(qPoly).forEach(([qid,p])=>{
+    const a=parseInt(qid)===id;
+    p.setStyle({fillOpacity:a?.25:.10,weight:a?2.5:1.5,opacity:a?1:.7});
+  });
+  document.getElementById('pName').textContent=qd.nome;
+  document.getElementById('pName').style.color=col;
+  document.getElementById('pArea').textContent=qd.km.area;
+  document.getElementById('pDiag').textContent=qd.km.diag;
+  document.getElementById('sheet').style.setProperty('--qc',col);
+  const props=PROPS.filter(p=>p.q===id);
+  document.getElementById('pProps').textContent=props.length;
+  document.getElementById('sDivisas').innerHTML=qd.divisas.map(d=>`<div class="dtag">${d}</div>`).join('');
+  document.getElementById('sRoads').innerHTML=qd.roads.map((r,i)=>`<div class="rtag" onclick="zR('${qd.roadKeys[i]}')">${r}</div>`).join('');
+  document.getElementById('sDirt').innerHTML=qd.dirt.map(d=>`<div class="dtag" style="border-color:rgba(146,64,14,.4);background:rgba(146,64,14,.1)">🟫 ${d}</div>`).join('');
+  const ref=FARM_REFS.find(f=>f.q===id);
+  document.getElementById('sRef').innerHTML=ref?`<div class="ref-card" style="--ref-col:${ref.col}" onclick="zRef(${id-1})"><div class="ref-ico-w" style="border-color:${ref.col}">${ref.ico}</div><div class="ref-info"><div class="ref-name" style="color:${ref.col}">${ref.nm}</div><div class="ref-nota">${ref.nota}</div><div class="ref-btns"><a class="ref-btn ref-btn-maps" href="${ref.maps}" target="_blank" onclick="event.stopPropagation()">📍 Ver no Maps</a><a class="ref-btn ref-btn-nav" href="${ref.nav}" target="_blank" onclick="event.stopPropagation()">🧭 Navegar</a></div><div class="ref-gps">${Math.abs(ref.lat).toFixed(4)}°S · ${Math.abs(ref.lng).toFixed(4)}°W · ${ref.km}</div></div></div>`:'';
+  document.getElementById('sProps').innerHTML=props.length>0?props.map((p,i)=>{
+    const idx=PROPS.indexOf(p);
+    const dtag=p.dirt?`<span style="font-size:7px;background:rgba(146,64,14,.2);color:#d97706;border-radius:3px;padding:1px 4px">🟫 terra</span>`:`<span style="font-size:7px;background:rgba(34,197,94,.1);color:#4ade80;border-radius:3px;padding:1px 4px">🛣 asf.</span>`;
+    return `<div class="prop-card" onclick="zProp(${idx})"><div class="prop-ico-w" style="border-color:${col}">${p.ico}</div><div class="prop-info"><div class="prop-name">${p.nm}</div><div class="prop-type">${p.tp}</div><div class="prop-meta">${p.r?`<span style="font-size:10px;color:var(--ac)">⭐${p.r}</span>`:''}${dtag}</div><div class="prop-addr">${p.end}</div><a class="nav-btn" href="${p.gmaps}" target="_blank" onclick="event.stopPropagation()">📍 Navegar no Maps</a></div><div class="prop-arrow">›</div></div>`;
+  }).join(''):`<div style="padding:16px;text-align:center;color:var(--mu);font-size:10px;font-family:'JetBrains Mono',monospace">Nenhuma prop. cadastrada neste setor</div>`;
+  const bx={1:[[N,W],[MX,MY]],2:[[N,MY],[MX,E]],3:[[MX,W],[S,MY]],4:[[MX,MY],[S,E]]};
+  map.fitBounds(bx[id],{padding:[60,60],animate:true});
+  openSheet();
+}
+
+function zProp(i){const p=PROPS[i];map.setView([p.lat,p.lng],15,{animate:true});setTimeout(()=>propMks[i].openPopup(),400);closeSheet();}
+function zRef(i){const f=FARM_REFS[i];map.setView([f.lat,f.lng],14,{animate:true});setTimeout(()=>refMks[i].openPopup(),400);closeSheet();}
+function zR(k){const r=RDS[k];if(r){map.fitBounds(L.polyline(r.pts).getBounds(),{padding:[60,60],animate:true});}closeSheet();}
+
+// ── TOAST
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+
+// ── MODAL ADD
+let miniMapInst=null, miniMk=null;
+
+function openAdd(){
+  const m=document.getElementById('mAdd');
+  m.classList.add('open');
+  ['aNome','aTipo','aEnd','aTel'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('aLat').value='';
+  document.getElementById('aLng').value='';
+  document.getElementById('aMsg').style.display='none';
+  document.getElementById('miniMapWrap').style.display='none';
+  // GPS automático ao abrir
+  captGPS();
+}
+function closeAdd(){
+  document.getElementById('mAdd').classList.remove('open');
+  if(miniMapInst){miniMapInst.remove();miniMapInst=null;miniMk=null;}
+}
+
+function captGPS(){
+  const txt=document.getElementById('gpsTxt');
+  const coord=document.getElementById('gpsCoord');
+  const ico=document.getElementById('gpsIco');
+  const retry=document.getElementById('gpsRetry');
+  txt.textContent='Obtendo localização GPS…';
+  coord.textContent='Aguarde…';
+  ico.textContent='📡';
+  retry.style.display='none';
+  if(!navigator.geolocation){
+    txt.textContent='⚠️ GPS não disponível neste dispositivo';
+    coord.textContent='Insira as coordenadas manualmente abaixo';
+    ico.textContent='⚠️';
+    retry.style.display='none';
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const lat=pos.coords.latitude;
+    const lng=pos.coords.longitude;
+    document.getElementById('aLat').value=lat.toFixed(6);
+    document.getElementById('aLng').value=lng.toFixed(6);
+    txt.textContent='✅ Localização obtida com sucesso!';
+    coord.textContent=`${Math.abs(lat).toFixed(5)}°S  ${Math.abs(lng).toFixed(5)}°W  ±${Math.round(pos.coords.accuracy)}m`;
+    ico.textContent='✅';
+    retry.style.display='block';
+    retry.textContent='↺ Atualizar';
+    initMiniMap(lat,lng);
+  }, err=>{
+    const msg={1:'Permissão negada – ative o GPS',2:'Sinal GPS indisponível',3:'Tempo esgotado'}[err.code]||'Erro GPS';
+    txt.textContent='⚠️ '+msg;
+    coord.textContent='Insira lat/lng manualmente nos campos abaixo';
+    ico.textContent='⚠️';
+    retry.style.display='block';
+    retry.textContent='↺ Tentar novamente';
+  },{enableHighAccuracy:true,timeout:12000,maximumAge:0});
+}
+
+function initMiniMap(lat,lng){
+  const wrap=document.getElementById('miniMapWrap');
+  wrap.style.display='block';
+  if(miniMapInst){
+    miniMapInst.setView([lat,lng],16);
+    if(miniMk) miniMk.setLatLng([lat,lng]);
+    return;
+  }
+  setTimeout(()=>{
+    miniMapInst=L.map('miniMap',{center:[lat,lng],zoom:16,zoomControl:false,attributionControl:false});
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19}).addTo(miniMapInst);
+    miniMk=L.marker([lat,lng],{icon:L.divIcon({className:'',html:'<div style="background:#22c55e;width:14px;height:14px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 8px rgba(34,197,94,.8)"></div>',iconAnchor:[7,7]})}).addTo(miniMapInst);
+    miniMapInst.on('click',e=>{
+      miniMk.setLatLng(e.latlng);
+      document.getElementById('aLat').value=e.latlng.lat.toFixed(6);
+      document.getElementById('aLng').value=e.latlng.lng.toFixed(6);
+      document.getElementById('gpsCoord').textContent=`${Math.abs(e.latlng.lat).toFixed(5)}°S  ${Math.abs(e.latlng.lng).toFixed(5)}°W  (ajustado manualmente)`;
+    });
+  },100);
+}
+
+function updateMiniMap(){
+  const lat=parseFloat(document.getElementById('aLat').value);
+  const lng=parseFloat(document.getElementById('aLng').value);
+  if(!isNaN(lat)&&!isNaN(lng)){
+    if(miniMapInst){miniMapInst.setView([lat,lng],16);if(miniMk)miniMk.setLatLng([lat,lng]);}
+    else initMiniMap(lat,lng);
+  }
+}
+
+function salvar(){
+  const nm=document.getElementById('aNome').value.trim();
+  const lat=parseFloat(document.getElementById('aLat').value);
+  const lng=parseFloat(document.getElementById('aLng').value);
+  const msg=document.getElementById('aMsg');
+  if(!nm){msg.style.cssText='display:block;background:rgba(239,68,68,.15);color:#ef4444';msg.textContent='⚠️ Informe o nome da fazenda.';return;}
+  if(isNaN(lat)||isNaN(lng)){msg.style.cssText='display:block;background:rgba(239,68,68,.15);color:#ef4444';msg.textContent='⚠️ Coordenadas inválidas. Use o GPS ou insira manualmente.';return;}
+  const pt={nm,tp:document.getElementById('aTipo').value.trim(),lat,lng,
+    end:document.getElementById('aEnd').value.trim(),ph:document.getElementById('aTel').value.trim(),
+    dirt:document.getElementById('aDirt').checked,dt:new Date().toLocaleString('pt-BR')};
+  userPts.push(pt);savePts();renderPt(pt,userPts.length-1);
+  map.setView([lat,lng],15,{animate:true});
+  msg.style.cssText='display:block;background:rgba(34,197,94,.15);color:#22c55e';
+  msg.textContent=`✅ "${nm}" salvo com sucesso!`;
+  setTimeout(closeAdd,1400);
+}
+
+// ── PWA / INSTALAÇÃO / QR
+// Depois de publicar, troque somente esta linha pelo endereço oficial do aplicativo.
+// Exemplo: const APP_URL='https://usuario.github.io/sisrural/';
+const APP_URL = (location.protocol === 'http:' || location.protocol === 'https:') ? location.href.split('#')[0] : '';
+let deferredInstallPrompt = null;
+
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(()=>{}));
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  const b = document.getElementById('bInstall');
+  if (b) b.classList.add('on');
+});
+
+async function instalarApp(){
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    return;
+  }
+  toast('Android: menu ⋮ > Instalar app. iPhone: Compartilhar > Adicionar à Tela de Início.');
+}
+
+function openQR(){
+  const m=document.getElementById('mQR');m.classList.add('open');
+  const wrap=document.getElementById('qrWrap');wrap.innerHTML='';
+  const cnv=document.createElement('canvas');wrap.appendChild(cnv);
+  const url=APP_URL || 'PUBLIQUE O APP EM HTTPS E DEFINA APP_URL NO INDEX.HTML';
+  const s=document.createElement('script');
+  s.src='https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js';
+  s.onload=()=>new QRious({element:cnv,value:url,size:220,background:'#ffffff',foreground:'#0c1520',level:'H'});
+  if(!window.QRious){document.head.appendChild(s);}
+  else{new QRious({element:cnv,value:url,size:220,background:'#ffffff',foreground:'#0c1520',level:'H'});}
+}
+function closeQR(){document.getElementById('mQR').classList.remove('open');}
+
+// ── INIT
+selQ(1);
+setTimeout(()=>{map.setView([CX,CY],10);closeSheet();},300);
+</script>
+</body>
+</html>

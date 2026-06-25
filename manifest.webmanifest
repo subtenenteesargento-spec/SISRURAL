@@ -1,0 +1,16 @@
+{
+  "name": "SISRURAL – Casa Branca/SP",
+  "short_name": "SISRURAL",
+  "description": "Aplicativo de apoio ao patrulhamento rural de Casa Branca/SP.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#070c17",
+  "theme_color": "#070c17",
+  "categories": ["navigation", "productivity"],
+  "icons": [
+    {"src":"icons/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
+    {"src":"icons/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+  ]
+}
