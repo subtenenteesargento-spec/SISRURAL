@@ -18,5 +18,5 @@ export const APP_INFO = {
   companhia: "2ª Companhia PM",
   batalhao: "24º BPM/I",
   municipioBase: "Casa Branca/SP",
-  versao: "6.2-visual-v5-firebase"
+  versao: "7.0-visual-v5-firebase"
 };

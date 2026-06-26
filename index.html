@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>SISRURAL – Casa Branca/SP</title>
+<title>SISRURAL V7 – Casa Branca/SP</title>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -183,10 +183,18 @@ html,body{
 .gps-btn{display:block;width:100%;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:10px;text-align:center;cursor:pointer;font-size:11px;color:var(--gr);font-family:'JetBrains Mono',monospace;font-weight:700;letter-spacing:.5px;margin-top:12px;-webkit-user-select:none;user-select:none}
 .msg-box{display:none;font-size:11px;font-family:'JetBrains Mono',monospace;padding:8px 12px;border-radius:6px;text-align:center;margin-top:10px}
 
-/* LOGIN FIREBASE - SISRURAL V6.2 */
-.auth-lock{position:fixed;inset:0;background:radial-gradient(circle at top,#13243b,#070c17 62%);z-index:3000;display:grid;place-items:center;padding:18px}
-.auth-card{width:100%;max-width:390px;background:#0c1520;border:1px solid #1d314d;border-radius:18px;padding:22px;box-shadow:0 20px 80px #0008}
-.auth-card h1{font-family:'Rajdhani',sans-serif;margin:0 0 6px;color:#ffd700;font-size:30px}.auth-card p{color:#6f89a8;font-size:13px;margin-bottom:12px}.auth-card label{display:block;font-size:10px;color:#6f89a8;margin-top:10px;font-family:'JetBrains Mono',monospace;letter-spacing:1px}.auth-card input,.auth-card textarea{width:100%;background:#070c17;border:1px solid #1d314d;border-radius:10px;padding:10px;color:#e2eaf4;outline:none}.auth-card button{border:0;border-radius:10px;padding:10px 14px;background:#ffd700;color:#111;font-weight:900;cursor:pointer;margin-top:12px}.auth-card .alt{background:#12243a;color:#e2eaf4;border:1px solid #1d314d}.auth-msg{font-size:12px;margin-top:10px;color:#fecdd3}.auth-ok{color:#bbf7d0}.auth-user{position:fixed;right:62px;top:10px;z-index:2500;background:rgba(7,12,23,.92);border:1px solid #1d314d;border-radius:10px;padding:5px 9px;font-size:10px;color:#6f89a8;text-align:right}.auth-user b{color:#e2eaf4}.auth-user button{background:#12243a;color:#e2eaf4;border:1px solid #1d314d;border-radius:6px;padding:2px 6px;font-size:9px;cursor:pointer}.admin-only{display:none}.is-admin .admin-only{display:flex!important}
+/* ── SISRURAL V7: Firebase/Login/Admin */
+#authGate{position:fixed;inset:0;z-index:5000;background:radial-gradient(circle at top,#13243b,#070c17 65%);display:flex;align-items:center;justify-content:center;padding:18px}
+#authGate.hidden{display:none}
+.authBox{width:100%;max-width:390px;background:var(--sf);border:1px solid var(--bd);border-radius:18px;padding:22px;box-shadow:0 20px 80px rgba(0,0,0,.55)}
+.authBox h2{font-family:'Rajdhani',sans-serif;font-size:30px;color:var(--ac);margin-bottom:4px}
+.authBox p{color:var(--mu);font-size:12px;margin-bottom:14px}.authBox .err{display:none;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.35);color:#fecdd3;border-radius:8px;padding:8px;margin-top:10px;font-size:12px}
+#userPill{position:fixed;right:56px;top:7px;z-index:800;background:rgba(7,12,23,.96);border:1px solid var(--bd);border-radius:10px;padding:5px 9px;font-size:10px;text-align:right;font-family:'JetBrains Mono',monospace;line-height:1.2;display:none}
+#userPill b{color:var(--tx)}#userPill span{color:var(--mu)}#userPill a{color:#93c5fd;cursor:pointer;text-decoration:none}
+#bAdmin{display:none;color:var(--ac)}
+.v7-modal{display:none;position:fixed;inset:0;z-index:4900;background:rgba(0,0,0,.78);align-items:center;justify-content:center;padding:14px}
+.v7-modal.open{display:flex}.v7-box{width:100%;max-width:760px;max-height:92vh;overflow:auto;background:var(--sf);border:1px solid var(--bd);border-radius:18px;padding:16px}.v7-box h2{font-family:'Rajdhani',sans-serif;color:var(--ac);font-size:24px;margin-bottom:8px}.v7-close{float:right;cursor:pointer;color:var(--mu);font-size:24px}
+.v7-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}.v7-card{background:var(--s2);border:1px solid var(--bd);border-radius:12px;padding:10px;margin:8px 0}.v7-small{font-size:11px;color:var(--mu);line-height:1.4}.v7-pill{display:inline-block;border:1px solid var(--bd);border-radius:999px;padding:2px 7px;font-size:10px;color:var(--mu);margin:2px}
 
 </style>
 
@@ -199,28 +207,18 @@ html,body{
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 </head>
 <body>
-
-<div id="authLock" class="auth-lock">
-  <div class="auth-card">
-    <h1>🛡️ SISRURAL</h1>
-    <p>2ª Companhia PM · Acesso restrito</p>
-    <label>E-MAIL</label>
-    <input id="authEmail" type="email" placeholder="seuemail@..." autocomplete="username">
-    <label>SENHA</label>
-    <input id="authSenha" type="password" placeholder="Senha" autocomplete="current-password">
-    <button onclick="sisLogin()">Entrar</button>
-    <button class="alt" onclick="sisShowRequest()">Solicitar acesso</button>
-    <div id="accessBox" style="display:none;margin-top:12px;border-top:1px solid #1d314d;padding-top:10px">
-      <label>NOME</label><input id="reqNome" placeholder="Nome completo">
-      <label>RE</label><input id="reqRe" placeholder="000000-0">
-      <label>GRADUAÇÃO</label><input id="reqGrad" placeholder="Cb PM, Sd PM...">
-      <label>E-MAIL</label><input id="reqEmail" type="email" placeholder="seuemail@...">
-      <button class="alt" onclick="sisRequestAccess()">Enviar solicitação</button>
-    </div>
-    <div id="authMsg" class="auth-msg"></div>
+<div id="authGate">
+  <div class="authBox">
+    <h2>🛡️ SISRURAL V7</h2>
+    <p>2ª Companhia PM · acesso restrito</p>
+    <label class="field-lbl">E-MAIL</label><input class="field-inp" id="v7Email" type="email" placeholder="seuemail@..." autocomplete="username">
+    <label class="field-lbl">SENHA</label><input class="field-inp" id="v7Senha" type="password" placeholder="Senha" autocomplete="current-password">
+    <div class="btn-primary" onclick="v7Login()">Entrar</div>
+    <div class="btn-secondary" onclick="openRequestAccess()">Solicitar acesso</div>
+    <div id="v7LoginMsg" class="err"></div>
   </div>
 </div>
-<div id="authUser" class="auth-user" style="display:none"><b id="authName">--</b><br><span id="authPerfil">--</span> · <button onclick="sisLogout()">Sair</button></div>
+<div id="userPill"><b id="v7UserEmail">--</b><br><span id="v7UserPerfil">--</span> · <a onclick="v7Logout()">Sair</a></div>
 
 
 <!-- TOPBAR -->
@@ -272,8 +270,8 @@ html,body{
     <div class="mbtn on" id="bUser" onclick="togLayer('user')" title="Pontos PM">📌</div>
     <div class="mbtn" id="bAdd" onclick="openAdd()" title="Cadastrar fazenda">＋</div>
     <div class="mbtn" id="bQR" onclick="openQR()" title="QR Code">📲</div>
-    <div class="mbtn" id="bRel" onclick="openRelatorio()" title="Relatórios e visitas">📋</div>
-    <div class="mbtn admin-only" id="bAdm" onclick="openAdminSis()" title="Administração">⚙️</div>
+    <div class="mbtn" id="bVisit" onclick="openVisitModal()" title="Registrar visita">📋</div>
+    <div class="mbtn" id="bAdmin" onclick="openAdminPanel()" title="Administração">⚙️</div>
     <div class="mbtn" id="bRst" onclick="rv()" title="Visão geral">⟲</div>
   </div>
   <!-- Sheet backdrop -->
@@ -371,45 +369,6 @@ html,body{
   </div>
 </div>
 
-
-<!-- MODAL RELATÓRIO / VISITA -->
-<div class="modal-over" id="mRel">
-  <div class="modal-box">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-      <span style="font-size:22px">📋</span>
-      <div><div style="font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;color:var(--ac)">Relatórios e visitas</div><div style="font-size:9px;color:var(--mu);font-family:'JetBrains Mono',monospace;letter-spacing:1px">Registrar visita rural e gerar relatório</div></div>
-      <div onclick="closeRelatorio()" style="margin-left:auto;font-size:22px;cursor:pointer;color:var(--mu);line-height:1">×</div>
-    </div>
-    <label class="field-lbl">PROPRIEDADE VISITADA</label>
-    <select class="field-inp" id="vProp"></select>
-    <label class="field-lbl">EQUIPE</label>
-    <input class="field-inp" id="vEquipe" placeholder="Ex: Sgt Pozzer, Cb Silva">
-    <label class="field-lbl">RESUMO DA VISITA</label>
-    <textarea class="field-inp" id="vTexto" placeholder="Contato realizado, orientações, novidades, providências..." style="min-height:90px"></textarea>
-    <div class="btn-primary" onclick="salvarVisitaSis()">✅ SALVAR VISITA</div>
-    <div class="btn-secondary" onclick="gerarRelatorioSis()">📄 GERAR RELATÓRIO / IMPRIMIR PDF</div>
-    <div class="btn-secondary" onclick="exportarCSVVisitas()">⬇️ EXPORTAR CSV</div>
-    <div id="relMsg" class="msg-box"></div>
-    <div style="margin-top:14px;font-family:'Rajdhani',sans-serif;color:var(--ac);font-weight:700">Últimas visitas</div>
-    <div id="visitasBox" style="font-size:11px;color:var(--mu);margin-top:8px"></div>
-  </div>
-</div>
-
-<!-- MODAL ADMIN -->
-<div class="modal-over" id="mAdminSis">
-  <div class="modal-box">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-      <span style="font-size:22px">⚙️</span>
-      <div><div style="font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;color:var(--ac)">Administração</div><div style="font-size:9px;color:var(--mu);font-family:'JetBrains Mono',monospace;letter-spacing:1px">Solicitações e perfis</div></div>
-      <div onclick="closeAdminSis()" style="margin-left:auto;font-size:22px;cursor:pointer;color:var(--mu);line-height:1">×</div>
-    </div>
-    <div style="font-size:12px;color:var(--tx);margin-bottom:8px">Solicitações pendentes</div>
-    <div id="solicitacoesBox" style="font-size:11px;color:var(--mu)"></div>
-    <div style="font-size:12px;color:var(--tx);margin-top:16px;margin-bottom:8px">Perfis cadastrados</div>
-    <div id="perfisBox" style="font-size:11px;color:var(--mu)"></div>
-  </div>
-</div>
-
 <!-- MODAL QR CODE -->
 <div class="modal-over" id="mQR" onclick="closeQR()" style="align-items:center">
   <div class="modal-box center" onclick="event.stopPropagation()" style="max-width:320px;text-align:center">
@@ -421,6 +380,12 @@ html,body{
     <div class="btn-secondary" onclick="closeQR()">Fechar</div>
   </div>
 </div>
+
+
+<!-- MODAIS V7 FIREBASE -->
+<div class="v7-modal" id="v7VisitModal"><div class="v7-box"><span class="v7-close" onclick="closeV7Modal('v7VisitModal')">×</span><h2>📋 Registrar visita rural</h2><div class="v7-small">Escolha a propriedade visitada e registre o resumo. Esse registro alimenta o relatório de visitas.</div><label class="field-lbl">PROPRIEDADE</label><select class="field-inp" id="v7VisitProp"></select><label class="field-lbl">EQUIPE</label><input class="field-inp" id="v7VisitEquipe" placeholder="Ex: Sgt Pozzer, Cb Silva"><label class="field-lbl">RESUMO DA VISITA</label><textarea class="field-inp" id="v7VisitTexto" style="min-height:90px" placeholder="Contato realizado, orientações, novidades, pendências..."></textarea><div class="btn-primary" onclick="saveV7Visit()">Salvar visita</div><div id="v7VisitMsg" class="v7-small"></div></div></div>
+<div class="v7-modal" id="v7RequestModal"><div class="v7-box"><span class="v7-close" onclick="closeV7Modal('v7RequestModal')">×</span><h2>👮 Solicitar acesso</h2><div class="v7-grid"><div><label class="field-lbl">NOME</label><input class="field-inp" id="reqNome"></div><div><label class="field-lbl">RE</label><input class="field-inp" id="reqRe"></div><div><label class="field-lbl">GRADUAÇÃO</label><input class="field-inp" id="reqGrad"></div><div><label class="field-lbl">E-MAIL</label><input class="field-inp" id="reqEmail" type="email"></div><div><label class="field-lbl">TELEFONE</label><input class="field-inp" id="reqTel"></div></div><div class="btn-primary" onclick="sendAccessRequest()">Enviar solicitação</div><div id="reqMsg" class="v7-small"></div></div></div>
+<div class="v7-modal" id="v7AdminModal"><div class="v7-box"><span class="v7-close" onclick="closeV7Modal('v7AdminModal')">×</span><h2>⚙️ Administração SISRURAL</h2><div class="v7-small">Você é Administrador. Aqui ficam usuários, solicitações, auditoria e relatórios.</div><h3 style="color:var(--ac);margin-top:12px">Meu perfil</h3><div class="v7-grid"><div><label class="field-lbl">NOME</label><input class="field-inp" id="admNome"></div><div><label class="field-lbl">RE</label><input class="field-inp" id="admRe"></div><div><label class="field-lbl">GRADUAÇÃO</label><input class="field-inp" id="admGrad"></div><div><label class="field-lbl">PERFIL</label><select class="field-inp" id="admPerfil"><option>Administrador</option><option>Comandante</option><option>Supervisor</option><option>Patrulheiro</option><option>Consulta</option></select></div></div><div class="btn-primary" onclick="saveMyAdminProfile()">Salvar meu perfil</div><h3 style="color:var(--ac);margin-top:14px">Solicitações pendentes</h3><div id="v7Requests"></div><h3 style="color:var(--ac);margin-top:14px">Relatórios</h3><div class="v7-card"><button class="btn-primary" onclick="exportV7FarmsCSV()">Exportar fazendas cadastradas CSV</button><button class="btn-secondary" onclick="exportV7VisitsCSV()">Exportar visitas CSV</button><button class="btn-secondary" onclick="window.print()">Imprimir / PDF</button></div><h3 style="color:var(--ac);margin-top:14px">Auditoria recente</h3><div id="v7Audit"></div></div></div>
 
 <script>
 // ── CLOCK
@@ -459,7 +424,7 @@ const QDATA=[
     dirt:['Est. Lagoa Branca–Venda Branca KM 8-15','Acesso Faz. Cachoeirinha','Est. Pomar Jabuticaba SE']},
 ];
 
-const PROPS=window.PROPS=[
+const PROPS=[
   // Q1 NW
   {nm:'Faz. Três Marias (Rocheto)',tp:'Grãos/Batata/Maquinário',ico:'🌾',lat:-21.7430544,lng:-47.1301689,r:4.7,rc:43,ph:null,end:'Est. Vicinal p/ Tambaú, Km 6',dirt:true,gmaps:'https://www.google.com/maps/dir/?api=1&destination=-21.7430544,-47.1301689&travelmode=driving'},
   {nm:'Faz. Boa Vista Rocheto',tp:'Agropecuária/Grãos',ico:'🌾',lat:-21.7599106,lng:-47.1693823,r:5.0,rc:2,ph:'+55 19 98310-6666',end:'Vicinal – Rural NW',dirt:true,gmaps:'https://www.google.com/maps/dir/?api=1&destination=-21.7599106,-47.1693823&travelmode=driving'},
@@ -494,9 +459,10 @@ const PROPS=window.PROPS=[
 ];
 
 function classQ(lat,lng){const n=lat>MX,w=lng<MY;return n&&w?1:n&&!w?2:!n&&w?3:4;}
+window.PROPS=PROPS;
 PROPS.forEach(p=>{p.q=classQ(p.lat,p.lng);});
 
-const FARM_REFS=window.FARM_REFS=[
+const FARM_REFS=[
   {q:1,nm:'REF-Q1 · Faz. Lagoa do Cedro',lat:-21.6920,lng:-47.1640,
    nota:'Âncora NW: 12 km via Est. do Rocheto (terra). Corredor vicinal divisa Mococa/Tambaú.',
    maps:'https://www.google.com/maps/search/?api=1&query=-21.6920,-47.1640',
@@ -616,8 +582,8 @@ L.polyline([[-21.562,-47.048],[-21.596,-47.008],[-21.645,-46.968]],{color:'#38bd
 
 // ── PONTOS PM (localStorage)
 const userPtsG=L.layerGroup().addTo(map);
-let userPts=[];
-try{const r=localStorage.getItem('sisrural_pm_v1');if(r)userPts=JSON.parse(r);}catch(e){}
+let userPts=[]; window.userPts=userPts;
+try{const r=localStorage.getItem('sisrural_pm_v1');if(r)userPts=JSON.parse(r);}catch(e){} window.userPts=userPts;
 
 function savePts(){try{localStorage.setItem('sisrural_pm_v1',JSON.stringify(userPts));}catch(e){}}
 
@@ -822,34 +788,86 @@ selQ(1);
 setTimeout(()=>{map.setView([CX,CY],10);closeSheet();},300);
 </script>
 
-
 <script type="module">
 import { firebaseConfig, ADMIN_EMAIL, APP_INFO } from './config.firebase.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
-import { getFirestore, collection, doc, setDoc, addDoc, getDoc, getDocs, onSnapshot, serverTimestamp, query, orderBy, updateDoc } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
-const appFb=initializeApp(firebaseConfig);
-const authFb=getAuth(appFb);
-const dbFb=getFirestore(appFb);
-window.sisDb=dbFb; window.sisAuth=authFb; window.sisUser=null; window.sisProfile=null;
-function msg(t,ok=false){const e=document.getElementById('authMsg'); if(e){e.textContent=t; e.className=ok?'auth-msg auth-ok':'auth-msg';}}
-function safeId(email){return String(email||'').toLowerCase().replace(/[^a-z0-9]/g,'_')}
-async function audit(acao,detalhe){try{await addDoc(collection(dbFb,'auditoria'),{acao,detalhe,usuario:window.sisUser?.email||'',createdAt:serverTimestamp(),app:'SISRURAL V6.2'})}catch(e){}}
-window.sisLogin=async()=>{try{msg('Entrando...'); await signInWithEmailAndPassword(authFb,document.getElementById('authEmail').value.trim(),document.getElementById('authSenha').value);}catch(e){msg('Erro no login: '+traduzErro(e.code||e.message));}};
-window.sisLogout=()=>signOut(authFb);
-window.sisShowRequest=()=>{const b=document.getElementById('accessBox'); b.style.display=b.style.display==='none'?'block':'none';};
-window.sisRequestAccess=async()=>{try{const dados={nome:reqNome.value,re:reqRe.value,graduacao:reqGrad.value,email:reqEmail.value,status:'pendente',createdAt:serverTimestamp()}; if(!dados.nome||!dados.email) throw Error('Informe nome e e-mail.'); await setDoc(doc(dbFb,'solicitacoes',safeId(dados.email)),dados,{merge:true}); msg('Solicitação enviada. Avise o administrador para aprovar no painel.',true);}catch(e){msg(e.message)}};
-function traduzErro(c){return ({'auth/invalid-credential':'e-mail ou senha incorretos','auth/user-not-found':'usuário não encontrado','auth/wrong-password':'senha incorreta','auth/too-many-requests':'muitas tentativas; aguarde um pouco'})[c]||c}
-onAuthStateChanged(authFb,async user=>{ if(!user){window.sisUser=null;document.getElementById('authLock').style.display='grid';document.getElementById('authUser').style.display='none';document.body.classList.remove('is-admin');return;} window.sisUser=user; const uidRef=doc(dbFb,'usuarios',user.uid); let snap=await getDoc(uidRef); if(!snap.exists()){ const emailId=doc(dbFb,'usuarios',safeId(user.email)); const emailSnap=await getDoc(emailId); if(emailSnap.exists()){window.sisProfile=emailSnap.data(); await setDoc(uidRef,{...window.sisProfile,uid:user.uid,email:user.email},{merge:true});} else {window.sisProfile={nome:user.email,email:user.email,perfil:(user.email.toLowerCase()===ADMIN_EMAIL.toLowerCase()?'Administrador':'Patrulheiro'),status:'Ativo',companhia:APP_INFO.companhia,createdAt:serverTimestamp()}; await setDoc(uidRef,window.sisProfile,{merge:true});} } else window.sisProfile=snap.data(); document.getElementById('authLock').style.display='none'; document.getElementById('authUser').style.display='block'; document.getElementById('authName').textContent=window.sisProfile.nome||user.email; document.getElementById('authPerfil').textContent=window.sisProfile.perfil||'Patrulheiro'; if((window.sisProfile.perfil||'').toLowerCase()==='administrador')document.body.classList.add('is-admin'); else document.body.classList.remove('is-admin'); await audit('login','Entrada no sistema'); ouvirAdmin(); });
-window.salvarVisitaSis=async()=>{try{const nome=document.getElementById('vProp').value; const equipe=document.getElementById('vEquipe').value; const texto=document.getElementById('vTexto').value; if(!nome||!texto) throw Error('Escolha a propriedade e escreva o resumo.'); await addDoc(collection(dbFb,'visitas'),{propriedade:nome,equipe,texto,createdAt:serverTimestamp(),createdBy:window.sisUser?.email||''}); await audit('visita_registrada',nome); document.getElementById('relMsg').style.cssText='display:block;background:rgba(34,197,94,.15);color:#22c55e'; document.getElementById('relMsg').textContent='Visita salva no Firebase.'; document.getElementById('vTexto').value=''; carregarVisitas();}catch(e){document.getElementById('relMsg').style.cssText='display:block;background:rgba(239,68,68,.15);color:#ef4444';document.getElementById('relMsg').textContent=e.message}};
-window.openRelatorio=()=>{document.getElementById('mRel').classList.add('open'); const props=[...(window.PROPS||[]),...((JSON.parse(localStorage.getItem('sisrural_pm_v1')||'[]'))||[])]; document.getElementById('vProp').innerHTML=props.map(p=>`<option>${p.nm||p.nome}</option>`).join(''); carregarVisitas();};
-window.closeRelatorio=()=>document.getElementById('mRel').classList.remove('open');
-async function carregarVisitas(){try{const s=await getDocs(query(collection(dbFb,'visitas'),orderBy('createdAt','desc'))); const arr=s.docs.map(d=>d.data()); window.sisVisitas=arr; document.getElementById('visitasBox').innerHTML=arr.slice(0,20).map(v=>`<div style="border:1px solid var(--bd);border-radius:8px;padding:8px;margin-bottom:6px"><b style="color:var(--ac)">${v.propriedade||''}</b><br>${v.equipe||''}<br>${v.texto||''}<br><small>${v.createdBy||''}</small></div>`).join('')||'Nenhuma visita registrada.';}catch(e){document.getElementById('visitasBox').textContent='Erro ao carregar visitas: '+e.message}}
-window.gerarRelatorioSis=()=>{const props=[...(window.PROPS||[]),...((JSON.parse(localStorage.getItem('sisrural_pm_v1')||'[]'))||[])]; const visitas=window.sisVisitas||[]; const html=`<html><head><title>Relatório SISRURAL</title><style>body{font-family:Arial;padding:24px}h1{color:#111}table{border-collapse:collapse;width:100%;font-size:12px}td,th{border:1px solid #999;padding:6px;text-align:left}</style></head><body><h1>Relatório SISRURAL - 2ª Cia PM</h1><p>Gerado em ${new Date().toLocaleString('pt-BR')}</p><h2>Resumo</h2><p>Propriedades base: ${props.length}<br>Visitas registradas: ${visitas.length}</p><h2>Últimas visitas</h2><table><tr><th>Propriedade</th><th>Equipe</th><th>Resumo</th><th>Usuário</th></tr>${visitas.map(v=>`<tr><td>${v.propriedade||''}</td><td>${v.equipe||''}</td><td>${v.texto||''}</td><td>${v.createdBy||''}</td></tr>`).join('')}</table><h2>Propriedades cadastradas</h2><table><tr><th>Nome</th><th>Tipo</th><th>Telefone</th><th>Link Maps</th></tr>${props.map(p=>`<tr><td>${p.nm||p.nome||''}</td><td>${p.tp||''}</td><td>${p.ph||''}</td><td>https://www.google.com/maps?q=${p.lat},${p.lng}</td></tr>`).join('')}</table></body></html>`; const w=window.open('','_blank'); w.document.write(html); w.document.close(); setTimeout(()=>w.print(),300);};
-window.exportarCSVVisitas=()=>{const visitas=window.sisVisitas||[]; const csv='propriedade;equipe;resumo;usuario\n'+visitas.map(v=>[v.propriedade,v.equipe,v.texto,v.createdBy].map(x=>'"'+String(x||'').replace(/"/g,'""')+'"').join(';')).join('\n'); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); a.download='sisrural-visitas.csv'; a.click();};
-window.openAdminSis=()=>{document.getElementById('mAdminSis').classList.add('open'); ouvirAdmin(true)}; window.closeAdminSis=()=>document.getElementById('mAdminSis').classList.remove('open');
-let adminStarted=false; function ouvirAdmin(force=false){ if(adminStarted||!window.sisProfile||window.sisProfile.perfil!=='Administrador')return; adminStarted=true; onSnapshot(collection(dbFb,'solicitacoes'),s=>{const arr=s.docs.map(d=>({id:d.id,...d.data()})).filter(x=>x.status==='pendente'); const box=document.getElementById('solicitacoesBox'); if(box) box.innerHTML=arr.map(x=>`<div style="border:1px solid var(--bd);border-radius:8px;padding:8px;margin-bottom:6px"><b style="color:var(--ac)">${x.nome}</b><br>${x.graduacao||''} · RE ${x.re||''}<br>${x.email}<br><button onclick="aprovarSis('${x.id}','${x.email}','${(x.nome||'').replace(/'/g,'')}')">Aprovar</button></div>`).join('')||'Nenhuma solicitação pendente.';}); onSnapshot(collection(dbFb,'usuarios'),s=>{const arr=s.docs.map(d=>d.data()); const box=document.getElementById('perfisBox'); if(box) box.innerHTML=arr.map(x=>`<div style="border:1px solid var(--bd);border-radius:8px;padding:8px;margin-bottom:6px"><b style="color:var(--ac)">${x.nome||x.email}</b><br>${x.perfil||''} · ${x.status||'Ativo'}<br>${x.email||''}</div>`).join('')||'Nenhum perfil.';});}
-window.aprovarSis=async(id,email,nome)=>{await setDoc(doc(dbFb,'usuarios',safeId(email)),{email,nome,perfil:'Patrulheiro',status:'Ativo',companhia:APP_INFO.companhia,approvedBy:window.sisUser.email,approvedAt:serverTimestamp()},{merge:true}); await updateDoc(doc(dbFb,'solicitacoes',id),{status:'aprovado',approvedAt:serverTimestamp(),approvedBy:window.sisUser.email}); alert('Acesso aprovado. Agora crie esse usuário em Authentication se ainda não existir.');};
+import { getFirestore, doc, getDoc, setDoc, collection, addDoc, onSnapshot, serverTimestamp, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
+
+const firebaseApp = initializeApp(firebaseConfig);
+const auth = getAuth(firebaseApp);
+const db = getFirestore(firebaseApp);
+let v7User=null, v7Profile=null, v7Requests=[], v7Visits=[], v7Audits=[];
+const ADMIN = ADMIN_EMAIL || 'ferpozzer@gmail.com';
+const $v=id=>document.getElementById(id);
+const emailKey = email => String(email||'').toLowerCase().replace(/[^a-z0-9]/g,'_');
+function isAdmin(){ return v7User && (String(v7User.email).toLowerCase()===String(ADMIN).toLowerCase() || ['Administrador','Comandante'].includes(v7Profile?.perfil)); }
+async function auditV7(acao,detalhe){ try{ await addDoc(collection(db,'auditoria'),{acao,detalhe,usuario:v7User?.email||'',createdAt:serverTimestamp(),app:'SISRURAL V7'}); }catch(e){} }
+async function loadProfile(u){
+  const refUid=doc(db,'usuarios',u.uid);
+  const refEmail=doc(db,'usuarios',emailKey(u.email));
+  let snap=await getDoc(refUid);
+  let data=snap.exists()?snap.data():null;
+  if(!data){ const s2=await getDoc(refEmail); if(s2.exists()) data=s2.data(); }
+  if(!data){
+    data={nome:u.email,email:u.email,re:'',graduacao:'',companhia:APP_INFO.companhia,perfil:String(u.email).toLowerCase()===String(ADMIN).toLowerCase()?'Administrador':'Patrulheiro',status:'Ativo',createdAt:serverTimestamp()};
+  }
+  if(String(u.email).toLowerCase()===String(ADMIN).toLowerCase()) data.perfil='Administrador';
+  data.email=u.email;
+  await setDoc(refUid,data,{merge:true});
+  await setDoc(refEmail,{...data,uid:u.uid},{merge:true});
+  return data;
+}
+function showLogged(){
+  $v('authGate').classList.add('hidden');
+  $v('userPill').style.display='block';
+  $v('v7UserEmail').textContent=v7User.email;
+  $v('v7UserPerfil').textContent=v7Profile?.perfil||'Patrulheiro';
+  const b=$v('bAdmin'); if(b) b.style.display=isAdmin()?'flex':'none';
+}
+function showLogin(){ $v('authGate').classList.remove('hidden'); $v('userPill').style.display='none'; const b=$v('bAdmin'); if(b) b.style.display='none'; }
+window.v7Login=async()=>{
+  const msg=$v('v7LoginMsg'); msg.style.display='none';
+  try{ await signInWithEmailAndPassword(auth,$v('v7Email').value.trim(),$v('v7Senha').value); }
+  catch(e){ msg.style.display='block'; msg.textContent = e.code==='auth/invalid-credential'?'E-mail ou senha incorretos.':e.message; }
+};
+window.v7Logout=async()=>{ await signOut(auth); location.reload(); };
+onAuthStateChanged(auth, async u=>{
+  if(!u){ showLogin(); return; }
+  v7User=u; v7Profile=await loadProfile(u); showLogged(); auditV7('login','Usuário entrou no sistema'); startRealtime();
+});
+function startRealtime(){
+  onSnapshot(query(collection(db,'solicitacoes_acesso'),orderBy('createdAt','desc')),s=>{v7Requests=s.docs.map(d=>({id:d.id,...d.data()})); renderRequests();});
+  onSnapshot(query(collection(db,'visitas'),orderBy('createdAt','desc')),s=>{v7Visits=s.docs.map(d=>({id:d.id,...d.data()}));});
+  onSnapshot(query(collection(db,'auditoria'),orderBy('createdAt','desc')),s=>{v7Audits=s.docs.map(d=>({id:d.id,...d.data()})); renderAudit();});
+}
+window.closeV7Modal=id=>$v(id).classList.remove('open');
+window.openRequestAccess=()=>{$v('v7RequestModal').classList.add('open'); $v('reqEmail').value=$v('v7Email').value||'';};
+window.sendAccessRequest=async()=>{
+  try{ const data={nome:$v('reqNome').value,re:$v('reqRe').value,graduacao:$v('reqGrad').value,email:$v('reqEmail').value,telefone:$v('reqTel').value,status:'Pendente',createdAt:serverTimestamp()}; if(!data.email) throw Error('Informe o e-mail.'); await addDoc(collection(db,'solicitacoes_acesso'),data); $v('reqMsg').innerHTML='<span style="color:#4ade80">Solicitação enviada. O administrador verá no painel ADMIN.</span>'; }catch(e){$v('reqMsg').innerHTML='<span style="color:#ef4444">'+e.message+'</span>'}
+};
+window.openAdminPanel=()=>{ if(!isAdmin()) return alert('Acesso restrito ao administrador.'); $v('admNome').value=v7Profile.nome||''; $v('admRe').value=v7Profile.re||''; $v('admGrad').value=v7Profile.graduacao||''; $v('admPerfil').value='Administrador'; $v('v7AdminModal').classList.add('open'); renderRequests(); renderAudit(); };
+window.saveMyAdminProfile=async()=>{
+  if(!v7User) return; const data={nome:$v('admNome').value,re:$v('admRe').value,graduacao:$v('admGrad').value,email:v7User.email,perfil:'Administrador',companhia:APP_INFO.companhia,status:'Ativo',updatedAt:serverTimestamp()}; await setDoc(doc(db,'usuarios',v7User.uid),data,{merge:true}); await setDoc(doc(db,'usuarios',emailKey(v7User.email)),{...data,uid:v7User.uid},{merge:true}); v7Profile=data; showLogged(); auditV7('perfil_admin_salvo','Administrador confirmou perfil'); alert('Perfil de Administrador salvo.'); };
+window.approveReq=async(id)=>{ const r=v7Requests.find(x=>x.id===id); if(!r)return; const data={nome:r.nome,email:r.email,re:r.re,graduacao:r.graduacao,telefone:r.telefone,perfil:'Patrulheiro',status:'Ativo',companhia:APP_INFO.companhia,approvedBy:v7User.email,approvedAt:serverTimestamp()}; await setDoc(doc(db,'usuarios',emailKey(r.email)),data,{merge:true}); await setDoc(doc(db,'solicitacoes_acesso',id),{status:'Aprovado',approvedBy:v7User.email,approvedAt:serverTimestamp()},{merge:true}); auditV7('acesso_aprovado',r.email); renderRequests(); };
+window.denyReq=async(id)=>{ const r=v7Requests.find(x=>x.id===id); await setDoc(doc(db,'solicitacoes_acesso',id),{status:'Negado',deniedBy:v7User.email,deniedAt:serverTimestamp()},{merge:true}); auditV7('acesso_negado',r?.email||id); renderRequests(); };
+function renderRequests(){ const el=$v('v7Requests'); if(!el) return; const pend=v7Requests.filter(r=>r.status==='Pendente'); el.innerHTML=pend.length?pend.map(r=>`<div class="v7-card"><b>${r.nome||r.email}</b><div class="v7-small">${r.graduacao||''} · RE ${r.re||''}<br>${r.email||''} · ${r.telefone||''}</div><button class="btn-primary" onclick="approveReq('${r.id}')">Aprovar</button><button class="btn-secondary" onclick="denyReq('${r.id}')">Negar</button></div>`).join(''):'<div class="v7-card v7-small">Nenhuma solicitação pendente.</div>'; }
+function renderAudit(){ const el=$v('v7Audit'); if(!el)return; el.innerHTML=v7Audits.slice(0,20).map(a=>`<div class="v7-card"><b>${a.acao||''}</b><div class="v7-small">${a.detalhe||''}<br>${a.usuario||''}</div></div>`).join('')||'<div class="v7-card v7-small">Sem auditoria.</div>'; }
+window.openVisitModal=()=>{
+  const sel=$v('v7VisitProp'); const arr=[...(window.PROPS||[])]; sel.innerHTML=arr.map((p,i)=>`<option value="${i}">${p.nm}</option>`).join(''); $v('v7VisitEquipe').value=v7Profile?.nome||v7User?.email||''; $v('v7VisitModal').classList.add('open');
+};
+window.saveV7Visit=async()=>{
+  try{ const idx=parseInt($v('v7VisitProp').value); const p=(window.PROPS||[])[idx]; if(!p) throw Error('Selecione a propriedade.'); const data={propriedade:p.nm,lat:p.lat,lng:p.lng,quadrante:p.q,equipe:$v('v7VisitEquipe').value,texto:$v('v7VisitTexto').value,usuario:v7User.email,createdAt:serverTimestamp(),maps:p.gmaps}; await addDoc(collection(db,'visitas'),data); await auditV7('visita_registrada',p.nm); $v('v7VisitMsg').innerHTML='<span style="color:#4ade80">Visita registrada com sucesso.</span>'; $v('v7VisitTexto').value=''; }catch(e){$v('v7VisitMsg').innerHTML='<span style="color:#ef4444">'+e.message+'</span>'}
+};
+const oldSalvar=window.salvar;
+window.salvar=async function(){
+  const nm=document.getElementById('aNome').value.trim(); const lat=parseFloat(document.getElementById('aLat').value); const lng=parseFloat(document.getElementById('aLng').value);
+  oldSalvar();
+  if(v7User && nm && !isNaN(lat) && !isNaN(lng)){ try{ await addDoc(collection(db,'propriedades_cadastradas'),{nome:nm,tipo:document.getElementById('aTipo').value,endereco:document.getElementById('aEnd').value,telefone:document.getElementById('aTel').value,lat,lng,maps:`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`,usuario:v7User.email,createdAt:serverTimestamp()}); await auditV7('propriedade_cadastrada',nm); }catch(e){} }
+};
+window.exportV7FarmsCSV=()=>{ const arr=[...(window.PROPS||[]),...((window.userPts||[]).map(p=>({nm:p.nm,tp:p.tp,lat:p.lat,lng:p.lng,end:p.end,ph:p.ph,q:''})))]; const rows=[['nome','tipo','telefone','endereco','lat','lng','quadrante','maps']].concat(arr.map(p=>[p.nm,p.tp,p.ph,p.end,p.lat,p.lng,p.q,`https://www.google.com/maps?q=${p.lat},${p.lng}`])); downloadCSV('sisrural-fazendas.csv',rows); };
+window.exportV7VisitsCSV=()=>{ const rows=[['propriedade','quadrante','equipe','texto','usuario','maps']].concat(v7Visits.map(v=>[v.propriedade,v.quadrante,v.equipe,v.texto,v.usuario,v.maps])); downloadCSV('sisrural-visitas.csv',rows); };
+function downloadCSV(name,rows){ const csv=rows.map(r=>r.map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(';')).join('\n'); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); a.download=name; a.click(); }
 </script>
 
 <script>
