@@ -12,11 +12,11 @@ export const firebaseConfig = {
 };
 
 // Primeiro administrador do sistema. Use o mesmo e-mail que você vai criar no Firebase Authentication.
-export const ADMIN_EMAIL = "subtenenteesargento@gmail.com";
+export const ADMIN_EMAIL = "ferpozzer@gmail.com";
 
 export const APP_INFO = {
   companhia: "2ª Companhia PM",
   batalhao: "24º BPM/I",
   municipioBase: "Casa Branca/SP",
-  versao: "6.0-base-firebase"
+  versao: "6.2-visual-v5-firebase"
 };
