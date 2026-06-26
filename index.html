@@ -214,10 +214,20 @@ html,body{
     <label class="field-lbl">E-MAIL</label><input class="field-inp" id="v7Email" type="email" placeholder="seuemail@..." autocomplete="username">
     <label class="field-lbl">SENHA</label><input class="field-inp" id="v7Senha" type="password" placeholder="Senha" autocomplete="current-password">
     <div class="btn-primary" onclick="v7Login()">Entrar</div>
-    <div class="btn-secondary" onclick="openRequestAccess()">Solicitar acesso</div>
+    <button type="button" class="btn-secondary" id="btnSolicitarAcesso" onclick="openRequestAccess()" style="width:100%;cursor:pointer;pointer-events:auto">Solicitar acesso</button>
     <div id="v7LoginMsg" class="err"></div>
   </div>
 </div>
+<script>
+// Fallback imediato: garante que o botão Solicitar acesso sempre abra o formulário.
+window.openRequestAccess = window.openRequestAccess || function(){
+  const m=document.getElementById('v7RequestModal');
+  const email=document.getElementById('v7Email')?.value || '';
+  if(document.getElementById('reqEmail')) document.getElementById('reqEmail').value=email;
+  if(m) m.classList.add('open');
+};
+</script>
+
 <div id="userPill"><b id="v7UserEmail">--</b><br><span id="v7UserPerfil">--</span> · <a onclick="v7Logout()">Sair</a></div>
 
 
@@ -844,7 +854,27 @@ function startRealtime(){
 window.closeV7Modal=id=>$v(id).classList.remove('open');
 window.openRequestAccess=()=>{$v('v7RequestModal').classList.add('open'); $v('reqEmail').value=$v('v7Email').value||'';};
 window.sendAccessRequest=async()=>{
-  try{ const data={nome:$v('reqNome').value,re:$v('reqRe').value,graduacao:$v('reqGrad').value,email:$v('reqEmail').value,telefone:$v('reqTel').value,status:'Pendente',createdAt:serverTimestamp()}; if(!data.email) throw Error('Informe o e-mail.'); await addDoc(collection(db,'solicitacoes_acesso'),data); $v('reqMsg').innerHTML='<span style="color:#4ade80">Solicitação enviada. O administrador verá no painel ADMIN.</span>'; }catch(e){$v('reqMsg').innerHTML='<span style="color:#ef4444">'+e.message+'</span>'}
+  const btnMsg=$v('reqMsg');
+  try{
+    const data={
+      nome:$v('reqNome').value.trim(),
+      re:$v('reqRe').value.trim(),
+      graduacao:$v('reqGrad').value.trim(),
+      email:$v('reqEmail').value.trim().toLowerCase(),
+      telefone:$v('reqTel').value.trim(),
+      status:'Pendente',
+      createdAt:serverTimestamp()
+    };
+    if(!data.nome) throw Error('Informe o nome.');
+    if(!data.re) throw Error('Informe o RE.');
+    if(!data.email) throw Error('Informe o e-mail.');
+    btnMsg.innerHTML='<span style="color:#facc15">Enviando solicitação...</span>';
+    await addDoc(collection(db,'solicitacoes_acesso'),data);
+    btnMsg.innerHTML='<span style="color:#4ade80">Solicitação enviada. O administrador verá no painel ADMIN.</span>';
+    setTimeout(()=>closeV7Modal('v7RequestModal'),1600);
+  }catch(e){
+    btnMsg.innerHTML='<span style="color:#ef4444">'+(e.code==='permission-denied'?'Permissão negada no Firebase. Atualize as regras do Firestore conforme orientação.':e.message)+'</span>';
+  }
 };
 window.openAdminPanel=()=>{ if(!isAdmin()) return alert('Acesso restrito ao administrador.'); $v('admNome').value=v7Profile.nome||''; $v('admRe').value=v7Profile.re||''; $v('admGrad').value=v7Profile.graduacao||''; $v('admPerfil').value='Administrador'; $v('v7AdminModal').classList.add('open'); renderRequests(); renderAudit(); };
 window.saveMyAdminProfile=async()=>{
