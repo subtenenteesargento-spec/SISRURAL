@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>SISRURAL V7 – Casa Branca/SP</title>
+<title>SISRURAL V7.4.4 – Visitas Firestore</title>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -183,7 +183,7 @@ html,body{
 .gps-btn{display:block;width:100%;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:10px;text-align:center;cursor:pointer;font-size:11px;color:var(--gr);font-family:'JetBrains Mono',monospace;font-weight:700;letter-spacing:.5px;margin-top:12px;-webkit-user-select:none;user-select:none}
 .msg-box{display:none;font-size:11px;font-family:'JetBrains Mono',monospace;padding:8px 12px;border-radius:6px;text-align:center;margin-top:10px}
 
-/* ── SISRURAL V7: Firebase/Login/Admin */
+/* ── SISRURAL V7.4: Firebase/Login/Admin */
 #authGate{position:fixed;inset:0;z-index:5000;background:radial-gradient(circle at top,#13243b,#070c17 65%);display:flex;align-items:center;justify-content:center;padding:18px}
 #authGate.hidden{display:none}
 .authBox{width:100%;max-width:390px;background:var(--sf);border:1px solid var(--bd);border-radius:18px;padding:22px;box-shadow:0 20px 80px rgba(0,0,0,.55)}
@@ -192,7 +192,7 @@ html,body{
 #userPill{position:fixed;right:56px;top:7px;z-index:800;background:rgba(7,12,23,.96);border:1px solid var(--bd);border-radius:10px;padding:5px 9px;font-size:10px;text-align:right;font-family:'JetBrains Mono',monospace;line-height:1.2;display:none}
 #userPill b{color:var(--tx)}#userPill span{color:var(--mu)}#userPill a{color:#93c5fd;cursor:pointer;text-decoration:none}
 #bAdmin{display:none;color:var(--ac)}
-.v7-modal{display:none;position:fixed;inset:0;z-index:4900;background:rgba(0,0,0,.78);align-items:center;justify-content:center;padding:14px}
+.v7-modal{display:none;position:fixed;inset:0;z-index:7000;background:rgba(0,0,0,.78);align-items:center;justify-content:center;padding:14px}
 .v7-modal.open{display:flex}.v7-box{width:100%;max-width:760px;max-height:92vh;overflow:auto;background:var(--sf);border:1px solid var(--bd);border-radius:18px;padding:16px}.v7-box h2{font-family:'Rajdhani',sans-serif;color:var(--ac);font-size:24px;margin-bottom:8px}.v7-close{float:right;cursor:pointer;color:var(--mu);font-size:24px}
 .v7-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}.v7-card{background:var(--s2);border:1px solid var(--bd);border-radius:12px;padding:10px;margin:8px 0}.v7-small{font-size:11px;color:var(--mu);line-height:1.4}.v7-pill{display:inline-block;border:1px solid var(--bd);border-radius:999px;padding:2px 7px;font-size:10px;color:var(--mu);margin:2px}
 
@@ -209,12 +209,12 @@ html,body{
 <body>
 <div id="authGate">
   <div class="authBox">
-    <h2>🛡️ SISRURAL V7</h2>
+    <h2>🛡️ SISRURAL V7.4</h2>
     <p>2ª Companhia PM · acesso restrito</p>
     <label class="field-lbl">E-MAIL</label><input class="field-inp" id="v7Email" type="email" placeholder="seuemail@..." autocomplete="username">
     <label class="field-lbl">SENHA</label><input class="field-inp" id="v7Senha" type="password" placeholder="Senha" autocomplete="current-password">
     <div class="btn-primary" onclick="v7Login()">Entrar</div>
-    <button type="button" class="btn-secondary" id="btnSolicitarAcesso" onclick="openRequestAccess()" style="width:100%;cursor:pointer;pointer-events:auto">Solicitar acesso</button>
+    <button type="button" class="btn-secondary" id="btnSolicitarAcesso" onclick="openRequestAccess()" style="width:100%;cursor:pointer;pointer-events:auto;opacity:1;background:rgba(255,255,255,.09);color:#93c5fd">Solicitar acesso</button>
     <div id="v7LoginMsg" class="err"></div>
   </div>
 </div>
@@ -226,6 +226,15 @@ window.openRequestAccess = window.openRequestAccess || function(){
   if(document.getElementById('reqEmail')) document.getElementById('reqEmail').value=email;
   if(m) m.classList.add('open');
 };
+
+// Reforço: se algum navegador bloquear o onclick inline, este evento mantém o botão funcional.
+document.addEventListener('DOMContentLoaded',()=>{
+  const btn=document.getElementById('btnSolicitarAcesso');
+  if(btn){
+    btn.disabled=false;
+    btn.addEventListener('click',(ev)=>{ ev.preventDefault(); window.openRequestAccess(); });
+  }
+});
 </script>
 
 <div id="userPill"><b id="v7UserEmail">--</b><br><span id="v7UserPerfil">--</span> · <a onclick="v7Logout()">Sair</a></div>
@@ -393,7 +402,7 @@ window.openRequestAccess = window.openRequestAccess || function(){
 
 
 <!-- MODAIS V7 FIREBASE -->
-<div class="v7-modal" id="v7VisitModal"><div class="v7-box"><span class="v7-close" onclick="closeV7Modal('v7VisitModal')">×</span><h2>📋 Registrar visita rural</h2><div class="v7-small">Escolha a propriedade visitada e registre o resumo. Esse registro alimenta o relatório de visitas.</div><label class="field-lbl">PROPRIEDADE</label><select class="field-inp" id="v7VisitProp"></select><label class="field-lbl">EQUIPE</label><input class="field-inp" id="v7VisitEquipe" placeholder="Ex: Sgt Pozzer, Cb Silva"><label class="field-lbl">RESUMO DA VISITA</label><textarea class="field-inp" id="v7VisitTexto" style="min-height:90px" placeholder="Contato realizado, orientações, novidades, pendências..."></textarea><div class="btn-primary" onclick="saveV7Visit()">Salvar visita</div><div id="v7VisitMsg" class="v7-small"></div></div></div>
+<div class="v7-modal" id="v7VisitModal"><div class="v7-box"><span class="v7-close" onclick="closeV7Modal('v7VisitModal')">×</span><h2>📋 Registrar visita</h2><div class="v7-small" id="v7VisitInfo">Selecione a propriedade. O sistema preencherá data, hora, policial e GPS automaticamente.</div><input type="hidden" id="v7VisitKey"><label class="field-lbl">PROPRIEDADE</label><select class="field-inp" id="v7VisitProp" onchange="selectVisitPropFromList()"></select><label class="field-lbl">OBSERVAÇÃO</label><textarea class="field-inp" id="v7VisitTexto" style="min-height:100px" placeholder="Ex: Visita realizada. Proprietário orientado. Tudo em ordem."></textarea><div class="btn-primary" onclick="saveV7Visit()">Salvar visita</div><div id="v7VisitMsg" class="v7-small"></div></div></div>
 <div class="v7-modal" id="v7RequestModal"><div class="v7-box"><span class="v7-close" onclick="closeV7Modal('v7RequestModal')">×</span><h2>👮 Solicitar acesso</h2><div class="v7-grid"><div><label class="field-lbl">NOME</label><input class="field-inp" id="reqNome"></div><div><label class="field-lbl">RE</label><input class="field-inp" id="reqRe"></div><div><label class="field-lbl">GRADUAÇÃO</label><input class="field-inp" id="reqGrad"></div><div><label class="field-lbl">E-MAIL</label><input class="field-inp" id="reqEmail" type="email"></div><div><label class="field-lbl">TELEFONE</label><input class="field-inp" id="reqTel"></div></div><div class="btn-primary" onclick="sendAccessRequest()">Enviar solicitação</div><div id="reqMsg" class="v7-small"></div></div></div>
 <div class="v7-modal" id="v7AdminModal"><div class="v7-box"><span class="v7-close" onclick="closeV7Modal('v7AdminModal')">×</span><h2>⚙️ Administração SISRURAL</h2><div class="v7-small">Você é Administrador. Aqui ficam usuários, solicitações, auditoria e relatórios.</div><h3 style="color:var(--ac);margin-top:12px">Meu perfil</h3><div class="v7-grid"><div><label class="field-lbl">NOME</label><input class="field-inp" id="admNome"></div><div><label class="field-lbl">RE</label><input class="field-inp" id="admRe"></div><div><label class="field-lbl">GRADUAÇÃO</label><input class="field-inp" id="admGrad"></div><div><label class="field-lbl">PERFIL</label><select class="field-inp" id="admPerfil"><option>Administrador</option><option>Comandante</option><option>Supervisor</option><option>Patrulheiro</option><option>Consulta</option></select></div></div><div class="btn-primary" onclick="saveMyAdminProfile()">Salvar meu perfil</div><h3 style="color:var(--ac);margin-top:14px">Solicitações pendentes</h3><div id="v7Requests"></div><h3 style="color:var(--ac);margin-top:14px">Relatórios</h3><div class="v7-card"><button class="btn-primary" onclick="exportV7FarmsCSV()">Exportar fazendas cadastradas CSV</button><button class="btn-secondary" onclick="exportV7VisitsCSV()">Exportar visitas CSV</button><button class="btn-secondary" onclick="window.print()">Imprimir / PDF</button></div><h3 style="color:var(--ac);margin-top:14px">Auditoria recente</h3><div id="v7Audit"></div></div></div>
 
@@ -569,7 +578,7 @@ PROPS.forEach((p,i)=>{
     html:`<div style="background:rgba(7,12,23,.93);border:2px solid ${col};border-radius:50% 50% 50% 0;transform:rotate(-45deg);width:${sz}px;height:${sz}px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,.6)"><span style="transform:rotate(45deg);font-size:${big?14:11}px">${p.ico}</span></div>`,
     iconAnchor:[sz/2,sz]})});
   const dtag=p.dirt?'🟫 terra':'🛣 asfalto';
-  mk.bindPopup(`<div class="pt" style="color:${col}">${p.ico} ${p.nm}</div><div class="ps">Q${p.q}·${['ALFA','BRAVO','CHARLIE','DELTA'][p.q-1]} · ${p.tp}</div>${p.r?`<div class="pop-rating">${'★'.repeat(Math.floor(p.r))} ${p.r} (${p.rc})</div>`:''}<div class="pr"><span>Endereço</span><span>${p.end}</span></div><div class="pr"><span>Acesso</span><span>${dtag}</span></div>${p.ph?`<div class="pr"><span>Tel</span><span><a href="tel:${p.ph}" style="color:var(--ac)">${p.ph}</a></span></div>`:''}<div class="pr"><span>GPS</span><span>${Math.abs(p.lat).toFixed(4)}°S ${Math.abs(p.lng).toFixed(4)}°W</span></div><div class="pr"><span>Navegar</span><span><a href="${p.gmaps}" target="_blank" style="color:#4ade80;font-weight:700">🧭 Abrir Maps ↗</a></span></div>`,{maxWidth:280});
+  mk.bindPopup(`<div class="pt" style="color:${col}">${p.ico} ${p.nm}</div><div class="ps">Q${p.q}·${['ALFA','BRAVO','CHARLIE','DELTA'][p.q-1]} · ${p.tp}</div>${p.r?`<div class="pop-rating">${'★'.repeat(Math.floor(p.r))} ${p.r} (${p.rc})</div>`:''}<div class="pr"><span>Endereço</span><span>${p.end}</span></div><div class="pr"><span>Acesso</span><span>${dtag}</span></div>${p.ph?`<div class="pr"><span>Tel</span><span><a href="tel:${p.ph}" style="color:var(--ac)">${p.ph}</a></span></div>`:''}<div class="pr"><span>GPS</span><span>${Math.abs(p.lat).toFixed(4)}°S ${Math.abs(p.lng).toFixed(4)}°W</span></div><div class="pr"><span>Navegar</span><span><a href="${p.gmaps}" target="_blank" style="color:#4ade80;font-weight:700">🧭 Abrir Maps ↗</a></span></div><div style="margin-top:8px"><button onclick="openVisitForBase(${i})" style="width:100%;background:#ffd700;color:#07111f;border:0;border-radius:8px;padding:8px;font-weight:800;cursor:pointer">📋 Registrar visita</button></div>`,{maxWidth:290});
   propsG.addLayer(mk); propMks.push(mk);
 });
 
@@ -621,7 +630,7 @@ function renderCloudPt(p,id){
   const mk=L.marker([lat,lng],{icon:L.divIcon({className:'',
     html:`<div style="position:relative;display:inline-block"><div style="background:rgba(7,12,23,.96);border:2px solid ${col};border-radius:9px;padding:3px 8px;display:flex;align-items:center;gap:4px;box-shadow:0 0 12px ${col}44;white-space:nowrap"><span style="font-size:13px">☁️</span><span style="font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;color:${col}">${nm}</span></div><div style="position:absolute;bottom:-5px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid ${col}"></div></div>`,
     iconAnchor:[55,35]})});
-  mk.bindPopup(`<div class="pt" style="color:${col}">☁️ ${nm}</div><div class="ps">CADASTRO SINCRONIZADO · ${tp}</div>${q?`<div class="pr"><span>Quadrante</span><span>Q${q}</span></div>`:''}${end?`<div class="pr"><span>End.</span><span>${end}</span></div>`:''}${ph?`<div class="pr"><span>Tel</span><span><a href="tel:${ph}" style="color:var(--ac)">${ph}</a></span></div>`:''}<div class="pr"><span>GPS</span><span>${Math.abs(lat).toFixed(5)}°S ${Math.abs(lng).toFixed(5)}°W</span></div><div class="pr"><span>Navegar</span><span><a href="${maps}" target="_blank" style="color:#4ade80;font-weight:700">🧭 Abrir Maps ↗</a></span></div><div class="pr"><span>Status</span><span style="color:#4ade80">Sincronizado</span></div>`,{maxWidth:280});
+  mk.bindPopup(`<div class="pt" style="color:${col}">☁️ ${nm}</div><div class="ps">CADASTRO SINCRONIZADO · ${tp}</div>${q?`<div class="pr"><span>Quadrante</span><span>Q${q}</span></div>`:''}${end?`<div class="pr"><span>End.</span><span>${end}</span></div>`:''}${ph?`<div class="pr"><span>Tel</span><span><a href="tel:${ph}" style="color:var(--ac)">${ph}</a></span></div>`:''}<div class="pr"><span>GPS</span><span>${Math.abs(lat).toFixed(5)}°S ${Math.abs(lng).toFixed(5)}°W</span></div>${p.ultimaVisitaTexto?`<div class="pr"><span>Última visita</span><span style="color:#ffd700">${p.ultimaVisitaTexto}</span></div>`:''}<div class="pr"><span>Navegar</span><span><a href="${maps}" target="_blank" style="color:#4ade80;font-weight:700">🧭 Abrir Maps ↗</a></span></div><div class="pr"><span>Status</span><span style="color:#4ade80">Sincronizado</span></div><div style="margin-top:8px"><button onclick="openVisitForCloud('${id}')" style="width:100%;background:#ffd700;color:#07111f;border:0;border-radius:8px;padding:8px;font-weight:800;cursor:pointer">📋 Registrar visita</button></div>`,{maxWidth:290});
   cloudPtsG.addLayer(mk);
 }
 window.renderCloudPt=renderCloudPt;
@@ -840,7 +849,7 @@ const ADMIN = ADMIN_EMAIL || 'ferpozzer@gmail.com';
 const $v=id=>document.getElementById(id);
 const emailKey = email => String(email||'').toLowerCase().replace(/[^a-z0-9]/g,'_');
 function isAdmin(){ return v7User && (String(v7User.email).toLowerCase()===String(ADMIN).toLowerCase() || ['Administrador','Comandante'].includes(v7Profile?.perfil)); }
-async function auditV7(acao,detalhe){ try{ await addDoc(collection(db,'auditoria'),{acao,detalhe,usuario:v7User?.email||'',createdAt:serverTimestamp(),app:'SISRURAL V7'}); }catch(e){} }
+async function auditV7(acao,detalhe){ try{ await addDoc(collection(db,'auditoria'),{acao,detalhe,usuario:v7User?.email||'',createdAt:serverTimestamp(),app:'SISRURAL V7.4'}); }catch(e){} }
 async function loadProfile(u){
   const refUid=doc(db,'usuarios',u.uid);
   const refEmail=doc(db,'usuarios',emailKey(u.email));
@@ -914,11 +923,62 @@ window.approveReq=async(id)=>{ const r=v7Requests.find(x=>x.id===id); if(!r)retu
 window.denyReq=async(id)=>{ const r=v7Requests.find(x=>x.id===id); await setDoc(doc(db,'solicitacoes_acesso',id),{status:'Negado',deniedBy:v7User.email,deniedAt:serverTimestamp()},{merge:true}); auditV7('acesso_negado',r?.email||id); renderRequests(); };
 function renderRequests(){ const el=$v('v7Requests'); if(!el) return; const pend=v7Requests.filter(r=>r.status==='Pendente'); el.innerHTML=pend.length?pend.map(r=>`<div class="v7-card"><b>${r.nome||r.email}</b><div class="v7-small">${r.graduacao||''} · RE ${r.re||''}<br>${r.email||''} · ${r.telefone||''}</div><button class="btn-primary" onclick="approveReq('${r.id}')">Aprovar</button><button class="btn-secondary" onclick="denyReq('${r.id}')">Negar</button></div>`).join(''):'<div class="v7-card v7-small">Nenhuma solicitação pendente.</div>'; }
 function renderAudit(){ const el=$v('v7Audit'); if(!el)return; el.innerHTML=v7Audits.slice(0,20).map(a=>`<div class="v7-card"><b>${a.acao||''}</b><div class="v7-small">${a.detalhe||''}<br>${a.usuario||''}</div></div>`).join('')||'<div class="v7-card v7-small">Sem auditoria.</div>'; }
+function allVisitProps(){
+  const base=(window.PROPS||[]).map((p,i)=>({key:'base_'+i,id:'base_'+i,baseIndex:i,source:'base',nome:p.nm,municipio:'Casa Branca',quadrante:p.q,lat:p.lat,lng:p.lng,maps:p.gmaps||`https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}&travelmode=driving`}));
+  const cloud=(v7CloudProps||[]).map(p=>({key:'cloud_'+p.id,id:p.id,source:'cloud',nome:p.nome||p.nm||'Propriedade cadastrada',municipio:p.municipio||'Casa Branca',quadrante:p.quadrante||p.q||classQ(parseFloat(p.lat),parseFloat(p.lng)),lat:parseFloat(p.lat),lng:parseFloat(p.lng),maps:p.maps||`https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}&travelmode=driving`}));
+  return base.concat(cloud);
+}
+function fillVisitSelect(selectedKey=''){
+  const sel=$v('v7VisitProp'); const arr=allVisitProps();
+  sel.innerHTML=arr.map(p=>`<option value="${p.key}" ${p.key===selectedKey?'selected':''}>${p.nome}</option>`).join('');
+  if(!selectedKey && arr[0]) $v('v7VisitKey').value=arr[0].key; else $v('v7VisitKey').value=selectedKey;
+  updateVisitInfo();
+}
+function updateVisitInfo(){
+  const key=$v('v7VisitKey').value || $v('v7VisitProp').value;
+  const p=allVisitProps().find(x=>x.key===key);
+  $v('v7VisitInfo').innerHTML=p?`<b>${p.nome}</b><br>${p.municipio||'Casa Branca'} · Quadrante ${p.quadrante||'-'}<br>Data, hora, policial e GPS serão preenchidos automaticamente.`:'Selecione a propriedade.';
+}
+window.selectVisitPropFromList=()=>{ $v('v7VisitKey').value=$v('v7VisitProp').value; updateVisitInfo(); };
 window.openVisitModal=()=>{
-  const sel=$v('v7VisitProp'); const arr=[...(window.PROPS||[])]; sel.innerHTML=arr.map((p,i)=>`<option value="${i}">${p.nm}</option>`).join(''); $v('v7VisitEquipe').value=v7Profile?.nome||v7User?.email||''; $v('v7VisitModal').classList.add('open');
+  if(!v7User) return alert('Faça login para registrar visita.');
+  $v('v7VisitTexto').value=''; $v('v7VisitMsg').innerHTML=''; fillVisitSelect(''); $v('v7VisitModal').classList.add('open');
 };
+window.openVisitForBase=(idx)=>{ if(!v7User) return alert('Faça login para registrar visita.'); map.closePopup(); $v('v7VisitTexto').value=''; $v('v7VisitMsg').innerHTML=''; fillVisitSelect('base_'+idx); $v('v7VisitModal').classList.add('open'); };
+window.openVisitForCloud=(id)=>{ if(!v7User) return alert('Faça login para registrar visita.'); map.closePopup(); $v('v7VisitTexto').value=''; $v('v7VisitMsg').innerHTML=''; fillVisitSelect('cloud_'+id); $v('v7VisitModal').classList.add('open'); };
+function getGpsOnce(){
+  return new Promise(resolve=>{
+    if(!navigator.geolocation) return resolve(null);
+    navigator.geolocation.getCurrentPosition(pos=>resolve({lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy}),()=>resolve(null),{enableHighAccuracy:true,timeout:10000,maximumAge:60000});
+  });
+}
 window.saveV7Visit=async()=>{
-  try{ const idx=parseInt($v('v7VisitProp').value); const p=(window.PROPS||[])[idx]; if(!p) throw Error('Selecione a propriedade.'); const data={propriedade:p.nm,lat:p.lat,lng:p.lng,quadrante:p.q,equipe:$v('v7VisitEquipe').value,texto:$v('v7VisitTexto').value,usuario:v7User.email,createdAt:serverTimestamp(),maps:p.gmaps}; await addDoc(collection(db,'visitas'),data); await auditV7('visita_registrada',p.nm); $v('v7VisitMsg').innerHTML='<span style="color:#4ade80">Visita registrada com sucesso.</span>'; $v('v7VisitTexto').value=''; }catch(e){$v('v7VisitMsg').innerHTML='<span style="color:#ef4444">'+e.message+'</span>'}
+  const msg=$v('v7VisitMsg');
+  try{
+    if(!v7User) throw Error('Faça login para registrar visita.');
+    const key=$v('v7VisitKey').value || $v('v7VisitProp').value;
+    const p=allVisitProps().find(x=>x.key===key);
+    if(!p) throw Error('Selecione a propriedade.');
+    const observacao=$v('v7VisitTexto').value.trim();
+    msg.innerHTML='<span style="color:#facc15">Salvando visita...</span>';
+    const gps=await getGpsOnce();
+    const now=new Date();
+    const data={
+      propriedadeId:p.id, propriedade:p.nome, origem:p.source, municipio:p.municipio||'Casa Branca', quadrante:p.quadrante||'',
+      lat:p.lat, lng:p.lng, gpsVisita:gps, observacao, texto:observacao, usuario:v7User.email,
+      usuarioNome:v7Profile?.nome||v7User.email, re:v7Profile?.re||'', graduacao:v7Profile?.graduacao||'',
+      dataLocal:now.toLocaleDateString('pt-BR'), horaLocal:now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
+      createdAt:serverTimestamp(), maps:p.maps
+    };
+    await addDoc(collection(db,'visitas'),data);
+    if(p.source==='cloud'){
+      await setDoc(doc(db,'propriedades_cadastradas',p.id),{ultimaVisitaTexto:`${data.dataLocal} ${data.horaLocal} · ${data.usuarioNome}`,ultimaVisitaObs:observacao,ultimaVisitaPor:v7User.email,ultimaVisitaEm:serverTimestamp()},{merge:true});
+    }
+    await auditV7('visita_registrada',p.nome);
+    msg.innerHTML='<span style="color:#4ade80">✅ Visita registrada e sincronizada.</span>';
+    $v('v7VisitTexto').value='';
+    setTimeout(()=>closeV7Modal('v7VisitModal'),1200);
+  }catch(e){ msg.innerHTML='<span style="color:#ef4444">'+e.message+'</span>'; }
 };
 function pendingProps(){ try{return JSON.parse(localStorage.getItem(PENDING_PROPS_KEY)||'[]')}catch(e){return[]} }
 function savePendingProps(arr){ localStorage.setItem(PENDING_PROPS_KEY,JSON.stringify(arr)); }
@@ -985,7 +1045,7 @@ window.salvar=async function(){
   setTimeout(closeAdd,1600);
 };
 window.exportV7FarmsCSV=()=>{ const arr=[...(window.PROPS||[]),...(v7CloudProps.map(p=>({nm:p.nome,tp:p.tipo,lat:p.lat,lng:p.lng,end:p.endereco,ph:p.telefone,q:''}))),...((window.userPts||[]).map(p=>({nm:p.nm,tp:p.tp,lat:p.lat,lng:p.lng,end:p.end,ph:p.ph,q:''})))]; const rows=[['nome','tipo','telefone','endereco','lat','lng','quadrante','maps']].concat(arr.map(p=>[p.nm,p.tp,p.ph,p.end,p.lat,p.lng,p.q,`https://www.google.com/maps?q=${p.lat},${p.lng}`])); downloadCSV('sisrural-fazendas.csv',rows); };
-window.exportV7VisitsCSV=()=>{ const rows=[['propriedade','quadrante','equipe','texto','usuario','maps']].concat(v7Visits.map(v=>[v.propriedade,v.quadrante,v.equipe,v.texto,v.usuario,v.maps])); downloadCSV('sisrural-visitas.csv',rows); };
+window.exportV7VisitsCSV=()=>{ const rows=[['data','hora','propriedade','municipio','quadrante','observacao','usuario','nome','re','maps']].concat(v7Visits.map(v=>[v.dataLocal,v.horaLocal,v.propriedade,v.municipio,v.quadrante,v.observacao||v.texto,v.usuario,v.usuarioNome,v.re,v.maps])); downloadCSV('sisrural-visitas.csv',rows); };
 function downloadCSV(name,rows){ const csv=rows.map(r=>r.map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(';')).join('\n'); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); a.download=name; a.click(); }
 </script>
 
