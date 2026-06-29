@@ -592,6 +592,9 @@ L.polyline([[-21.562,-47.048],[-21.596,-47.008],[-21.645,-46.968]],{color:'#38bd
 
 // ── PONTOS PM (localStorage)
 const userPtsG=L.layerGroup().addTo(map);
+const cloudPtsG=L.layerGroup().addTo(map);
+window.userPtsG=userPtsG;
+window.cloudPtsG=cloudPtsG;
 let userPts=[]; window.userPts=userPts;
 try{const r=localStorage.getItem('sisrural_pm_v1');if(r)userPts=JSON.parse(r);}catch(e){} window.userPts=userPts;
 
@@ -605,6 +608,24 @@ function renderPt(p,i){
   mk.bindPopup(`<div class="pt" style="color:${col}">📌 ${p.nm}</div><div class="ps">PONTO PM · ${p.dt||''}</div>${p.tp?`<div class="pr"><span>Tipo</span><span>${p.tp}</span></div>`:''} ${p.end?`<div class="pr"><span>End.</span><span>${p.end}</span></div>`:''} ${p.ph?`<div class="pr"><span>Tel</span><span>${p.ph}</span></div>`:''}<div class="pr"><span>Acesso</span><span>${p.dirt?'🟫 Terra':'🛣 Asfalto'}</span></div><div class="pr"><span>GPS</span><span>${Math.abs(p.lat).toFixed(4)}°S ${Math.abs(p.lng).toFixed(4)}°W</span></div><div class="pr"><span>Navegar</span><span><a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}&travelmode=driving" target="_blank" style="color:#4ade80;font-weight:700">🧭 Abrir Maps ↗</a></span></div><div style="margin-top:6px;text-align:center"><span onclick="delPt(${i})" style="font-size:9px;color:#ef4444;cursor:pointer;border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:2px 8px;font-family:'JetBrains Mono',monospace">🗑 Remover</span></div>`,{maxWidth:270});
   userPtsG.addLayer(mk);
 }
+function renderCloudPt(p,id){
+  const col='#22d3ee';
+  const lat=parseFloat(p.lat), lng=parseFloat(p.lng);
+  if(isNaN(lat)||isNaN(lng)) return;
+  const nm=p.nm||p.nome||'Propriedade cadastrada';
+  const tp=p.tp||p.tipo||'Cadastro rural';
+  const end=p.end||p.endereco||'';
+  const ph=p.ph||p.telefone||'';
+  const maps=p.maps||`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+  const q=typeof classQ==='function'?classQ(lat,lng):'';
+  const mk=L.marker([lat,lng],{icon:L.divIcon({className:'',
+    html:`<div style="position:relative;display:inline-block"><div style="background:rgba(7,12,23,.96);border:2px solid ${col};border-radius:9px;padding:3px 8px;display:flex;align-items:center;gap:4px;box-shadow:0 0 12px ${col}44;white-space:nowrap"><span style="font-size:13px">☁️</span><span style="font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;color:${col}">${nm}</span></div><div style="position:absolute;bottom:-5px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid ${col}"></div></div>`,
+    iconAnchor:[55,35]})});
+  mk.bindPopup(`<div class="pt" style="color:${col}">☁️ ${nm}</div><div class="ps">CADASTRO SINCRONIZADO · ${tp}</div>${q?`<div class="pr"><span>Quadrante</span><span>Q${q}</span></div>`:''}${end?`<div class="pr"><span>End.</span><span>${end}</span></div>`:''}${ph?`<div class="pr"><span>Tel</span><span><a href="tel:${ph}" style="color:var(--ac)">${ph}</a></span></div>`:''}<div class="pr"><span>GPS</span><span>${Math.abs(lat).toFixed(5)}°S ${Math.abs(lng).toFixed(5)}°W</span></div><div class="pr"><span>Navegar</span><span><a href="${maps}" target="_blank" style="color:#4ade80;font-weight:700">🧭 Abrir Maps ↗</a></span></div><div class="pr"><span>Status</span><span style="color:#4ade80">Sincronizado</span></div>`,{maxWidth:280});
+  cloudPtsG.addLayer(mk);
+}
+window.renderCloudPt=renderCloudPt;
+window.clearCloudPts=()=>cloudPtsG.clearLayers();
 function delPt(i){userPts.splice(i,1);savePts();userPtsG.clearLayers();userPts.forEach((p,i)=>renderPt(p,i));map.closePopup();}
 userPts.forEach((p,i)=>renderPt(p,i));
 
@@ -619,7 +640,12 @@ function togSat(){
 function togLayer(k){
   lsh[k]=!lsh[k];
   const g={roads:roadsG,props:propsG,refs:refsG,dirt:dirtG,user:userPtsG}[k];
-  lsh[k]?g.addTo(map):g.remove();
+  if(k==='user'){
+    if(lsh[k]){ userPtsG.addTo(map); cloudPtsG.addTo(map); }
+    else{ userPtsG.remove(); cloudPtsG.remove(); }
+  } else {
+    lsh[k]?g.addTo(map):g.remove();
+  }
   const btn={roads:'bRoads',props:'bProps',refs:'bRef',dirt:'bDirt',user:'bUser'}[k];
   document.getElementById(btn).classList.toggle('on',lsh[k]);
 }
@@ -807,7 +833,9 @@ import { getFirestore, doc, getDoc, setDoc, collection, addDoc, onSnapshot, serv
 const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
-let v7User=null, v7Profile=null, v7Requests=[], v7Visits=[], v7Audits=[];
+let v7User=null, v7Profile=null, v7Requests=[], v7Visits=[], v7Audits=[], v7CloudProps=[];
+const PENDING_PROPS_KEY='sisrural_pending_props_v1';
+const MIGRATED_LOCAL_KEY='sisrural_local_props_migrated_v1';
 const ADMIN = ADMIN_EMAIL || 'ferpozzer@gmail.com';
 const $v=id=>document.getElementById(id);
 const emailKey = email => String(email||'').toLowerCase().replace(/[^a-z0-9]/g,'_');
@@ -850,6 +878,9 @@ function startRealtime(){
   onSnapshot(query(collection(db,'solicitacoes_acesso'),orderBy('createdAt','desc')),s=>{v7Requests=s.docs.map(d=>({id:d.id,...d.data()})); renderRequests();});
   onSnapshot(query(collection(db,'visitas'),orderBy('createdAt','desc')),s=>{v7Visits=s.docs.map(d=>({id:d.id,...d.data()}));});
   onSnapshot(query(collection(db,'auditoria'),orderBy('createdAt','desc')),s=>{v7Audits=s.docs.map(d=>({id:d.id,...d.data()})); renderAudit();});
+  onSnapshot(collection(db,'propriedades_cadastradas'),s=>{v7CloudProps=s.docs.map(d=>({id:d.id,...d.data()})); renderCloudProperties();});
+  syncPendingProperties();
+  migrateLocalPointsToCloudOnce();
 }
 window.closeV7Modal=id=>$v(id).classList.remove('open');
 window.openRequestAccess=()=>{$v('v7RequestModal').classList.add('open'); $v('reqEmail').value=$v('v7Email').value||'';};
@@ -889,13 +920,71 @@ window.openVisitModal=()=>{
 window.saveV7Visit=async()=>{
   try{ const idx=parseInt($v('v7VisitProp').value); const p=(window.PROPS||[])[idx]; if(!p) throw Error('Selecione a propriedade.'); const data={propriedade:p.nm,lat:p.lat,lng:p.lng,quadrante:p.q,equipe:$v('v7VisitEquipe').value,texto:$v('v7VisitTexto').value,usuario:v7User.email,createdAt:serverTimestamp(),maps:p.gmaps}; await addDoc(collection(db,'visitas'),data); await auditV7('visita_registrada',p.nm); $v('v7VisitMsg').innerHTML='<span style="color:#4ade80">Visita registrada com sucesso.</span>'; $v('v7VisitTexto').value=''; }catch(e){$v('v7VisitMsg').innerHTML='<span style="color:#ef4444">'+e.message+'</span>'}
 };
-const oldSalvar=window.salvar;
-window.salvar=async function(){
+function pendingProps(){ try{return JSON.parse(localStorage.getItem(PENDING_PROPS_KEY)||'[]')}catch(e){return[]} }
+function savePendingProps(arr){ localStorage.setItem(PENDING_PROPS_KEY,JSON.stringify(arr)); }
+function formProp(){
   const nm=document.getElementById('aNome').value.trim(); const lat=parseFloat(document.getElementById('aLat').value); const lng=parseFloat(document.getElementById('aLng').value);
-  oldSalvar();
-  if(v7User && nm && !isNaN(lat) && !isNaN(lng)){ try{ await addDoc(collection(db,'propriedades_cadastradas'),{nome:nm,tipo:document.getElementById('aTipo').value,endereco:document.getElementById('aEnd').value,telefone:document.getElementById('aTel').value,lat,lng,maps:`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`,usuario:v7User.email,createdAt:serverTimestamp()}); await auditV7('propriedade_cadastrada',nm); }catch(e){} }
+  return {nm, nome:nm, tp:document.getElementById('aTipo').value.trim(), tipo:document.getElementById('aTipo').value.trim(), lat, lng,
+    end:document.getElementById('aEnd').value.trim(), endereco:document.getElementById('aEnd').value.trim(), ph:document.getElementById('aTel').value.trim(), telefone:document.getElementById('aTel').value.trim(),
+    dirt:document.getElementById('aDirt').checked, dt:new Date().toLocaleString('pt-BR'), maps:`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`};
+}
+async function savePropCloud(pt){
+  const data={nome:pt.nm,tipo:pt.tp||'',endereco:pt.end||'',telefone:pt.ph||'',lat:pt.lat,lng:pt.lng,dirt:!!pt.dirt,maps:pt.maps,municipio:'Casa Branca',origem:'app',usuario:v7User?.email||'',createdAt:serverTimestamp(),updatedAt:serverTimestamp()};
+  return await addDoc(collection(db,'propriedades_cadastradas'),data);
+}
+function renderCloudProperties(){
+  if(window.clearCloudPts) window.clearCloudPts();
+  v7CloudProps.forEach(p=>window.renderCloudPt&&window.renderCloudPt(p,p.id));
+}
+async function syncPendingProperties(){
+  if(!v7User || !navigator.onLine) return;
+  let arr=pendingProps(); if(!arr.length) return;
+  const rest=[];
+  for(const pt of arr){
+    try{ await savePropCloud(pt); await auditV7('propriedade_sincronizada',pt.nm||pt.nome||'sem nome'); }
+    catch(e){ rest.push(pt); }
+  }
+  savePendingProps(rest);
+  if(rest.length===0) console.log('SISRURAL: propriedades pendentes sincronizadas.');
+}
+async function migrateLocalPointsToCloudOnce(){
+  if(!v7User || localStorage.getItem(MIGRATED_LOCAL_KEY)==='1') return;
+  const arr=Array.isArray(window.userPts)?window.userPts:[];
+  if(!arr.length){ localStorage.setItem(MIGRATED_LOCAL_KEY,'1'); return; }
+  const pend=[];
+  for(const pt of arr){
+    try{ await savePropCloud({...pt, nome:pt.nm, tipo:pt.tp, endereco:pt.end, telefone:pt.ph, maps:`https://www.google.com/maps/dir/?api=1&destination=${pt.lat},${pt.lng}&travelmode=driving`}); await auditV7('propriedade_local_migrada',pt.nm||'sem nome'); }
+    catch(e){ pend.push(pt); }
+  }
+  localStorage.setItem(MIGRATED_LOCAL_KEY,'1');
+  window.userPts.length=0; pend.forEach(p=>window.userPts.push(p));
+  try{ savePts(); userPtsG.clearLayers(); window.userPts.forEach((p,i)=>renderPt(p,i)); }catch(e){}
+}
+window.addEventListener('online',()=>syncPendingProperties());
+
+window.salvar=async function(){
+  const pt=formProp(); const msg=document.getElementById('aMsg');
+  if(!pt.nm){msg.style.cssText='display:block;background:rgba(239,68,68,.15);color:#ef4444';msg.textContent='⚠️ Informe o nome da fazenda.';return;}
+  if(isNaN(pt.lat)||isNaN(pt.lng)){msg.style.cssText='display:block;background:rgba(239,68,68,.15);color:#ef4444';msg.textContent='⚠️ Coordenadas inválidas. Use o GPS ou insira manualmente.';return;}
+  if(v7User && navigator.onLine){
+    try{
+      await savePropCloud(pt); await auditV7('propriedade_cadastrada',pt.nm);
+      msg.style.cssText='display:block;background:rgba(34,197,94,.15);color:#22c55e';
+      msg.textContent=`✅ "${pt.nm}" salvo na nuvem e sincronizado.`;
+    }catch(e){
+      const arr=pendingProps(); arr.push({...pt, erro:e.message}); savePendingProps(arr); userPts.push(pt); savePts(); renderPt(pt,userPts.length-1);
+      msg.style.cssText='display:block;background:rgba(245,158,11,.15);color:#f59e0b';
+      msg.textContent=`🟡 Sem envio no momento. "${pt.nm}" ficou pendente para sincronizar.`;
+    }
+  } else {
+    const arr=pendingProps(); arr.push(pt); savePendingProps(arr); userPts.push(pt); savePts(); renderPt(pt,userPts.length-1);
+    msg.style.cssText='display:block;background:rgba(245,158,11,.15);color:#f59e0b';
+    msg.textContent=`🟡 "${pt.nm}" salvo no aparelho. Enviaremos quando voltar sinal.`;
+  }
+  map.setView([pt.lat,pt.lng],15,{animate:true});
+  setTimeout(closeAdd,1600);
 };
-window.exportV7FarmsCSV=()=>{ const arr=[...(window.PROPS||[]),...((window.userPts||[]).map(p=>({nm:p.nm,tp:p.tp,lat:p.lat,lng:p.lng,end:p.end,ph:p.ph,q:''})))]; const rows=[['nome','tipo','telefone','endereco','lat','lng','quadrante','maps']].concat(arr.map(p=>[p.nm,p.tp,p.ph,p.end,p.lat,p.lng,p.q,`https://www.google.com/maps?q=${p.lat},${p.lng}`])); downloadCSV('sisrural-fazendas.csv',rows); };
+window.exportV7FarmsCSV=()=>{ const arr=[...(window.PROPS||[]),...(v7CloudProps.map(p=>({nm:p.nome,tp:p.tipo,lat:p.lat,lng:p.lng,end:p.endereco,ph:p.telefone,q:''}))),...((window.userPts||[]).map(p=>({nm:p.nm,tp:p.tp,lat:p.lat,lng:p.lng,end:p.end,ph:p.ph,q:''})))]; const rows=[['nome','tipo','telefone','endereco','lat','lng','quadrante','maps']].concat(arr.map(p=>[p.nm,p.tp,p.ph,p.end,p.lat,p.lng,p.q,`https://www.google.com/maps?q=${p.lat},${p.lng}`])); downloadCSV('sisrural-fazendas.csv',rows); };
 window.exportV7VisitsCSV=()=>{ const rows=[['propriedade','quadrante','equipe','texto','usuario','maps']].concat(v7Visits.map(v=>[v.propriedade,v.quadrante,v.equipe,v.texto,v.usuario,v.maps])); downloadCSV('sisrural-visitas.csv',rows); };
 function downloadCSV(name,rows){ const csv=rows.map(r=>r.map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(';')).join('\n'); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); a.download=name; a.click(); }
 </script>
