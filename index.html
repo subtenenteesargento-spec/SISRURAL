@@ -594,19 +594,7 @@ FARM_REFS.forEach((f,i)=>{
   refsG.addLayer(mk); refMks.push(mk);
 });
 
-// QUARTEL / POSTO CENTRAL PM - marcador fixo e sempre visível
-const quartelPM = {
-  nome: 'Quartel PM · Casa Branca',
-  lat: CX,
-  lng: CY,
-  tel: '(19) 3671-1125',
-  endereco: 'Pç. Rui Barbosa, 56',
-  maps: `https://www.google.com/maps/dir/?api=1&destination=${CX},${CY}&travelmode=driving`
-};
-const quartelMk=L.marker([quartelPM.lat,quartelPM.lng],{zIndexOffset:9999,icon:L.divIcon({className:'',html:`<div style="position:relative;display:inline-block"><div style="background:rgba(7,12,23,.96);border:2px solid #ffd700;border-radius:9px;padding:3px 8px;display:flex;align-items:center;gap:4px;box-shadow:0 0 14px rgba(255,215,0,.45);white-space:nowrap"><span style="font-size:13px">🏛️</span><span style="font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:800;color:#ffd700">Quartel PM</span></div><div style="position:absolute;bottom:-5px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid #ffd700"></div></div>`,iconAnchor:[45,35]})}).addTo(map);
-quartelMk.bindPopup(`<div class="pt" style="color:#ffd700">🏛 Quartel PM – Casa Branca</div><div class="ps">POSTO CENTRAL · ${quartelPM.endereco}</div><div class="pr"><span>Tel</span><span>${quartelPM.tel}</span></div><div class="pr"><span>GPS</span><span>${Math.abs(quartelPM.lat).toFixed(4)}°S ${Math.abs(quartelPM.lng).toFixed(4)}°W</span></div><div class="pr"><span>Navegar</span><span><a href="${quartelPM.maps}" target="_blank" style="color:#4ade80;font-weight:700">🧭 Abrir Maps ↗</a></span></div>`,{maxWidth:250});
-function zQuartel(){map.setView([quartelPM.lat,quartelPM.lng],15,{animate:true});setTimeout(()=>quartelMk.openPopup(),350);closeSheet();}
-window.zQuartel=zQuartel;
+// Ponto PM fixo removido: referências oficiais serão cadastradas pelo próprio sistema.
 
 // Rio
 L.polyline([[-21.562,-47.048],[-21.596,-47.008],[-21.645,-46.968]],{color:'#38bdf8',weight:3,opacity:.7}).addTo(map).bindPopup(`<div class="pt" style="color:#38bdf8">💧 Rio Mogi Pardo</div><div class="ps">DIVISA NATURAL CASA BRANCA ↔ MOCOCA</div>`,{maxWidth:200});
@@ -616,6 +604,7 @@ const userPtsG=L.layerGroup().addTo(map);
 const cloudPtsG=L.layerGroup().addTo(map);
 window.userPtsG=userPtsG;
 window.cloudPtsG=cloudPtsG;
+window.cloudPropMks={};
 let userPts=[]; window.userPts=userPts;
 try{const r=localStorage.getItem('sisrural_pm_v1');if(r)userPts=JSON.parse(r);}catch(e){} window.userPts=userPts;
 
@@ -644,9 +633,10 @@ function renderCloudPt(p,id){
     iconAnchor:[55,35]})});
   mk.bindPopup(`<div class="pt" style="color:${col}">☁️ ${nm}</div><div class="ps">CADASTRO SINCRONIZADO · ${tp}</div>${q?`<div class="pr"><span>Quadrante</span><span>Q${q}</span></div>`:''}${end?`<div class="pr"><span>End.</span><span>${end}</span></div>`:''}${ph?`<div class="pr"><span>Tel</span><span><a href="tel:${ph}" style="color:var(--ac)">${ph}</a></span></div>`:''}<div class="pr"><span>GPS</span><span>${Math.abs(lat).toFixed(5)}°S ${Math.abs(lng).toFixed(5)}°W</span></div>${p.ultimaVisitaTexto?`<div class="pr"><span>Última visita</span><span style="color:#ffd700">${p.ultimaVisitaTexto}</span></div>`:''}<div class="pr"><span>Navegar</span><span><a href="${maps}" target="_blank" style="color:#4ade80;font-weight:700">🧭 Abrir Maps ↗</a></span></div><div class="pr"><span>Status</span><span style="color:#4ade80">Sincronizado</span></div><div style="margin-top:8px;display:grid;gap:6px"><button onclick="openVisitForCloud('${id}')" style="width:100%;background:#ffd700;color:#07111f;border:0;border-radius:8px;padding:8px;font-weight:800;cursor:pointer">📋 Registrar visita</button><button onclick="openHistoryForCloud('${id}')" style="width:100%;background:#1e293b;color:#e5e7eb;border:1px solid #334155;border-radius:8px;padding:8px;font-weight:800;cursor:pointer">📜 Histórico</button></div>`,{maxWidth:290});
   cloudPtsG.addLayer(mk);
+  window.cloudPropMks[id]=mk;
 }
 window.renderCloudPt=renderCloudPt;
-window.clearCloudPts=()=>cloudPtsG.clearLayers();
+window.clearCloudPts=()=>{cloudPtsG.clearLayers(); window.cloudPropMks={};};
 function delPt(i){userPts.splice(i,1);savePts();userPtsG.clearLayers();userPts.forEach((p,i)=>renderPt(p,i));map.closePopup();}
 userPts.forEach((p,i)=>renderPt(p,i));
 
@@ -699,25 +689,38 @@ function selQ(id){
   document.getElementById('pDiag').textContent=qd.km.diag;
   document.getElementById('sheet').style.setProperty('--qc',col);
   const props=PROPS.filter(p=>p.q===id);
-  document.getElementById('pProps').textContent=props.length;
+  const cloudPropsForQuad=(window.v7CloudProps||[]).filter(p=>{
+    const lat=parseFloat(p.lat), lng=parseFloat(p.lng);
+    const q=p.quadrante||p.q||(typeof classQ==='function'?classQ(lat,lng):'');
+    return String(q)===String(id);
+  });
+  document.getElementById('pProps').textContent=props.length + cloudPropsForQuad.length;
   document.getElementById('sDivisas').innerHTML=qd.divisas.map(d=>`<div class="dtag">${d}</div>`).join('');
   document.getElementById('sRoads').innerHTML=qd.roads.map((r,i)=>`<div class="rtag" onclick="zR('${qd.roadKeys[i]}')">${r}</div>`).join('');
   document.getElementById('sDirt').innerHTML=qd.dirt.map(d=>`<div class="dtag" style="border-color:rgba(146,64,14,.4);background:rgba(146,64,14,.1)">🟫 ${d}</div>`).join('');
   const ref=FARM_REFS.find(f=>f.q===id);
-  const quartelCard=`<div class="ref-card" style="--ref-col:#ffd700" onclick="zQuartel()"><div class="ref-ico-w" style="border-color:#ffd700">🏛️</div><div class="ref-info"><div class="ref-name" style="color:#ffd700">Quartel PM · Casa Branca</div><div class="ref-nota">Posto Central · Pç. Rui Barbosa, 56 · referência para deslocamento e apoio.</div><div class="ref-btns"><a class="ref-btn ref-btn-maps" href="https://www.google.com/maps/search/?api=1&query=${CX},${CY}" target="_blank" onclick="event.stopPropagation()">📍 Ver no Maps</a><a class="ref-btn ref-btn-nav" href="https://www.google.com/maps/dir/?api=1&destination=${CX},${CY}&travelmode=driving" target="_blank" onclick="event.stopPropagation()">🧭 Navegar</a></div><div class="ref-gps">${Math.abs(CX).toFixed(4)}°S · ${Math.abs(CY).toFixed(4)}°W</div></div></div>`;
-  const refCard=ref?`<div class="ref-card" style="--ref-col:${ref.col}" onclick="zRef(${id-1})"><div class="ref-ico-w" style="border-color:${ref.col}">${ref.ico}</div><div class="ref-info"><div class="ref-name" style="color:${ref.col}">${ref.nm}</div><div class="ref-nota">${ref.nota}</div><div class="ref-btns"><a class="ref-btn ref-btn-maps" href="${ref.maps}" target="_blank" onclick="event.stopPropagation()">📍 Ver no Maps</a><a class="ref-btn ref-btn-nav" href="${ref.nav}" target="_blank" onclick="event.stopPropagation()">🧭 Navegar</a></div><div class="ref-gps">${Math.abs(ref.lat).toFixed(4)}°S · ${Math.abs(ref.lng).toFixed(4)}°W · ${ref.km}</div></div></div>`:'';
-  document.getElementById('sRef').innerHTML=quartelCard+refCard;
-  document.getElementById('sProps').innerHTML=props.length>0?props.map((p,i)=>{
+  document.getElementById('sRef').innerHTML=ref?`<div class="ref-card" style="--ref-col:${ref.col}" onclick="zRef(${id-1})"><div class="ref-ico-w" style="border-color:${ref.col}">${ref.ico}</div><div class="ref-info"><div class="ref-name" style="color:${ref.col}">${ref.nm}</div><div class="ref-nota">${ref.nota}</div><div class="ref-btns"><a class="ref-btn ref-btn-maps" href="${ref.maps}" target="_blank" onclick="event.stopPropagation()">📍 Ver no Maps</a><a class="ref-btn ref-btn-nav" href="${ref.nav}" target="_blank" onclick="event.stopPropagation()">🧭 Navegar</a></div><div class="ref-gps">${Math.abs(ref.lat).toFixed(4)}°S · ${Math.abs(ref.lng).toFixed(4)}°W · ${ref.km}</div></div></div>`:'';
+  const baseHtml=props.map((p,i)=>{
     const idx=PROPS.indexOf(p);
     const dtag=p.dirt?`<span style="font-size:7px;background:rgba(146,64,14,.2);color:#d97706;border-radius:3px;padding:1px 4px">🟫 terra</span>`:`<span style="font-size:7px;background:rgba(34,197,94,.1);color:#4ade80;border-radius:3px;padding:1px 4px">🛣 asf.</span>`;
     return `<div class="prop-card" onclick="zProp(${idx})"><div class="prop-ico-w" style="border-color:${col}">${p.ico}</div><div class="prop-info"><div class="prop-name">${p.nm}</div><div class="prop-type">${p.tp}</div><div class="prop-meta">${p.r?`<span style="font-size:10px;color:var(--ac)">⭐${p.r}</span>`:''}${dtag}</div><div class="prop-addr">${p.end}</div><a class="nav-btn" href="${p.gmaps}" target="_blank" onclick="event.stopPropagation()">📍 Navegar no Maps</a></div><div class="prop-arrow">›</div></div>`;
-  }).join(''):`<div style="padding:16px;text-align:center;color:var(--mu);font-size:10px;font-family:'JetBrains Mono',monospace">Nenhuma prop. cadastrada neste setor</div>`;
+  }).join('');
+  const cloudHtml=cloudPropsForQuad.map(p=>{
+    const nm=p.nome||p.nm||'Propriedade cadastrada';
+    const tp=p.tipo||p.tp||'Cadastro rural';
+    const end=p.endereco||p.end||'';
+    const lat=parseFloat(p.lat), lng=parseFloat(p.lng);
+    const maps=p.maps||`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+    return `<div class="prop-card" onclick="zCloudProp('${p.id}')"><div class="prop-ico-w" style="border-color:#22d3ee">☁️</div><div class="prop-info"><div class="prop-name">${nm}</div><div class="prop-type">${tp} · sincronizado</div><div class="prop-meta"><span style="font-size:7px;background:rgba(34,211,238,.1);color:#22d3ee;border-radius:3px;padding:1px 4px">☁️ nuvem</span></div><div class="prop-addr">${end}</div><a class="nav-btn" href="${maps}" target="_blank" onclick="event.stopPropagation()">📍 Navegar no Maps</a></div><div class="prop-arrow">›</div></div>`;
+  }).join('');
+  document.getElementById('sProps').innerHTML=(baseHtml+cloudHtml)||`<div style="padding:16px;text-align:center;color:var(--mu);font-size:10px;font-family:'JetBrains Mono',monospace">Nenhuma prop. cadastrada neste setor</div>`;
   const bx={1:[[N,W],[MX,MY]],2:[[N,MY],[MX,E]],3:[[MX,W],[S,MY]],4:[[MX,MY],[S,E]]};
   map.fitBounds(bx[id],{padding:[60,60],animate:true});
   openSheet();
 }
 
 function zProp(i){const p=PROPS[i];map.setView([p.lat,p.lng],15,{animate:true});setTimeout(()=>propMks[i].openPopup(),400);closeSheet();}
+function zCloudProp(id){const p=(window.v7CloudProps||[]).find(x=>x.id===id); if(!p)return; const lat=parseFloat(p.lat),lng=parseFloat(p.lng); map.setView([lat,lng],15,{animate:true}); const mk=(window.cloudPropMks||{})[id]; if(mk)setTimeout(()=>mk.openPopup(),400); closeSheet();}
 function zRef(i){const f=FARM_REFS[i];map.setView([f.lat,f.lng],14,{animate:true});setTimeout(()=>refMks[i].openPopup(),400);closeSheet();}
 function zR(k){const r=RDS[k];if(r){map.fitBounds(L.polyline(r.pts).getBounds(),{padding:[60,60],animate:true});}closeSheet();}
 
@@ -856,7 +859,7 @@ import { getFirestore, doc, getDoc, setDoc, collection, addDoc, onSnapshot, serv
 const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
-let v7User=null, v7Profile=null, v7Requests=[], v7Visits=[], v7Audits=[], v7CloudProps=[];
+let v7User=null, v7Profile=null, v7Requests=[], v7Visits=[], v7Audits=[], v7CloudProps=[]; window.v7CloudProps=v7CloudProps;
 const PENDING_PROPS_KEY='sisrural_pending_props_v1';
 const MIGRATED_LOCAL_KEY='sisrural_local_props_migrated_v1';
 const ADMIN = ADMIN_EMAIL || 'ferpozzer@gmail.com';
@@ -901,7 +904,7 @@ function startRealtime(){
   onSnapshot(query(collection(db,'solicitacoes_acesso'),orderBy('createdAt','desc')),s=>{v7Requests=s.docs.map(d=>({id:d.id,...d.data()})); renderRequests();});
   onSnapshot(query(collection(db,'visitas'),orderBy('createdAt','desc')),s=>{v7Visits=s.docs.map(d=>({id:d.id,...d.data()}));});
   onSnapshot(query(collection(db,'auditoria'),orderBy('createdAt','desc')),s=>{v7Audits=s.docs.map(d=>({id:d.id,...d.data()})); renderAudit();});
-  onSnapshot(collection(db,'propriedades_cadastradas'),s=>{v7CloudProps=s.docs.map(d=>({id:d.id,...d.data()})); renderCloudProperties();});
+  onSnapshot(collection(db,'propriedades_cadastradas'),s=>{v7CloudProps=s.docs.map(d=>({id:d.id,...d.data()})); window.v7CloudProps=v7CloudProps; renderCloudProperties();});
   syncPendingProperties();
   migrateLocalPointsToCloudOnce();
 }
@@ -941,6 +944,12 @@ function allVisitProps(){
   const base=(window.PROPS||[]).map((p,i)=>({key:'base_'+i,id:'base_'+i,baseIndex:i,source:'base',nome:p.nm,municipio:'Casa Branca',quadrante:p.q,lat:p.lat,lng:p.lng,maps:p.gmaps||`https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}&travelmode=driving`}));
   const cloud=(v7CloudProps||[]).map(p=>({key:'cloud_'+p.id,id:p.id,source:'cloud',nome:p.nome||p.nm||'Propriedade cadastrada',municipio:p.municipio||'Casa Branca',quadrante:p.quadrante||p.q||classQ(parseFloat(p.lat),parseFloat(p.lng)),lat:parseFloat(p.lat),lng:parseFloat(p.lng),maps:p.maps||`https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}&travelmode=driving`}));
   return base.concat(cloud);
+}
+function baseVisitProps(){
+  return allVisitProps().filter(p=>p.source==='base').map(p=>({...p,id:String(p.baseIndex)}));
+}
+function cloudVisitProps(){
+  return allVisitProps().filter(p=>p.source==='cloud');
 }
 function fillVisitSelect(selectedKey=''){
   const sel=$v('v7VisitProp'); const arr=allVisitProps();
@@ -1021,12 +1030,13 @@ function formProp(){
     dirt:document.getElementById('aDirt').checked, dt:new Date().toLocaleString('pt-BR'), maps:`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`};
 }
 async function savePropCloud(pt){
-  const data={nome:pt.nm,tipo:pt.tp||'',endereco:pt.end||'',telefone:pt.ph||'',lat:pt.lat,lng:pt.lng,dirt:!!pt.dirt,maps:pt.maps,municipio:'Casa Branca',origem:'app',usuario:v7User?.email||'',createdAt:serverTimestamp(),updatedAt:serverTimestamp()};
+  const data={nome:pt.nm,tipo:pt.tp||'',endereco:pt.end||'',telefone:pt.ph||'',lat:pt.lat,lng:pt.lng,dirt:!!pt.dirt,maps:pt.maps,municipio:'Casa Branca',quadrante:(typeof classQ==='function'?classQ(pt.lat,pt.lng):''),origem:'app',usuario:v7User?.email||'',createdAt:serverTimestamp(),updatedAt:serverTimestamp()};
   return await addDoc(collection(db,'propriedades_cadastradas'),data);
 }
 function renderCloudProperties(){
   if(window.clearCloudPts) window.clearCloudPts();
   v7CloudProps.forEach(p=>window.renderCloudPt&&window.renderCloudPt(p,p.id));
+  try{ if(document.getElementById('sheet')?.classList.contains('open')) selQ(activeQ||1); }catch(e){}
 }
 async function syncPendingProperties(){
   if(!v7User || !navigator.onLine) return;
