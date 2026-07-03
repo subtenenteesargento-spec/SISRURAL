@@ -383,7 +383,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     </div>
 
     <div class="msg-box" id="aMsg"></div>
-    <div class="btn-primary" onclick="salvar()">✅ SALVAR PONTO NO SISRURAL</div>
+    <button type="button" id="btnSalvarPonto" class="btn-primary" onclick="salvar()">✅ SALVAR PONTO NO SISRURAL</button>
     <div class="btn-secondary" onclick="closeAdd()">Cancelar</div>
   </div>
 </div>
@@ -402,10 +402,10 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 
 <!-- MODAIS V7 FIREBASE -->
-<div class="v7-modal" id="v7VisitModal"><div class="v7-box"><span class="v7-close" onclick="closeV7Modal('v7VisitModal')">×</span><h2>📋 Registrar visita</h2><div class="v7-small" id="v7VisitInfo">Selecione a propriedade. O sistema preencherá data, hora, policial e GPS automaticamente.</div><input type="hidden" id="v7VisitKey"><label class="field-lbl">PROPRIEDADE</label><select class="field-inp" id="v7VisitProp" onchange="selectVisitPropFromList()"></select><label class="field-lbl">OBSERVAÇÃO</label><textarea class="field-inp" id="v7VisitTexto" style="min-height:100px" placeholder="Ex: Visita realizada. Proprietário orientado. Tudo em ordem."></textarea><div class="btn-primary" onclick="saveV7Visit()">Salvar visita</div><div id="v7VisitMsg" class="v7-small"></div></div></div>
+<div class="v7-modal" id="v7VisitModal"><div class="v7-box"><span class="v7-close" onclick="closeV7Modal('v7VisitModal')">×</span><h2>📋 Registrar visita</h2><div class="v7-small" id="v7VisitInfo">Selecione a propriedade. O sistema preencherá data, hora, policial e GPS automaticamente.</div><input type="hidden" id="v7VisitKey"><label class="field-lbl">PROPRIEDADE</label><select class="field-inp" id="v7VisitProp" onchange="selectVisitPropFromList()"></select><label class="field-lbl">OBSERVAÇÃO</label><textarea class="field-inp" id="v7VisitTexto" style="min-height:100px" placeholder="Ex: Visita realizada. Proprietário orientado. Tudo em ordem."></textarea><button type="button" id="btnSalvarVisita" class="btn-primary" onclick="saveV7Visit()">Salvar visita</button><div id="v7VisitMsg" class="v7-small"></div></div></div>
 <div class="v7-modal" id="v7HistoryModal"><div class="v7-box"><span class="v7-close" onclick="closeV7Modal('v7HistoryModal')">×</span><h2 id="v7HistoryTitle">📜 Histórico da propriedade</h2><div class="v7-small" id="v7HistorySub">Últimas visitas registradas no Firestore.</div><div id="v7HistoryList" style="margin-top:12px"></div></div></div>
 <div class="v7-modal" id="v7RequestModal"><div class="v7-box"><span class="v7-close" onclick="closeV7Modal('v7RequestModal')">×</span><h2>👮 Solicitar acesso</h2><div class="v7-grid"><div><label class="field-lbl">NOME</label><input class="field-inp" id="reqNome"></div><div><label class="field-lbl">RE</label><input class="field-inp" id="reqRe"></div><div><label class="field-lbl">GRADUAÇÃO</label><input class="field-inp" id="reqGrad"></div><div><label class="field-lbl">E-MAIL</label><input class="field-inp" id="reqEmail" type="email"></div><div><label class="field-lbl">TELEFONE</label><input class="field-inp" id="reqTel"></div></div><div class="btn-primary" onclick="sendAccessRequest()">Enviar solicitação</div><div id="reqMsg" class="v7-small"></div></div></div>
-<div class="v7-modal" id="v7AdminModal"><div class="v7-box"><span class="v7-close" onclick="closeV7Modal('v7AdminModal')">×</span><h2>⚙️ Administração SISRURAL</h2><div class="v7-small">Você é Administrador. Aqui ficam usuários, solicitações, auditoria e relatórios.</div><h3 style="color:var(--ac);margin-top:12px">Meu perfil</h3><div class="v7-grid"><div><label class="field-lbl">NOME</label><input class="field-inp" id="admNome"></div><div><label class="field-lbl">RE</label><input class="field-inp" id="admRe"></div><div><label class="field-lbl">GRADUAÇÃO</label><input class="field-inp" id="admGrad"></div><div><label class="field-lbl">PERFIL</label><select class="field-inp" id="admPerfil"><option>Administrador</option><option>Comandante</option><option>Supervisor</option><option>Patrulheiro</option><option>Consulta</option></select></div></div><div class="btn-primary" onclick="saveMyAdminProfile()">Salvar meu perfil</div><h3 style="color:var(--ac);margin-top:14px">Solicitações pendentes</h3><div id="v7Requests"></div><h3 style="color:var(--ac);margin-top:14px">Relatórios</h3><div class="v7-card"><button class="btn-primary" onclick="exportV7FarmsCSV()">Exportar fazendas cadastradas CSV</button><button class="btn-secondary" onclick="exportV7VisitsCSV()">Exportar visitas CSV</button><button class="btn-secondary" onclick="window.print()">Imprimir / PDF</button></div><h3 style="color:var(--ac);margin-top:14px">Auditoria recente</h3><div id="v7Audit"></div></div></div>
+<div class="v7-modal" id="v7AdminModal"><div class="v7-box"><span class="v7-close" onclick="closeV7Modal('v7AdminModal')">×</span><h2>⚙️ Administração SISRURAL</h2><div class="v7-small">Você é Administrador. Aqui ficam usuários, solicitações, auditoria e relatórios.</div><h3 style="color:var(--ac);margin-top:12px">Painel do Capitão</h3><div id="capDashboard" class="v7-card v7-small">Carregando indicadores...</div><div class="v7-card"><button class="btn-primary" onclick="openCommanderReport()">📄 Relatório das visitas</button><button class="btn-secondary" onclick="exportCommanderReportCSV()">Exportar relatório CSV</button></div><h3 style="color:var(--ac);margin-top:12px">Meu perfil</h3><div class="v7-grid"><div><label class="field-lbl">NOME</label><input class="field-inp" id="admNome"></div><div><label class="field-lbl">RE</label><input class="field-inp" id="admRe"></div><div><label class="field-lbl">GRADUAÇÃO</label><input class="field-inp" id="admGrad"></div><div><label class="field-lbl">PERFIL</label><select class="field-inp" id="admPerfil"><option>Administrador</option><option>Comandante</option><option>Supervisor</option><option>Patrulheiro</option><option>Consulta</option></select></div></div><div class="btn-primary" onclick="saveMyAdminProfile()">Salvar meu perfil</div><h3 style="color:var(--ac);margin-top:14px">Solicitações pendentes</h3><div id="v7Requests"></div><h3 style="color:var(--ac);margin-top:14px">Relatórios</h3><div class="v7-card"><button class="btn-primary" onclick="exportV7FarmsCSV()">Exportar fazendas cadastradas CSV</button><button class="btn-secondary" onclick="exportV7VisitsCSV()">Exportar visitas CSV</button><button class="btn-secondary" onclick="window.print()">Imprimir / PDF</button></div><h3 style="color:var(--ac);margin-top:14px">Auditoria recente</h3><div id="v7Audit"></div></div></div>
 
 <script>
 // ── CLOCK
@@ -791,21 +791,11 @@ function captGPS(){
   }, err=>{
     const msg={1:'Permissão negada – ative o GPS',2:'Sinal GPS indisponível',3:'Tempo esgotado'}[err.code]||'Erro GPS';
     txt.textContent='⚠️ '+msg;
+    coord.textContent='Insira lat/lng manualmente nos campos abaixo';
     ico.textContent='⚠️';
     retry.style.display='block';
     retry.textContent='↺ Tentar novamente';
-    // Modo campo: se o GPS demorar ou falhar sem sinal, não bloqueia o cadastro.
-    // Usa o centro atual do mapa como ponto provisório, permitindo salvar offline.
-    try{
-      const c=map.getCenter();
-      if(c && isFinite(c.lat) && isFinite(c.lng)){
-        document.getElementById('aLat').value=c.lat.toFixed(6);
-        document.getElementById('aLng').value=c.lng.toFixed(6);
-        coord.textContent='GPS não fixou. Coordenada provisória pelo centro do mapa. Ajuste manualmente se necessário.';
-        initMiniMap(c.lat,c.lng);
-      }else{ coord.textContent='Insira lat/lng manualmente nos campos abaixo'; }
-    }catch(e){ coord.textContent='Insira lat/lng manualmente nos campos abaixo'; }
-  },{enableHighAccuracy:true,timeout:45000,maximumAge:300000});
+  },{enableHighAccuracy:true,timeout:25000,maximumAge:60000});
 }
 
 function initMiniMap(lat,lng){
@@ -892,7 +882,7 @@ const ADMIN = ADMIN_EMAIL || 'ferpozzer@gmail.com';
 const $v=id=>document.getElementById(id);
 const emailKey = email => String(email||'').toLowerCase().replace(/[^a-z0-9]/g,'_');
 function isAdmin(){ return v7User && (String(v7User.email).toLowerCase()===String(ADMIN).toLowerCase() || ['Administrador','Comandante'].includes(v7Profile?.perfil)); }
-async function auditV7(acao,detalhe){ try{ await addDoc(collection(db,'auditoria'),{acao,detalhe,usuario:v7User?.email||'',createdAt:serverTimestamp(),app:'SISRURAL V7.4'}); }catch(e){} }
+async function auditV7(acao,detalhe){ try{ await addDoc(collection(db,'auditoria'),{acao,detalhe,usuario:v7User?.email||'',createdAt:serverTimestamp(),app:'SISRURAL V7.3 ROBUSTEZ OFFLINE'}); }catch(e){} }
 async function loadProfile(u){
   const refUid=doc(db,'usuarios',u.uid);
   const refEmail=doc(db,'usuarios',emailKey(u.email));
@@ -928,10 +918,11 @@ onAuthStateChanged(auth, async u=>{
 });
 function startRealtime(){
   onSnapshot(query(collection(db,'solicitacoes_acesso'),orderBy('createdAt','desc')),s=>{v7Requests=s.docs.map(d=>({id:d.id,...d.data()})); renderRequests();});
-  onSnapshot(query(collection(db,'visitas'),orderBy('createdAt','desc')),s=>{v7Visits=s.docs.map(d=>({id:d.id,...d.data()}));});
+  onSnapshot(query(collection(db,'visitas'),orderBy('createdAt','desc')),s=>{v7Visits=s.docs.map(d=>({id:d.id,...d.data()})); renderCommanderDashboard();});
   onSnapshot(query(collection(db,'auditoria'),orderBy('createdAt','desc')),s=>{v7Audits=s.docs.map(d=>({id:d.id,...d.data()})); renderAudit();});
-  onSnapshot(collection(db,'propriedades_cadastradas'),s=>{v7CloudProps=s.docs.map(d=>({id:d.id,...d.data()})); window.v7CloudProps=v7CloudProps; renderCloudProperties();});
+  onSnapshot(collection(db,'propriedades_cadastradas'),s=>{v7CloudProps=s.docs.map(d=>({id:d.id,...d.data()})); window.v7CloudProps=v7CloudProps; renderCloudProperties(); renderCommanderDashboard();});
   syncPendingProperties();
+      syncPendingVisits();
   migrateLocalPointsToCloudOnce();
 }
 window.closeV7Modal=id=>$v(id).classList.remove('open');
@@ -959,7 +950,7 @@ window.sendAccessRequest=async()=>{
     btnMsg.innerHTML='<span style="color:#ef4444">'+(e.code==='permission-denied'?'Permissão negada no Firebase. Atualize as regras do Firestore conforme orientação.':e.message)+'</span>';
   }
 };
-window.openAdminPanel=()=>{ if(!isAdmin()) return alert('Acesso restrito ao administrador.'); $v('admNome').value=v7Profile.nome||''; $v('admRe').value=v7Profile.re||''; $v('admGrad').value=v7Profile.graduacao||''; $v('admPerfil').value='Administrador'; $v('v7AdminModal').classList.add('open'); renderRequests(); renderAudit(); };
+window.openAdminPanel=()=>{ if(!isAdmin()) return alert('Acesso restrito ao administrador.'); $v('admNome').value=v7Profile.nome||''; $v('admRe').value=v7Profile.re||''; $v('admGrad').value=v7Profile.graduacao||''; $v('admPerfil').value='Administrador'; $v('v7AdminModal').classList.add('open'); renderRequests(); renderAudit(); renderCommanderDashboard(); };
 window.saveMyAdminProfile=async()=>{
   if(!v7User) return; const data={nome:$v('admNome').value,re:$v('admRe').value,graduacao:$v('admGrad').value,email:v7User.email,perfil:'Administrador',companhia:APP_INFO.companhia,status:'Ativo',updatedAt:serverTimestamp()}; await setDoc(doc(db,'usuarios',v7User.uid),data,{merge:true}); await setDoc(doc(db,'usuarios',emailKey(v7User.email)),{...data,uid:v7User.uid},{merge:true}); v7Profile=data; showLogged(); auditV7('perfil_admin_salvo','Administrador confirmou perfil'); alert('Perfil de Administrador salvo.'); };
 window.approveReq=async(id)=>{ const r=v7Requests.find(x=>x.id===id); if(!r)return; const data={nome:r.nome,email:r.email,re:r.re,graduacao:r.graduacao,telefone:r.telefone,perfil:'Patrulheiro',status:'Ativo',companhia:APP_INFO.companhia,approvedBy:v7User.email,approvedAt:serverTimestamp()}; await setDoc(doc(db,'usuarios',emailKey(r.email)),data,{merge:true}); await setDoc(doc(db,'solicitacoes_acesso',id),{status:'Aprovado',approvedBy:v7User.email,approvedAt:serverTimestamp()},{merge:true}); auditV7('acesso_aprovado',r.email); renderRequests(); };
@@ -1008,7 +999,7 @@ function renderV7HistoryForProp(p){
     list.innerHTML='<div class="v7-card"><b>Nenhuma visita registrada ainda.</b><br><span class="v7-small">Use o botão 📋 Registrar visita para criar o primeiro histórico desta propriedade.</span></div>';
     return;
   }
-  list.innerHTML=visits.slice(0,30).map(v=>`<div class="v7-card"><b style="color:#ffd700">${v.dataLocal||''} ${v.horaLocal||''}</b><br><span class="v7-small">${v.usuarioNome||v.usuario||''}${v.re?' · RE '+v.re:''}</span><div style="margin-top:6px;color:#e5e7eb;white-space:pre-wrap">${(v.observacao||v.texto||'Sem observação').replace(/[<>]/g,'')}</div>${v.maps?`<div style="margin-top:6px"><a href="${v.maps}" target="_blank" style="color:#4ade80;font-weight:700">🧭 Abrir local no Maps ↗</a></div>`:''}</div>`).join('');
+  list.innerHTML=visits.slice(0,30).map(v=>`<div class="v7-card"><b style="color:#ffd700">${v.dataLocal||''} ${v.horaLocal||''}${v._pendente?' · 🟡 pendente':''}</b><br><span class="v7-small">${v.usuarioNome||v.usuario||''}${v.re?' · RE '+v.re:''}</span><div style="margin-top:6px;color:#e5e7eb;white-space:pre-wrap">${(v.observacao||v.texto||'Sem observação').replace(/[<>]/g,'')}</div>${v.maps?`<div style="margin-top:6px"><a href="${v.maps}" target="_blank" style="color:#4ade80;font-weight:700">🧭 Abrir local no Maps ↗</a></div>`:''}</div>`).join('');
 }
 window.openHistoryForBase=(idx)=>{ map.closePopup(); const p=baseVisitProps().find(x=>x.id===String(idx)); renderV7HistoryForProp(p); $v('v7HistoryModal').classList.add('open'); };
 window.openHistoryForCloud=(id)=>{ map.closePopup(); const p=cloudVisitProps().find(x=>x.id===id); renderV7HistoryForProp(p); $v('v7HistoryModal').classList.add('open'); };
@@ -1018,6 +1009,29 @@ function getGpsOnce(){
     if(!navigator.geolocation) return resolve(null);
     navigator.geolocation.getCurrentPosition(pos=>resolve({lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy}),()=>resolve(null),{enableHighAccuracy:true,timeout:10000,maximumAge:60000});
   });
+}
+function pendingVisits(){ try{return JSON.parse(localStorage.getItem(PENDING_VISITS_KEY)||'[]')}catch(e){return[]} }
+function savePendingVisits(arr){ localStorage.setItem(PENDING_VISITS_KEY,JSON.stringify(arr)); }
+async function saveVisitCloud(data,p){
+  const cloudData={...data,createdAt:serverTimestamp()};
+  await addDoc(collection(db,'visitas'),cloudData);
+  if(p && p.source==='cloud'){
+    await setDoc(doc(db,'propriedades_cadastradas',p.id),{ultimaVisitaTexto:`${data.dataLocal} ${data.horaLocal} · ${data.usuarioNome}`,ultimaVisitaObs:data.observacao,ultimaVisitaPor:data.usuario,ultimaVisitaEm:serverTimestamp()},{merge:true});
+  }
+}
+async function syncPendingVisits(){
+  if(!v7User || !navigator.onLine) return;
+  let arr=pendingVisits(); if(!arr.length) return;
+  const rest=[];
+  for(const item of arr){
+    try{
+      const p=allVisitProps().find(x=>String(x.id)===String(item.propriedadeId)||String(x.nome)===String(item.propriedade));
+      await saveVisitCloud(item,p);
+      await auditV7('visita_sincronizada',item.propriedade||'sem nome');
+    }catch(e){ rest.push(item); }
+  }
+  savePendingVisits(rest);
+  if(rest.length===0) console.log('SISRURAL: visitas pendentes sincronizadas.');
 }
 window.saveV7Visit=async()=>{
   const msg=$v('v7VisitMsg');
@@ -1035,28 +1049,68 @@ window.saveV7Visit=async()=>{
       lat:p.lat, lng:p.lng, gpsVisita:gps, observacao, texto:observacao, usuario:v7User.email,
       usuarioNome:v7Profile?.nome||v7User.email, re:v7Profile?.re||'', graduacao:v7Profile?.graduacao||'',
       dataLocal:now.toLocaleDateString('pt-BR'), horaLocal:now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
-      createdAt:serverTimestamp(), maps:p.maps
+      createdAtLocal:now.toISOString(), maps:p.maps
     };
-    await addDoc(collection(db,'visitas'),data);
-    if(p.source==='cloud'){
-      await setDoc(doc(db,'propriedades_cadastradas',p.id),{ultimaVisitaTexto:`${data.dataLocal} ${data.horaLocal} · ${data.usuarioNome}`,ultimaVisitaObs:observacao,ultimaVisitaPor:v7User.email,ultimaVisitaEm:serverTimestamp()},{merge:true});
+    if(navigator.onLine){
+      try{
+        await saveVisitCloud(data,p);
+        await auditV7('visita_registrada',p.nome);
+        msg.innerHTML='<span style="color:#4ade80">✅ Visita registrada e sincronizada.</span>';
+      }catch(e){
+        const arr=pendingVisits(); arr.push(data); savePendingVisits(arr);
+        msg.innerHTML='<span style="color:#f59e0b">🟡 Sem envio no momento. Visita salva no aparelho para sincronizar.</span>';
+      }
+    }else{
+      const arr=pendingVisits(); arr.push(data); savePendingVisits(arr);
+      msg.innerHTML='<span style="color:#f59e0b">🟡 Visita salva offline no aparelho. Enviaremos quando voltar sinal.</span>';
     }
-    await auditV7('visita_registrada',p.nome);
-    msg.innerHTML='<span style="color:#4ade80">✅ Visita registrada e sincronizada.</span>';
     $v('v7VisitTexto').value='';
-    setTimeout(()=>closeV7Modal('v7VisitModal'),1200);
-  }catch(e){ msg.innerHTML='<span style="color:#ef4444">'+e.message+'</span>'; }
+    setTimeout(()=>{ if(btn){btn.disabled=false;btn.innerHTML=btn.dataset.old||'Salvar visita';btn.style.opacity='1';} closeV7Modal('v7VisitModal'); },1600);
+  }catch(e){ if(btn){btn.disabled=false;btn.innerHTML=btn.dataset.old||'Salvar visita';btn.style.opacity='1';} msg.innerHTML='<span style="color:#ef4444">'+e.message+'</span>'; }
 };
+function toastV7(txt){ const d=document.createElement('div'); d.textContent=txt; d.style.cssText='position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:10000;background:#0f172a;color:#e5e7eb;border:1px solid #22c55e;border-radius:12px;padding:10px 14px;font:700 12px Rajdhani,Arial;box-shadow:0 0 18px rgba(0,0,0,.55)'; document.body.appendChild(d); setTimeout(()=>d.remove(),3200); }
 function pendingProps(){ try{return JSON.parse(localStorage.getItem(PENDING_PROPS_KEY)||'[]')}catch(e){return[]} }
-function savePendingProps(arr){ localStorage.setItem(PENDING_PROPS_KEY,JSON.stringify(arr)); }
+function savePendingProps(arr){ localStorage.setItem(PENDING_PROPS_KEY,JSON.stringify(arr)); updateOfflineBadge(); }
+function normTxt(v){ return String(v||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' '); }
+function distMeters(aLat,aLng,bLat,bLng){
+  const R=6371000, toRad=x=>x*Math.PI/180;
+  const dLat=toRad((+bLat)-(+aLat)), dLng=toRad((+bLng)-(+aLng));
+  const la1=toRad(+aLat), la2=toRad(+bLat);
+  const h=Math.sin(dLat/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(h));
+}
+function isDuplicateProp(pt){
+  const nome=normTxt(pt.nm||pt.nome); if(!nome) return false;
+  const near=(p)=>{
+    const pn=normTxt(p.nm||p.nome); if(pn!==nome) return false;
+    const plat=parseFloat(p.lat), plng=parseFloat(p.lng); if(isNaN(plat)||isNaN(plng)||isNaN(pt.lat)||isNaN(pt.lng)) return true;
+    return distMeters(pt.lat,pt.lng,plat,plng) <= 60;
+  };
+  return [...(window.PROPS||[]), ...(window.userPts||[]), ...(v7CloudProps||[]), ...pendingProps()].some(near);
+}
+function pushPendingPropOnce(pt){
+  const arr=pendingProps();
+  const tempCloud=v7CloudProps; // reaproveita validador contra a fila local
+  const nome=normTxt(pt.nm||pt.nome);
+  const exists=arr.some(p=>normTxt(p.nm||p.nome)===nome && (!pt.lat || !p.lat || distMeters(pt.lat,pt.lng,p.lat,p.lng)<=60));
+  if(!exists){ arr.push(pt); savePendingProps(arr); return true; }
+  savePendingProps(arr); return false;
+}
+function updateOfflineBadge(){
+  const n=pendingProps().length + pendingVisits().length;
+  const el=document.getElementById('syncStatusBadge') || (()=>{ const d=document.createElement('div'); d.id='syncStatusBadge'; d.style.cssText='position:fixed;left:10px;bottom:88px;z-index:9999;background:#111827;color:#ffd700;border:1px solid #ffd700;border-radius:10px;padding:7px 10px;font:700 11px Rajdhani,Arial;box-shadow:0 0 12px rgba(0,0,0,.45);display:none'; document.body.appendChild(d); return d; })();
+  if(n>0){ el.style.display='block'; el.textContent=`🟡 ${n} registro(s) pendente(s) de sincronização`; } else { el.style.display='none'; }
+}
 function formProp(){
-  const nm=document.getElementById('aNome').value.trim(); const lat=parseFloat(document.getElementById('aLat').value); const lng=parseFloat(document.getElementById('aLng').value);
+  const nm=document.getElementById('aNome').value.trim(); let lat=parseFloat(document.getElementById('aLat').value); let lng=parseFloat(document.getElementById('aLng').value);
+  if((isNaN(lat)||isNaN(lng)) && window.map){ const c=map.getCenter(); lat=c.lat; lng=c.lng; }
   return {nm, nome:nm, tp:document.getElementById('aTipo').value.trim(), tipo:document.getElementById('aTipo').value.trim(), lat, lng,
     end:document.getElementById('aEnd').value.trim(), endereco:document.getElementById('aEnd').value.trim(), ph:document.getElementById('aTel').value.trim(), telefone:document.getElementById('aTel').value.trim(),
     dirt:document.getElementById('aDirt').checked, dt:new Date().toLocaleString('pt-BR'), maps:`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`};
 }
 async function savePropCloud(pt){
-  const data={nome:pt.nm,tipo:pt.tp||'',endereco:pt.end||'',telefone:pt.ph||'',lat:pt.lat,lng:pt.lng,dirt:!!pt.dirt,maps:pt.maps,municipio:'Casa Branca',quadrante:(typeof classQ==='function'?classQ(pt.lat,pt.lng):''),origem:'app',usuario:v7User?.email||'',createdAt:serverTimestamp(),updatedAt:serverTimestamp()};
+  if(isDuplicateProp(pt)) return {duplicado:true};
+  const data={nome:pt.nm,tipo:pt.tp||'',endereco:pt.end||'',telefone:pt.ph||'',lat:pt.lat,lng:pt.lng,dirt:!!pt.dirt,maps:pt.maps,municipio:'Casa Branca',quadrante:(typeof classQ==='function'?classQ(pt.lat,pt.lng):''),origem:pt._offline?'offline_app':'app',usuario:v7User?.email||'',createdAt:serverTimestamp(),updatedAt:serverTimestamp()};
   return await addDoc(collection(db,'propriedades_cadastradas'),data);
 }
 function renderCloudProperties(){
@@ -1066,14 +1120,20 @@ function renderCloudProperties(){
 }
 async function syncPendingProperties(){
   if(!v7User || !navigator.onLine) return;
-  let arr=pendingProps(); if(!arr.length) return;
+  let arr=pendingProps(); if(!arr.length) { updateOfflineBadge(); return; }
   const rest=[];
   for(const pt of arr){
-    try{ await savePropCloud(pt); await auditV7('propriedade_sincronizada',pt.nm||pt.nome||'sem nome'); }
+    try{
+      const r=await savePropCloud({...pt,_offline:true});
+      await auditV7(r?.duplicado?'propriedade_offline_duplicada_ignorada':'propriedade_sincronizada',pt.nm||pt.nome||'sem nome');
+    }
     catch(e){ rest.push(pt); }
   }
-  savePendingProps(rest);
-  if(rest.length===0) console.log('SISRURAL: propriedades pendentes sincronizadas.');
+  savePendingProps(rest); updateOfflineBadge();
+  if(rest.length===0){
+    console.log('SISRURAL: propriedades pendentes sincronizadas.');
+    try{ toastV7('✅ Cadastros offline enviados para o Firebase.'); }catch(e){}
+  }
 }
 async function migrateLocalPointsToCloudOnce(){
   if(!v7User || localStorage.getItem(MIGRATED_LOCAL_KEY)==='1') return;
@@ -1088,51 +1148,122 @@ async function migrateLocalPointsToCloudOnce(){
   window.userPts.length=0; pend.forEach(p=>window.userPts.push(p));
   try{ savePts(); userPtsG.clearLayers(); window.userPts.forEach((p,i)=>renderPt(p,i)); }catch(e){}
 }
-window.addEventListener('online',()=>syncPendingProperties());
+window.addEventListener('online',()=>{ syncPendingProperties(); syncPendingVisits(); });
 
 window.salvar=async function(){
-  const pt=formProp(); const msg=document.getElementById('aMsg');
+  const msg=document.getElementById('aMsg');
+  const btn=document.getElementById('btnSalvarPonto');
+  if(btn && btn.disabled) return;
+  const pt=formProp();
   if(!pt.nm){msg.style.cssText='display:block;background:rgba(239,68,68,.15);color:#ef4444';msg.textContent='⚠️ Informe o nome da fazenda.';return;}
-  if(isNaN(pt.lat)||isNaN(pt.lng)){
-    // Modo campo/offline: não impedir digitação/salvamento se o GPS não fixou.
-    // Usa o centro atual do mapa como coordenada provisória.
-    try{
-      const c=map.getCenter();
-      if(c && isFinite(c.lat) && isFinite(c.lng)){
-        pt.lat=Number(c.lat.toFixed(6));
-        pt.lng=Number(c.lng.toFixed(6));
-        pt.maps=`https://www.google.com/maps/dir/?api=1&destination=${pt.lat},${pt.lng}&travelmode=driving`;
-        document.getElementById('aLat').value=pt.lat;
-        document.getElementById('aLng').value=pt.lng;
-        msg.style.cssText='display:block;background:rgba(245,158,11,.15);color:#f59e0b';
-        msg.textContent='🟡 GPS não fixou. Salvando com a coordenada provisória do centro do mapa.';
-      }else{ throw new Error('sem centro do mapa'); }
-    }catch(e){
-      msg.style.cssText='display:block;background:rgba(239,68,68,.15);color:#ef4444';
-      msg.textContent='⚠️ Sem GPS. Digite latitude/longitude manualmente ou abra o mapa antes de salvar.';
-      return;
-    }
+  if(isNaN(pt.lat)||isNaN(pt.lng)){msg.style.cssText='display:block;background:rgba(239,68,68,.15);color:#ef4444';msg.textContent='⚠️ Coordenadas inválidas. Use o GPS ou insira manualmente.';return;}
+  if(isDuplicateProp(pt)){
+    msg.style.cssText='display:block;background:rgba(245,158,11,.15);color:#f59e0b';
+    msg.innerHTML='⚠️ Este ponto parece já estar cadastrado ou pendente. O SISRURAL evitou duplicidade.';
+    return;
   }
+  if(btn){ btn.disabled=true; btn.dataset.old=btn.innerHTML; btn.innerHTML='⏳ Salvando...'; btn.style.opacity='.65'; }
+  const finish=(html,ok=true)=>{
+    msg.style.cssText=`display:block;background:${ok?'rgba(34,197,94,.15)':'rgba(245,158,11,.15)'};color:${ok?'#22c55e':'#f59e0b'};line-height:1.35`;
+    msg.innerHTML=html;
+    try{ map.setView([pt.lat,pt.lng],15,{animate:true}); }catch(e){}
+    setTimeout(()=>{ if(btn){ btn.disabled=false; btn.innerHTML=btn.dataset.old||'✅ SALVAR PONTO NO SISRURAL'; btn.style.opacity='1'; } },1800);
+  };
   if(v7User && navigator.onLine){
     try{
-      await savePropCloud(pt); await auditV7('propriedade_cadastrada',pt.nm);
-      msg.style.cssText='display:block;background:rgba(34,197,94,.15);color:#22c55e';
-      msg.textContent=`✅ "${pt.nm}" salvo na nuvem e sincronizado.`;
+      const r=await savePropCloud(pt); await auditV7(r?.duplicado?'propriedade_duplicada_ignorada':'propriedade_cadastrada',pt.nm);
+      if(r?.duplicado){ finish('⚠️ Este ponto já existia no sistema. Não foi cadastrado novamente.',false); return; }
+      finish(`✅ "${pt.nm}" salvo na nuvem e sincronizado.`,true);
+      setTimeout(closeAdd,1400);
     }catch(e){
-      const arr=pendingProps(); arr.push({...pt, erro:e.message}); savePendingProps(arr); userPts.push(pt); savePts(); renderPt(pt,userPts.length-1);
+      const added=pushPendingPropOnce({...pt, erro:e.message, _offline:true});
+      if(added){ userPts.push(pt); savePts(); renderPt(pt,userPts.length-1); }
       try{ if(document.getElementById('sheet')?.classList.contains('open')) selQ(activeQ||classQ(pt.lat,pt.lng)); }catch(e){}
-      msg.style.cssText='display:block;background:rgba(245,158,11,.15);color:#f59e0b';
-      msg.textContent=`🟡 Sem envio no momento. "${pt.nm}" ficou pendente para sincronizar.`;
+      finish(`🟡 <b>SEM INTERNET / SEM ENVIO</b><br>Cadastro salvo no aparelho.<br>Quando o celular voltar a ter sinal, o SISRURAL enviará automaticamente.<br><b>Não clique novamente.</b>`,false);
+      setTimeout(closeAdd,2600);
     }
   } else {
-    const arr=pendingProps(); arr.push(pt); savePendingProps(arr); userPts.push(pt); savePts(); renderPt(pt,userPts.length-1);
+    const added=pushPendingPropOnce({...pt,_offline:true});
+    if(added){ userPts.push(pt); savePts(); renderPt(pt,userPts.length-1); }
     try{ if(document.getElementById('sheet')?.classList.contains('open')) selQ(activeQ||classQ(pt.lat,pt.lng)); }catch(e){}
-    msg.style.cssText='display:block;background:rgba(245,158,11,.15);color:#f59e0b';
-    msg.textContent=`🟡 "${pt.nm}" salvo no aparelho. Enviaremos quando voltar sinal.`;
+    finish(`🟡 <b>SEM INTERNET</b><br>"${pt.nm}" foi salvo no aparelho.<br>Quando voltar o sinal, o SISRURAL fará o envio automático.<br><b>Não é necessário clicar novamente.</b>`,false);
+    setTimeout(closeAdd,3000);
   }
-  map.setView([pt.lat,pt.lng],15,{animate:true});
-  setTimeout(closeAdd,1600);
 };
+
+function v7ToDate(v){
+  if(!v) return null;
+  if(v.createdAt && typeof v.createdAt.toDate==='function') return v.createdAt.toDate();
+  if(v.ultimaVisitaEm && typeof v.ultimaVisitaEm.toDate==='function') return v.ultimaVisitaEm.toDate();
+  if(v.dataLocal){
+    const parts=String(v.dataLocal).match(/(\d{2})\/(\d{2})\/(\d{4})/);
+    if(parts){ const d=new Date(+parts[3],+parts[2]-1,+parts[1]); if(!isNaN(d)) return d; }
+  }
+  return null;
+}
+function v7SameDay(a,b){ return a&&b&&a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate(); }
+function v7MonthKey(d){ return d?`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`:''; }
+function v7AllPropsForReport(){
+  const base=(window.PROPS||[]).map(p=>({nome:p.nm||p.nome,tipo:p.tp||p.tipo,lat:p.lat,lng:p.lng,quadrante:p.q||classQ(p.lat,p.lng),origem:'base'}));
+  const cloud=(v7CloudProps||[]).map(p=>({nome:p.nome||p.nm,tipo:p.tipo||p.tp,lat:p.lat,lng:p.lng,quadrante:p.quadrante||classQ(p.lat,p.lng),origem:'nuvem',ultimaVisitaEm:p.ultimaVisitaEm,ultimaVisitaTexto:p.ultimaVisitaTexto}));
+  const local=(window.userPts||[]).map(p=>({nome:p.nm||p.nome,tipo:p.tp||p.tipo,lat:p.lat,lng:p.lng,quadrante:p.q||classQ(p.lat,p.lng),origem:'local'}));
+  const m=new Map();
+  [...base,...cloud,...local].forEach(p=>{ const k=normTxt(p.nome)+'|'+(p.quadrante||''); if(p.nome&&!m.has(k)) m.set(k,p); });
+  return [...m.values()];
+}
+function v7VisitQuadrante(v){ return v.quadrante || v.q || (v.lat&&v.lng?classQ(v.lat,v.lng):''); }
+function v7VisitPropName(v){ return v.propriedade || v.propriedadeNome || v.nome || ''; }
+function v7VisitObs(v){ return v.observacao || v.texto || ''; }
+function v7ReportStats(){
+  const now=new Date();
+  const props=v7AllPropsForReport();
+  const visits=(v7Visits||[]).map(v=>({...v,_dt:v7ToDate(v),_q:v7VisitQuadrante(v),_prop:v7VisitPropName(v)}));
+  const today=visits.filter(v=>v7SameDay(v._dt,now));
+  const month=visits.filter(v=>v7MonthKey(v._dt)===v7MonthKey(now));
+  const byQ={1:0,2:0,3:0,4:0}; today.forEach(v=>{ if(byQ[v._q]) byQ[v._q]++; });
+  const byUser={}; month.forEach(v=>{ const u=v.usuarioNome||v.nome||v.usuario||'Não informado'; byUser[u]=(byUser[u]||0)+1; });
+  const visitedNames=new Set(visits.map(v=>normTxt(v._prop)).filter(Boolean));
+  const never=props.filter(p=>!visitedNames.has(normTxt(p.nome)));
+  const older30=props.filter(p=>{
+    const n=normTxt(p.nome); const pv=visits.filter(v=>normTxt(v._prop)===n && v._dt).sort((a,b)=>b._dt-a._dt)[0];
+    if(!pv) return false;
+    return (now-pv._dt)/(1000*60*60*24)>30;
+  });
+  return {props,visits,today,month,byQ,byUser,never,older30};
+}
+function renderCommanderDashboard(){
+  const el=document.getElementById('capDashboard'); if(!el) return;
+  const st=v7ReportStats();
+  const qLabel=q=>({1:'Alfa',2:'Bravo',3:'Charlie',4:'Delta'}[q]||q);
+  const prod=Object.entries(st.byUser).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([u,n])=>`<div style="display:flex;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.06);padding:3px 0"><span>${u}</span><b>${n}</b></div>`).join('')||'<div>Nenhuma visita no mês.</div>';
+  el.innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:8px;margin-bottom:10px">
+      <div class="v7-card"><b style="color:var(--ac);font-size:18px">${st.props.length}</b><br>Propriedades</div>
+      <div class="v7-card"><b style="color:#4ade80;font-size:18px">${st.today.length}</b><br>Visitas hoje</div>
+      <div class="v7-card"><b style="color:#facc15;font-size:18px">${st.month.length}</b><br>Visitas no mês</div>
+      <div class="v7-card"><b style="color:#ef4444;font-size:18px">${st.never.length}</b><br>Nunca visitadas</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="v7-card"><b>Visitas de hoje por quadrante</b><br>${[1,2,3,4].map(q=>`${qLabel(q)}: <b>${st.byQ[q]||0}</b>`).join(' · ')}</div>
+      <div class="v7-card"><b>Produtividade no mês</b>${prod}</div>
+    </div>
+    <div style="margin-top:8px;color:#93c5fd">Propriedades há mais de 30 dias sem visita: <b>${st.older30.length}</b></div>`;
+}
+window.openCommanderReport=()=>{
+  const st=v7ReportStats();
+  const today=new Date().toLocaleDateString('pt-BR');
+  const lastVisits=st.visits.slice().sort((a,b)=>(b._dt||0)-(a._dt||0)).slice(0,80);
+  const qLabel=q=>({1:'Alfa',2:'Bravo',3:'Charlie',4:'Delta'}[q]||q||'');
+  const linhas=lastVisits.map(v=>`<tr><td>${v.dataLocal||''}</td><td>${v.horaLocal||''}</td><td>${v._prop||''}</td><td>${qLabel(v._q)}</td><td>${v.usuarioNome||v.usuario||''}</td><td>${v7VisitObs(v)}</td></tr>`).join('');
+  const html=`<!doctype html><html><head><meta charset="utf-8"><title>Relatório SISRURAL</title><style>body{font-family:Arial;margin:24px;color:#111}h1{font-size:20px}table{border-collapse:collapse;width:100%;font-size:12px}td,th{border:1px solid #999;padding:6px;text-align:left}.box{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.box div{border:1px solid #999;padding:8px}button{padding:10px;margin-bottom:12px}</style></head><body><button onclick="window.print()">Imprimir / Salvar PDF</button><h1>SISRURAL - Relatório de Visitas</h1><p>2ª Companhia PM · Casa Branca/SP · ${today}</p><div class="box"><div><b>${st.props.length}</b><br>Propriedades</div><div><b>${st.today.length}</b><br>Visitas hoje</div><div><b>${st.month.length}</b><br>Visitas no mês</div><div><b>${st.never.length}</b><br>Nunca visitadas</div></div><h2>Últimas visitas</h2><table><thead><tr><th>Data</th><th>Hora</th><th>Propriedade</th><th>Quadrante</th><th>Policial</th><th>Observação</th></tr></thead><tbody>${linhas}</tbody></table></body></html>`;
+  const w=window.open('','_blank'); w.document.open(); w.document.write(html); w.document.close();
+};
+window.exportCommanderReportCSV=()=>{
+  const st=v7ReportStats();
+  const rows=[['data','hora','propriedade','quadrante','policial','observacao','maps']].concat(st.visits.map(v=>[v.dataLocal||'',v.horaLocal||'',v._prop||'',v._q||'',v.usuarioNome||v.usuario||'',v7VisitObs(v),v.maps||'']));
+  downloadCSV('sisrural-relatorio-visitas-capitao.csv',rows);
+};
+
 window.exportV7FarmsCSV=()=>{ const arr=[...(window.PROPS||[]),...(v7CloudProps.map(p=>({nm:p.nome,tp:p.tipo,lat:p.lat,lng:p.lng,end:p.endereco,ph:p.telefone,q:''}))),...((window.userPts||[]).map(p=>({nm:p.nm,tp:p.tp,lat:p.lat,lng:p.lng,end:p.end,ph:p.ph,q:''})))]; const rows=[['nome','tipo','telefone','endereco','lat','lng','quadrante','maps']].concat(arr.map(p=>[p.nm,p.tp,p.ph,p.end,p.lat,p.lng,p.q,`https://www.google.com/maps?q=${p.lat},${p.lng}`])); downloadCSV('sisrural-fazendas.csv',rows); };
 window.exportV7VisitsCSV=()=>{ const rows=[['data','hora','propriedade','municipio','quadrante','observacao','usuario','nome','re','maps']].concat(v7Visits.map(v=>[v.dataLocal,v.horaLocal,v.propriedade,v.municipio,v.quadrante,v.observacao||v.texto,v.usuario,v.usuarioNome,v.re,v.maps])); downloadCSV('sisrural-visitas.csv',rows); };
 function downloadCSV(name,rows){ const csv=rows.map(r=>r.map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(';')).join('\n'); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); a.download=name; a.click(); }
