@@ -405,7 +405,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 <div class="v7-modal" id="v7VisitModal"><div class="v7-box"><span class="v7-close" onclick="closeV7Modal('v7VisitModal')">×</span><h2>📋 Registrar visita</h2><div class="v7-small" id="v7VisitInfo">Selecione a propriedade. O sistema preencherá data, hora, policial e GPS automaticamente.</div><input type="hidden" id="v7VisitKey"><label class="field-lbl">PROPRIEDADE</label><select class="field-inp" id="v7VisitProp" onchange="selectVisitPropFromList()"></select><label class="field-lbl">OBSERVAÇÃO</label><textarea class="field-inp" id="v7VisitTexto" style="min-height:100px" placeholder="Ex: Visita realizada. Proprietário orientado. Tudo em ordem."></textarea><button type="button" id="btnSalvarVisita" class="btn-primary" onclick="saveV7Visit()">Salvar visita</button><div id="v7VisitMsg" class="v7-small"></div></div></div>
 <div class="v7-modal" id="v7HistoryModal"><div class="v7-box"><span class="v7-close" onclick="closeV7Modal('v7HistoryModal')">×</span><h2 id="v7HistoryTitle">📜 Histórico da propriedade</h2><div class="v7-small" id="v7HistorySub">Últimas visitas registradas no Firestore.</div><div id="v7HistoryList" style="margin-top:12px"></div></div></div>
 <div class="v7-modal" id="v7RequestModal"><div class="v7-box"><span class="v7-close" onclick="closeV7Modal('v7RequestModal')">×</span><h2>👮 Solicitar acesso</h2><div class="v7-grid"><div><label class="field-lbl">NOME</label><input class="field-inp" id="reqNome"></div><div><label class="field-lbl">RE</label><input class="field-inp" id="reqRe"></div><div><label class="field-lbl">GRADUAÇÃO</label><input class="field-inp" id="reqGrad"></div><div><label class="field-lbl">E-MAIL</label><input class="field-inp" id="reqEmail" type="email"></div><div><label class="field-lbl">TELEFONE</label><input class="field-inp" id="reqTel"></div></div><div class="btn-primary" onclick="sendAccessRequest()">Enviar solicitação</div><div id="reqMsg" class="v7-small"></div></div></div>
-<div class="v7-modal" id="v7AdminModal"><div class="v7-box"><span class="v7-close" onclick="closeV7Modal('v7AdminModal')">×</span><h2>⚙️ Administração SISRURAL</h2><div class="v7-small">Você é Administrador. Aqui ficam usuários, solicitações, auditoria e relatórios.</div><h3 style="color:var(--ac);margin-top:12px">Painel do Capitão</h3><div id="capDashboard" class="v7-card v7-small">Carregando indicadores...</div><div class="v7-card"><button class="btn-primary" onclick="openCommanderReport()">📄 Relatório das visitas</button><button class="btn-secondary" onclick="exportCommanderReportCSV()">Exportar relatório CSV</button></div><h3 style="color:var(--ac);margin-top:12px">Meu perfil</h3><div class="v7-grid"><div><label class="field-lbl">NOME</label><input class="field-inp" id="admNome"></div><div><label class="field-lbl">RE</label><input class="field-inp" id="admRe"></div><div><label class="field-lbl">GRADUAÇÃO</label><input class="field-inp" id="admGrad"></div><div><label class="field-lbl">PERFIL</label><select class="field-inp" id="admPerfil"><option>Administrador</option><option>Comandante</option><option>Supervisor</option><option>Patrulheiro</option><option>Consulta</option></select></div></div><div class="btn-primary" onclick="saveMyAdminProfile()">Salvar meu perfil</div><h3 style="color:var(--ac);margin-top:14px">Solicitações pendentes</h3><div id="v7Requests"></div><h3 style="color:var(--ac);margin-top:14px">Relatórios</h3><div class="v7-card"><button class="btn-primary" onclick="exportV7FarmsCSV()">Exportar fazendas cadastradas CSV</button><button class="btn-secondary" onclick="exportV7VisitsCSV()">Exportar visitas CSV</button><button class="btn-secondary" onclick="window.print()">Imprimir / PDF</button></div><h3 style="color:var(--ac);margin-top:14px">Auditoria recente</h3><div id="v7Audit"></div></div></div>
+<div class="v7-modal" id="v7AdminModal"><div class="v7-box"><span class="v7-close" onclick="closeV7Modal('v7AdminModal')">×</span><h2>⚙️ Administração SISRURAL</h2><div class="v7-small">Painel de gestão, usuários, solicitações, auditoria e relatórios.</div><h3 style="color:var(--ac);margin-top:12px">Painel do Capitão</h3><div id="capDashboard" class="v7-card v7-small">Carregando indicadores...</div><div class="v7-card"><button class="btn-primary" onclick="openCommanderReport()">📄 Relatório das visitas</button><button class="btn-secondary" onclick="exportCommanderReportCSV()">Exportar relatório CSV</button></div><h3 style="color:var(--ac);margin-top:12px">Usuários e perfis</h3><div class="v7-small">Somente Administrador Geral altera perfil. Supervisor acessa o Painel do Capitão e relatórios.</div><div id="v7UsersList"></div><h3 style="color:var(--ac);margin-top:14px">Meu perfil</h3><div class="v7-grid"><div><label class="field-lbl">NOME</label><input class="field-inp" id="admNome"></div><div><label class="field-lbl">RE</label><input class="field-inp" id="admRe"></div><div><label class="field-lbl">GRADUAÇÃO</label><input class="field-inp" id="admGrad"></div><div><label class="field-lbl">PERFIL ATUAL</label><input class="field-inp" id="admPerfilTxt" disabled></div></div><div class="btn-primary" onclick="saveMyBasicProfile()">Salvar meus dados</div><h3 style="color:var(--ac);margin-top:14px">Solicitações pendentes</h3><div id="v7Requests"></div><h3 style="color:var(--ac);margin-top:14px">Relatórios</h3><div class="v7-card"><button class="btn-primary" onclick="exportV7FarmsCSV()">Exportar fazendas cadastradas CSV</button><button class="btn-secondary" onclick="exportV7VisitsCSV()">Exportar visitas CSV</button><button class="btn-secondary" onclick="window.print()">Imprimir / PDF</button></div><h3 style="color:var(--ac);margin-top:14px">Auditoria recente</h3><div id="v7Audit"></div></div></div>
 
 <script>
 // ── CLOCK
@@ -875,14 +875,19 @@ import { getFirestore, doc, getDoc, setDoc, collection, addDoc, onSnapshot, serv
 const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
-let v7User=null, v7Profile=null, v7Requests=[], v7Visits=[], v7Audits=[], v7CloudProps=[]; window.v7CloudProps=v7CloudProps;
+let v7User=null, v7Profile=null, v7Requests=[], v7Visits=[], v7Audits=[], v7CloudProps=[], v7Users=[]; window.v7CloudProps=v7CloudProps;
 const PENDING_PROPS_KEY='sisrural_pending_props_v1';
 const MIGRATED_LOCAL_KEY='sisrural_local_props_migrated_v1';
 const ADMIN = ADMIN_EMAIL || 'ferpozzer@gmail.com';
+const ADMIN_EMAILS = [String(ADMIN).toLowerCase(),'ferpozzer@gmail.com'];
 const $v=id=>document.getElementById(id);
 const emailKey = email => String(email||'').toLowerCase().replace(/[^a-z0-9]/g,'_');
-function isAdmin(){ return v7User && (String(v7User.email).toLowerCase()===String(ADMIN).toLowerCase() || ['Administrador','Comandante'].includes(v7Profile?.perfil)); }
-async function auditV7(acao,detalhe){ try{ await addDoc(collection(db,'auditoria'),{acao,detalhe,usuario:v7User?.email||'',createdAt:serverTimestamp(),app:'SISRURAL V7.3 ROBUSTEZ OFFLINE'}); }catch(e){} }
+function perfilNorm(p){ return String(p||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
+function isAdminGeral(){ const email=String(v7User?.email||'').toLowerCase(); const p=perfilNorm(v7Profile?.perfil); return !!v7User && (ADMIN_EMAILS.includes(email) || ['administrador','administrador geral','comandante'].includes(p)); }
+function isSupervisor(){ const p=perfilNorm(v7Profile?.perfil); return ['supervisor','capitao','capitao pm','tenente'].includes(p); }
+function canOpenAdminPanel(){ return isAdminGeral() || isSupervisor(); }
+function isAdmin(){ return isAdminGeral(); }
+async function auditV7(acao,detalhe){ try{ await addDoc(collection(db,'auditoria'),{acao,detalhe,usuario:v7User?.email||'',createdAt:serverTimestamp(),app:'SISRURAL V7.5 USUARIOS'}); }catch(e){} }
 async function loadProfile(u){
   const refUid=doc(db,'usuarios',u.uid);
   const refEmail=doc(db,'usuarios',emailKey(u.email));
@@ -903,7 +908,7 @@ function showLogged(){
   $v('userPill').style.display='block';
   $v('v7UserEmail').textContent=v7User.email;
   $v('v7UserPerfil').textContent=v7Profile?.perfil||'Patrulheiro';
-  const b=$v('bAdmin'); if(b) b.style.display=isAdmin()?'flex':'none';
+  const b=$v('bAdmin'); if(b) b.style.display=canOpenAdminPanel()?'flex':'none';
 }
 function showLogin(){ $v('authGate').classList.remove('hidden'); $v('userPill').style.display='none'; const b=$v('bAdmin'); if(b) b.style.display='none'; }
 window.v7Login=async()=>{
@@ -920,6 +925,7 @@ function startRealtime(){
   onSnapshot(query(collection(db,'solicitacoes_acesso'),orderBy('createdAt','desc')),s=>{v7Requests=s.docs.map(d=>({id:d.id,...d.data()})); renderRequests();});
   onSnapshot(query(collection(db,'visitas'),orderBy('createdAt','desc')),s=>{v7Visits=s.docs.map(d=>({id:d.id,...d.data()})); renderCommanderDashboard();});
   onSnapshot(query(collection(db,'auditoria'),orderBy('createdAt','desc')),s=>{v7Audits=s.docs.map(d=>({id:d.id,...d.data()})); renderAudit();});
+  onSnapshot(collection(db,'usuarios'),s=>{v7Users=s.docs.map(d=>({docId:d.id,...d.data()})); renderUsersList();});
   onSnapshot(collection(db,'propriedades_cadastradas'),s=>{v7CloudProps=s.docs.map(d=>({id:d.id,...d.data()})); window.v7CloudProps=v7CloudProps; renderCloudProperties(); renderCommanderDashboard();});
   syncPendingProperties();
       syncPendingVisits();
@@ -950,12 +956,50 @@ window.sendAccessRequest=async()=>{
     btnMsg.innerHTML='<span style="color:#ef4444">'+(e.code==='permission-denied'?'Permissão negada no Firebase. Atualize as regras do Firestore conforme orientação.':e.message)+'</span>';
   }
 };
-window.openAdminPanel=()=>{ if(!isAdmin()) return alert('Acesso restrito ao administrador.'); $v('admNome').value=v7Profile.nome||''; $v('admRe').value=v7Profile.re||''; $v('admGrad').value=v7Profile.graduacao||''; $v('admPerfil').value='Administrador'; $v('v7AdminModal').classList.add('open'); renderRequests(); renderAudit(); renderCommanderDashboard(); };
-window.saveMyAdminProfile=async()=>{
-  if(!v7User) return; const data={nome:$v('admNome').value,re:$v('admRe').value,graduacao:$v('admGrad').value,email:v7User.email,perfil:'Administrador',companhia:APP_INFO.companhia,status:'Ativo',updatedAt:serverTimestamp()}; await setDoc(doc(db,'usuarios',v7User.uid),data,{merge:true}); await setDoc(doc(db,'usuarios',emailKey(v7User.email)),{...data,uid:v7User.uid},{merge:true}); v7Profile=data; showLogged(); auditV7('perfil_admin_salvo','Administrador confirmou perfil'); alert('Perfil de Administrador salvo.'); };
-window.approveReq=async(id)=>{ const r=v7Requests.find(x=>x.id===id); if(!r)return; const data={nome:r.nome,email:r.email,re:r.re,graduacao:r.graduacao,telefone:r.telefone,perfil:'Patrulheiro',status:'Ativo',companhia:APP_INFO.companhia,approvedBy:v7User.email,approvedAt:serverTimestamp()}; await setDoc(doc(db,'usuarios',emailKey(r.email)),data,{merge:true}); await setDoc(doc(db,'solicitacoes_acesso',id),{status:'Aprovado',approvedBy:v7User.email,approvedAt:serverTimestamp()},{merge:true}); auditV7('acesso_aprovado',r.email); renderRequests(); };
+window.openAdminPanel=()=>{ if(!canOpenAdminPanel()) return alert('Acesso restrito.'); $v('admNome').value=v7Profile.nome||''; $v('admRe').value=v7Profile.re||''; $v('admGrad').value=v7Profile.graduacao||''; const pf=$v('admPerfilTxt'); if(pf) pf.value=v7Profile?.perfil||'Patrulheiro'; $v('v7AdminModal').classList.add('open'); renderUsersList(); renderRequests(); renderAudit(); renderCommanderDashboard(); };
+window.saveMyBasicProfile=async()=>{
+  if(!v7User) return; const data={nome:$v('admNome').value,re:$v('admRe').value,graduacao:$v('admGrad').value,email:v7User.email,companhia:APP_INFO.companhia,status:v7Profile?.status||'Ativo',updatedAt:serverTimestamp()}; await setDoc(doc(db,'usuarios',v7User.uid),data,{merge:true}); await setDoc(doc(db,'usuarios',emailKey(v7User.email)),{...data,uid:v7User.uid,perfil:v7Profile?.perfil||'Patrulheiro'},{merge:true}); v7Profile={...v7Profile,...data}; showLogged(); auditV7('perfil_atualizado','Usuário atualizou dados básicos'); alert('Dados salvos. O perfil funcional só pode ser alterado por Administrador Geral.'); };
+window.approveReq=async(id)=>{ if(!isAdminGeral()) return alert('Somente Administrador Geral pode aprovar acesso.'); const r=v7Requests.find(x=>x.id===id); if(!r)return; const perfil=prompt('Perfil do usuário: Patrulheiro, Supervisor ou Administrador Geral','Patrulheiro')||'Patrulheiro'; const data={nome:r.nome,email:r.email,re:r.re,graduacao:r.graduacao,telefone:r.telefone,perfil,status:'Ativo',companhia:APP_INFO.companhia,approvedBy:v7User.email,approvedAt:serverTimestamp()}; await setDoc(doc(db,'usuarios',emailKey(r.email)),data,{merge:true}); await setDoc(doc(db,'solicitacoes_acesso',id),{status:'Aprovado',perfilAprovado:perfil,approvedBy:v7User.email,approvedAt:serverTimestamp()},{merge:true}); auditV7('acesso_aprovado',`${r.email} como ${perfil}. Criar/confirmar senha no Authentication.`); alert('Acesso aprovado. Se o usuário ainda não existir em Authentication, crie a senha provisória no Firebase.'); renderRequests(); renderUsersList(); };
 window.denyReq=async(id)=>{ const r=v7Requests.find(x=>x.id===id); await setDoc(doc(db,'solicitacoes_acesso',id),{status:'Negado',deniedBy:v7User.email,deniedAt:serverTimestamp()},{merge:true}); auditV7('acesso_negado',r?.email||id); renderRequests(); };
 function renderRequests(){ const el=$v('v7Requests'); if(!el) return; const pend=v7Requests.filter(r=>r.status==='Pendente'); el.innerHTML=pend.length?pend.map(r=>`<div class="v7-card"><b>${r.nome||r.email}</b><div class="v7-small">${r.graduacao||''} · RE ${r.re||''}<br>${r.email||''} · ${r.telefone||''}</div><button class="btn-primary" onclick="approveReq('${r.id}')">Aprovar</button><button class="btn-secondary" onclick="denyReq('${r.id}')">Negar</button></div>`).join(''):'<div class="v7-card v7-small">Nenhuma solicitação pendente.</div>'; }
+
+function uniqueUsers(){
+  const m=new Map();
+  (v7Users||[]).forEach(u=>{
+    const em=String(u.email||'').toLowerCase(); if(!em) return;
+    const cur=m.get(em)||{};
+    m.set(em,{...cur,...u,email:em});
+  });
+  return [...m.values()].sort((a,b)=>String(a.nome||a.email).localeCompare(String(b.nome||b.email),'pt-BR'));
+}
+function roleOptions(sel){
+  const opts=['Administrador Geral','Supervisor','Patrulheiro','Consulta'];
+  return opts.map(o=>`<option ${String(sel||'')===o||perfilNorm(sel)===perfilNorm(o)?'selected':''}>${o}</option>`).join('');
+}
+function renderUsersList(){
+  const el=$v('v7UsersList'); if(!el) return;
+  const arr=uniqueUsers();
+  if(!arr.length){ el.innerHTML='<div class="v7-card v7-small">Nenhum usuário cadastrado ainda.</div>'; return; }
+  const canEdit=isAdminGeral();
+  el.innerHTML=arr.map((u,i)=>{
+    const selId='userPerfil_'+i;
+    const stId='userStatus_'+i;
+    const locked=!canEdit?'disabled':'';
+    return `<div class="v7-card" style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap"><div><b>${u.nome||u.email}</b><div class="v7-small">${u.graduacao||''} · RE ${u.re||''}<br>${u.email||''}<br>Status: <b>${u.status||'Ativo'}</b></div></div><div style="min-width:210px"><label class="field-lbl">PERFIL</label><select class="field-inp" id="${selId}" ${locked}>${roleOptions(u.perfil||'Patrulheiro')}</select><label class="field-lbl">SITUAÇÃO</label><select class="field-inp" id="${stId}" ${locked}><option ${String(u.status||'Ativo')==='Ativo'?'selected':''}>Ativo</option><option ${String(u.status||'Ativo')==='Bloqueado'?'selected':''}>Bloqueado</option></select>${canEdit?`<button class="btn-primary" onclick="saveUserProfile('${u.email}','${selId}','${stId}')">Salvar perfil</button>`:`<div class="v7-small" style="color:#facc15;margin-top:6px">Somente Administrador Geral altera perfil.</div>`}</div></div></div>`;
+  }).join('');
+}
+window.saveUserProfile=async(email,selId,stId)=>{
+  if(!isAdminGeral()) return alert('Somente Administrador Geral pode alterar usuários.');
+  const perfil=$v(selId).value;
+  const status=$v(stId).value;
+  const user=uniqueUsers().find(u=>String(u.email).toLowerCase()===String(email).toLowerCase())||{};
+  const data={...user,email,perfil,status,updatedBy:v7User.email,updatedAt:serverTimestamp()};
+  await setDoc(doc(db,'usuarios',emailKey(email)),data,{merge:true});
+  if(user.uid) await setDoc(doc(db,'usuarios',user.uid),data,{merge:true});
+  auditV7('perfil_usuario_alterado',`${email}: ${perfil} / ${status}`);
+  alert('Perfil atualizado. Peça para o usuário sair e entrar novamente.');
+  renderUsersList();
+};
 function renderAudit(){ const el=$v('v7Audit'); if(!el)return; el.innerHTML=v7Audits.slice(0,20).map(a=>`<div class="v7-card"><b>${a.acao||''}</b><div class="v7-small">${a.detalhe||''}<br>${a.usuario||''}</div></div>`).join('')||'<div class="v7-card v7-small">Sem auditoria.</div>'; }
 function allVisitProps(){
   const base=(window.PROPS||[]).map((p,i)=>({key:'base_'+i,id:'base_'+i,baseIndex:i,source:'base',nome:p.nm,municipio:'Casa Branca',quadrante:p.q,lat:p.lat,lng:p.lng,maps:p.gmaps||`https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}&travelmode=driving`}));
