@@ -1,7 +1,15 @@
-# SISRURAL V7.5 - Usuários e Perfis
+# SISRURAL V7.5 COMPLETO SEGURO
 
-- Cria seção "Usuários e perfis" no ADMIN.
-- Administrador Geral pode alterar perfil de qualquer usuário.
-- Supervisor acessa Painel do Capitão e relatórios.
-- Remove a troca livre do próprio perfil.
-- Mantém cadastro offline, visitas e relatórios existentes.
+Pacote completo para substituir no GitHub Pages.
+
+Inclui:
+- Cadastro offline preservado.
+- Sincronização automática preservada.
+- Relatório/Painel do Capitão preservado.
+- ADMIN com Usuários e Perfis.
+- Supervisor pode acessar Painel do Capitão e relatórios.
+- Administrador Geral pode alterar perfil dos usuários.
+- Arquivos completos do PWA: index, service-worker, manifest, config e ícones.
+
+Teste com:
+https://subtenenteesargento-spec.github.io/SISRURAL/?v=75completo
