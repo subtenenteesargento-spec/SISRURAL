@@ -1,15 +1,16 @@
-# SISRURAL V7.5 COMPLETO SEGURO
+# SISRURAL V8 - Completo Estável
 
-Pacote completo para substituir no GitHub Pages.
+Versão consolidada para testes operacionais do Patrulhamento Rural.
 
 Inclui:
-- Cadastro offline preservado.
-- Sincronização automática preservada.
-- Relatório/Painel do Capitão preservado.
-- ADMIN com Usuários e Perfis.
-- Supervisor pode acessar Painel do Capitão e relatórios.
-- Administrador Geral pode alterar perfil dos usuários.
-- Arquivos completos do PWA: index, service-worker, manifest, config e ícones.
+- Cadastro de propriedades com funcionamento offline.
+- Fila de sincronização automática quando voltar sinal.
+- Bloqueio contra clique repetido e cadastro duplicado.
+- Registro de visitas.
+- Painel do Capitão / relatórios.
+- Administração com usuários e perfis.
+- PWA instalável no celular.
+- Service Worker atualizado para forçar nova versão.
 
-Teste com:
-https://subtenenteesargento-spec.github.io/SISRURAL/?v=75completo
+Teste após publicar:
+https://subtenenteesargento-spec.github.io/SISRURAL/?v=8
