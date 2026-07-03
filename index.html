@@ -791,11 +791,21 @@ function captGPS(){
   }, err=>{
     const msg={1:'Permissão negada – ative o GPS',2:'Sinal GPS indisponível',3:'Tempo esgotado'}[err.code]||'Erro GPS';
     txt.textContent='⚠️ '+msg;
-    coord.textContent='Insira lat/lng manualmente nos campos abaixo';
     ico.textContent='⚠️';
     retry.style.display='block';
     retry.textContent='↺ Tentar novamente';
-  },{enableHighAccuracy:true,timeout:12000,maximumAge:0});
+    // Modo campo: se o GPS demorar ou falhar sem sinal, não bloqueia o cadastro.
+    // Usa o centro atual do mapa como ponto provisório, permitindo salvar offline.
+    try{
+      const c=map.getCenter();
+      if(c && isFinite(c.lat) && isFinite(c.lng)){
+        document.getElementById('aLat').value=c.lat.toFixed(6);
+        document.getElementById('aLng').value=c.lng.toFixed(6);
+        coord.textContent='GPS não fixou. Coordenada provisória pelo centro do mapa. Ajuste manualmente se necessário.';
+        initMiniMap(c.lat,c.lng);
+      }else{ coord.textContent='Insira lat/lng manualmente nos campos abaixo'; }
+    }catch(e){ coord.textContent='Insira lat/lng manualmente nos campos abaixo'; }
+  },{enableHighAccuracy:true,timeout:45000,maximumAge:300000});
 }
 
 function initMiniMap(lat,lng){
@@ -1083,7 +1093,26 @@ window.addEventListener('online',()=>syncPendingProperties());
 window.salvar=async function(){
   const pt=formProp(); const msg=document.getElementById('aMsg');
   if(!pt.nm){msg.style.cssText='display:block;background:rgba(239,68,68,.15);color:#ef4444';msg.textContent='⚠️ Informe o nome da fazenda.';return;}
-  if(isNaN(pt.lat)||isNaN(pt.lng)){msg.style.cssText='display:block;background:rgba(239,68,68,.15);color:#ef4444';msg.textContent='⚠️ Coordenadas inválidas. Use o GPS ou insira manualmente.';return;}
+  if(isNaN(pt.lat)||isNaN(pt.lng)){
+    // Modo campo/offline: não impedir digitação/salvamento se o GPS não fixou.
+    // Usa o centro atual do mapa como coordenada provisória.
+    try{
+      const c=map.getCenter();
+      if(c && isFinite(c.lat) && isFinite(c.lng)){
+        pt.lat=Number(c.lat.toFixed(6));
+        pt.lng=Number(c.lng.toFixed(6));
+        pt.maps=`https://www.google.com/maps/dir/?api=1&destination=${pt.lat},${pt.lng}&travelmode=driving`;
+        document.getElementById('aLat').value=pt.lat;
+        document.getElementById('aLng').value=pt.lng;
+        msg.style.cssText='display:block;background:rgba(245,158,11,.15);color:#f59e0b';
+        msg.textContent='🟡 GPS não fixou. Salvando com a coordenada provisória do centro do mapa.';
+      }else{ throw new Error('sem centro do mapa'); }
+    }catch(e){
+      msg.style.cssText='display:block;background:rgba(239,68,68,.15);color:#ef4444';
+      msg.textContent='⚠️ Sem GPS. Digite latitude/longitude manualmente ou abra o mapa antes de salvar.';
+      return;
+    }
+  }
   if(v7User && navigator.onLine){
     try{
       await savePropCloud(pt); await auditV7('propriedade_cadastrada',pt.nm);
