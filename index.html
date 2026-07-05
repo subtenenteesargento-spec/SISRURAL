@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>SISRURAL V8 – Completo Estável</title>
+<title>SISRURAL V8.2 – Ajuste Botões</title>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -69,9 +69,20 @@ html,body{
 
 /* BOTÕES FLUTUANTES */
 .map-btns{
-  position:absolute;right:10px;top:10px;z-index:500;
+  position:absolute;right:10px;top:10px;bottom:88px;z-index:500;
   display:flex;flex-direction:column;gap:6px;
-  pointer-events:all;
+  pointer-events:all;overflow-y:auto;overflow-x:hidden;padding-bottom:4px;
+  scrollbar-width:none;
+}
+.map-btns::-webkit-scrollbar{display:none}
+/* Zoom do Leaflet fica no canto esquerdo para não cobrir a barra de botões do SISRURAL */
+.leaflet-bottom.leaflet-left{bottom:8px}
+.leaflet-control-zoom{border:1px solid var(--bd)!important;border-radius:8px!important;overflow:hidden;background:rgba(7,12,23,.9)!important}
+.leaflet-control-zoom a{background:rgba(7,12,23,.96)!important;color:var(--tx)!important;border-color:var(--bd)!important}
+@media(max-width:640px){
+  .map-btns{right:8px;top:8px;bottom:86px;gap:5px}
+  .mbtn{width:38px;height:38px;border-radius:9px}
+  .leaflet-bottom.leaflet-left{bottom:8px;left:8px}
 }
 .mbtn{
   width:40px;height:40px;border-radius:10px;
@@ -209,7 +220,7 @@ html,body{
 <body>
 <div id="authGate">
   <div class="authBox">
-    <h2>🛡️ SISRURAL V7.4</h2>
+    <h2>🛡️ SISRURAL V8.2</h2>
     <p>2ª Companhia PM · acesso restrito</p>
     <label class="field-lbl">E-MAIL</label><input class="field-inp" id="v7Email" type="email" placeholder="seuemail@..." autocomplete="username">
     <label class="field-lbl">SENHA</label><input class="field-inp" id="v7Senha" type="password" placeholder="Senha" autocomplete="current-password">
@@ -507,7 +518,7 @@ const FARM_REFS=[
 
 // ── MAPA
 const map=L.map('map',{center:[CX,CY],zoom:10,zoomControl:false});
-L.control.zoom({position:'bottomright'}).addTo(map);
+L.control.zoom({position:'bottomleft'}).addTo(map);
 
 const osmT=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM',maxZoom:19});
 const satT=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'© Esri',maxZoom:19});

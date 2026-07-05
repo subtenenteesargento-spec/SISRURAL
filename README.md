@@ -1,17 +1,11 @@
-# SISRURAL V8.1 - Dashboard Operacional
+# SISRURAL V8.2 - Ajuste dos Botões
 
-Versão baseada na última versão funcional enviada pelo usuário.
+Correção visual preservando a base atual:
 
-Inclui:
+- Move o controle de zoom (+/-) do Leaflet para o canto inferior esquerdo.
+- Impede que o botão +/zoom cubra a barra lateral de funções.
+- Barra lateral de botões passa a respeitar o rodapé/janela flutuante.
+- Mantém cadastro offline, sincronização, painel do comandante e usuários/perfis.
 
-- Cadastro offline preservado.
-- Sincronização automática preservada.
-- Painel do Capitão ampliado.
-- Filtros por data, quadrante e busca.
-- Relatório operacional imprimível/PDF.
-- Exportação CSV filtrada.
-- Produtividade por policial.
-- Indicadores de propriedades nunca visitadas e sem visita há 30/60/90 dias.
-
-Teste com:
-https://subtenenteesargento-spec.github.io/SISRURAL/?v=81dashboard
+Teste com cache busting:
+https://subtenenteesargento-spec.github.io/SISRURAL/?v=82botoes
