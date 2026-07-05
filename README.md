@@ -1,12 +1,18 @@
-# SISRURAL V8.3 - Cadastro de Policiais
+# SISRURAL V8.4 - Consolidação
+
+Base preservada da V8.
 
 Inclui:
+- cadastro offline preservado;
+- visitas offline preservadas;
+- sincronização manual pelo ADMIN;
+- indicador de pendências;
+- cadastro/atualização de perfil de policial no SISRURAL;
+- painel do comandante e relatórios preservados;
+- auditoria preservada.
 
-- Mantém tudo da V8.2: mapa, offline, sincronização, painel, usuários e relatórios.
-- Cadastrar policial diretamente pelo SISRURAL.
-- Campos simples: nome, RE, graduação, e-mail, telefone, perfil e senha provisória.
-- Aprovar solicitação pelo SISRURAL com criação/atualização do usuário.
-- Sem quadrante, batalhão ou companhia no formulário.
+Observação importante:
+O SISRURAL consegue criar/alterar o PERFIL do policial no Firestore. Para o primeiro login, o e-mail também precisa existir em Firebase Authentication. A criação automática da conta de autenticação exigirá Cloud Functions em etapa futura.
 
-Teste com:
-https://subtenenteesargento-spec.github.io/SISRURAL/?v=83policiais
+Teste sugerido:
+https://subtenenteesargento-spec.github.io/SISRURAL/?v=84consolidacao
