@@ -416,7 +416,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 <div class="v7-modal" id="v7VisitModal"><div class="v7-box"><span class="v7-close" onclick="closeV7Modal('v7VisitModal')">×</span><h2>📋 Registrar visita</h2><div class="v7-small" id="v7VisitInfo">Selecione a propriedade. O sistema preencherá data, hora, policial e GPS automaticamente.</div><input type="hidden" id="v7VisitKey"><label class="field-lbl">PROPRIEDADE</label><select class="field-inp" id="v7VisitProp" onchange="selectVisitPropFromList()"></select><label class="field-lbl">OBSERVAÇÃO</label><textarea class="field-inp" id="v7VisitTexto" style="min-height:100px" placeholder="Ex: Visita realizada. Proprietário orientado. Tudo em ordem."></textarea><button type="button" id="btnSalvarVisita" class="btn-primary" onclick="saveV7Visit()">Salvar visita</button><div id="v7VisitMsg" class="v7-small"></div></div></div>
 <div class="v7-modal" id="v7HistoryModal"><div class="v7-box"><span class="v7-close" onclick="closeV7Modal('v7HistoryModal')">×</span><h2 id="v7HistoryTitle">📜 Histórico da propriedade</h2><div class="v7-small" id="v7HistorySub">Últimas visitas registradas no Firestore.</div><div id="v7HistoryList" style="margin-top:12px"></div></div></div>
 <div class="v7-modal" id="v7RequestModal"><div class="v7-box"><span class="v7-close" onclick="closeV7Modal('v7RequestModal')">×</span><h2>👮 Solicitar acesso</h2><div class="v7-grid"><div><label class="field-lbl">NOME</label><input class="field-inp" id="reqNome"></div><div><label class="field-lbl">RE</label><input class="field-inp" id="reqRe"></div><div><label class="field-lbl">GRADUAÇÃO</label><input class="field-inp" id="reqGrad"></div><div><label class="field-lbl">E-MAIL</label><input class="field-inp" id="reqEmail" type="email"></div><div><label class="field-lbl">TELEFONE</label><input class="field-inp" id="reqTel"></div></div><div class="btn-primary" onclick="sendAccessRequest()">Enviar solicitação</div><div id="reqMsg" class="v7-small"></div></div></div>
-<div class="v7-modal" id="v7AdminModal"><div class="v7-box"><span class="v7-close" onclick="closeV7Modal('v7AdminModal')">×</span><h2>⚙️ Administração SISRURAL</h2><div class="v7-small">Painel de gestão, usuários, solicitações, auditoria e relatórios.</div><h3 style="color:var(--ac);margin-top:12px">Painel do Capitão</h3><div id="capDashboard" class="v7-card v7-small">Carregando indicadores...</div><div class="v7-card"><h3 style="color:var(--ac);margin-top:0">Filtros do relatório</h3><div class="v7-grid"><div><label class="field-lbl">DATA INICIAL</label><input class="field-inp" id="relDataIni" type="date"></div><div><label class="field-lbl">DATA FINAL</label><input class="field-inp" id="relDataFim" type="date"></div><div><label class="field-lbl">QUADRANTE</label><select class="field-inp" id="relQuadrante"><option value="">Todos</option><option value="1">Q1 - Alfa</option><option value="2">Q2 - Bravo</option><option value="3">Q3 - Charlie</option><option value="4">Q4 - Delta</option></select></div><div><label class="field-lbl">POLICIAL / PROPRIEDADE</label><input class="field-inp" id="relBusca" placeholder="Digite parte do nome"></div></div><button class="btn-primary" onclick="openCommanderReport()">📄 Relatório das visitas</button><button class="btn-secondary" onclick="exportCommanderReportCSV()">Exportar relatório CSV</button></div><h3 style="color:var(--ac);margin-top:12px">Usuários e perfis</h3><div class="v7-small">Somente Administrador Geral altera perfil. Supervisor acessa o Painel do Capitão e relatórios.</div><div id="v7UsersList"></div><h3 style="color:var(--ac);margin-top:14px">Meu perfil</h3><div class="v7-grid"><div><label class="field-lbl">NOME</label><input class="field-inp" id="admNome"></div><div><label class="field-lbl">RE</label><input class="field-inp" id="admRe"></div><div><label class="field-lbl">GRADUAÇÃO</label><input class="field-inp" id="admGrad"></div><div><label class="field-lbl">PERFIL ATUAL</label><input class="field-inp" id="admPerfilTxt" disabled></div></div><div class="btn-primary" onclick="saveMyBasicProfile()">Salvar meus dados</div><h3 style="color:var(--ac);margin-top:14px">Solicitações pendentes</h3><div id="v7Requests"></div><h3 style="color:var(--ac);margin-top:14px">Relatórios</h3><div class="v7-card"><button class="btn-primary" onclick="exportV7FarmsCSV()">Exportar fazendas cadastradas CSV</button><button class="btn-secondary" onclick="exportV7VisitsCSV()">Exportar visitas CSV</button><button class="btn-secondary" onclick="window.print()">Imprimir / PDF</button></div><h3 style="color:var(--ac);margin-top:14px">Auditoria recente</h3><div id="v7Audit"></div></div></div>
+<div class="v7-modal" id="v7AdminModal"><div class="v7-box"><span class="v7-close" onclick="closeV7Modal('v7AdminModal')">×</span><h2>⚙️ Administração SISRURAL</h2><div class="v7-small">Painel de gestão, usuários, solicitações, auditoria e relatórios.</div><h3 style="color:var(--ac);margin-top:12px">Painel do Capitão</h3><div id="capDashboard" class="v7-card v7-small">Carregando indicadores...</div><div class="v7-card"><h3 style="color:var(--ac);margin-top:0">Filtros do relatório</h3><div class="v7-grid"><div><label class="field-lbl">DATA INICIAL</label><input class="field-inp" id="relDataIni" type="date"></div><div><label class="field-lbl">DATA FINAL</label><input class="field-inp" id="relDataFim" type="date"></div><div><label class="field-lbl">QUADRANTE</label><select class="field-inp" id="relQuadrante"><option value="">Todos</option><option value="1">Q1 - Alfa</option><option value="2">Q2 - Bravo</option><option value="3">Q3 - Charlie</option><option value="4">Q4 - Delta</option></select></div><div><label class="field-lbl">POLICIAL / PROPRIEDADE</label><input class="field-inp" id="relBusca" placeholder="Digite parte do nome"></div></div><button class="btn-primary" onclick="openCommanderReport()">📄 Relatório das visitas</button><button class="btn-secondary" onclick="exportCommanderReportCSV()">Exportar relatório CSV</button></div><h3 style="color:var(--ac);margin-top:12px">Cadastrar policial</h3><div class="v7-card" id="v83CreateUserBox"><div class="v7-small">Cadastro simples: nome, RE, graduação, e-mail e telefone. O Administrador Geral cria o acesso pelo SISRURAL.</div><div class="v7-grid"><div><label class="field-lbl">NOME COMPLETO</label><input class="field-inp" id="newUserNome" placeholder="Ex.: João da Silva"></div><div><label class="field-lbl">RE</label><input class="field-inp" id="newUserRe" placeholder="000000-0"></div><div><label class="field-lbl">GRADUAÇÃO</label><input class="field-inp" id="newUserGrad" placeholder="Ex.: Cb PM"></div><div><label class="field-lbl">E-MAIL</label><input class="field-inp" id="newUserEmail" type="email" placeholder="email@exemplo.com"></div><div><label class="field-lbl">TELEFONE</label><input class="field-inp" id="newUserTel" placeholder="(19) 99999-9999"></div><div><label class="field-lbl">PERFIL</label><select class="field-inp" id="newUserPerfil"><option>Policial</option><option>Supervisor</option><option>Administrador Geral</option></select></div><div><label class="field-lbl">SENHA PROVISÓRIA</label><input class="field-inp" id="newUserPass" value="Sisrural@2026"></div></div><button class="btn-primary" id="btnCreatePoliceUser" onclick="createPoliceUser()">Criar acesso do policial</button><div id="newUserMsg" class="v7-small"></div></div><h3 style="color:var(--ac);margin-top:12px">Usuários e perfis</h3><div class="v7-small">Somente Administrador Geral altera perfil. Supervisor acessa o Painel do Capitão e relatórios.</div><div id="v7UsersList"></div><h3 style="color:var(--ac);margin-top:14px">Meu perfil</h3><div class="v7-grid"><div><label class="field-lbl">NOME</label><input class="field-inp" id="admNome"></div><div><label class="field-lbl">RE</label><input class="field-inp" id="admRe"></div><div><label class="field-lbl">GRADUAÇÃO</label><input class="field-inp" id="admGrad"></div><div><label class="field-lbl">PERFIL ATUAL</label><input class="field-inp" id="admPerfilTxt" disabled></div></div><div class="btn-primary" onclick="saveMyBasicProfile()">Salvar meus dados</div><h3 style="color:var(--ac);margin-top:14px">Solicitações pendentes</h3><div id="v7Requests"></div><h3 style="color:var(--ac);margin-top:14px">Relatórios</h3><div class="v7-card"><button class="btn-primary" onclick="exportV7FarmsCSV()">Exportar fazendas cadastradas CSV</button><button class="btn-secondary" onclick="exportV7VisitsCSV()">Exportar visitas CSV</button><button class="btn-secondary" onclick="window.print()">Imprimir / PDF</button></div><h3 style="color:var(--ac);margin-top:14px">Auditoria recente</h3><div id="v7Audit"></div></div></div>
 
 <script>
 // ── CLOCK
@@ -880,11 +880,13 @@ setTimeout(()=>{map.setView([CX,CY],10);closeSheet();},300);
 <script type="module">
 import { firebaseConfig, ADMIN_EMAIL, APP_INFO, ADMIN_EMAILS_FIXOS } from './config.firebase.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
 import { getFirestore, doc, getDoc, setDoc, collection, addDoc, onSnapshot, serverTimestamp, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
 
 const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
+const secondaryApp = initializeApp(firebaseConfig, 'sisrural-secondary-auth');
+const secondaryAuth = getAuth(secondaryApp);
 const db = getFirestore(firebaseApp);
 let v7User=null, v7Profile=null, v7Requests=[], v7Visits=[], v7Audits=[], v7CloudProps=[], v7Users=[]; window.v7CloudProps=v7CloudProps;
 const PENDING_PROPS_KEY='sisrural_pending_props_v1';
@@ -918,7 +920,7 @@ function showLogged(){
   $v('authGate').classList.add('hidden');
   $v('userPill').style.display='block';
   $v('v7UserEmail').textContent=v7User.email;
-  $v('v7UserPerfil').textContent=v7Profile?.perfil||'Patrulheiro';
+  $v('v7UserPerfil').textContent=v7Profile?.perfil||'Policial';
   const b=$v('bAdmin'); if(b) b.style.display=canOpenAdminPanel()?'flex':'none';
 }
 function showLogin(){ $v('authGate').classList.remove('hidden'); $v('userPill').style.display='none'; const b=$v('bAdmin'); if(b) b.style.display='none'; }
@@ -967,10 +969,62 @@ window.sendAccessRequest=async()=>{
     btnMsg.innerHTML='<span style="color:#ef4444">'+(e.code==='permission-denied'?'Permissão negada no Firebase. Atualize as regras do Firestore conforme orientação.':e.message)+'</span>';
   }
 };
-window.openAdminPanel=()=>{ if(!canOpenAdminPanel()) return alert('Acesso restrito.'); $v('admNome').value=v7Profile.nome||''; $v('admRe').value=v7Profile.re||''; $v('admGrad').value=v7Profile.graduacao||''; const pf=$v('admPerfilTxt'); if(pf) pf.value=v7Profile?.perfil||'Patrulheiro'; $v('v7AdminModal').classList.add('open'); renderUsersList(); renderRequests(); renderAudit(); renderCommanderDashboard(); };
+window.openAdminPanel=()=>{ if(!canOpenAdminPanel()) return alert('Acesso restrito.'); $v('admNome').value=v7Profile.nome||''; $v('admRe').value=v7Profile.re||''; $v('admGrad').value=v7Profile.graduacao||''; const pf=$v('admPerfilTxt'); if(pf) pf.value=v7Profile?.perfil||'Policial'; $v('v7AdminModal').classList.add('open'); renderUsersList(); renderRequests(); renderAudit(); renderCommanderDashboard(); };
 window.saveMyBasicProfile=async()=>{
-  if(!v7User) return; const data={nome:$v('admNome').value,re:$v('admRe').value,graduacao:$v('admGrad').value,email:v7User.email,companhia:APP_INFO.companhia,status:v7Profile?.status||'Ativo',updatedAt:serverTimestamp()}; await setDoc(doc(db,'usuarios',v7User.uid),data,{merge:true}); await setDoc(doc(db,'usuarios',emailKey(v7User.email)),{...data,uid:v7User.uid,perfil:v7Profile?.perfil||'Patrulheiro'},{merge:true}); v7Profile={...v7Profile,...data}; showLogged(); auditV7('perfil_atualizado','Usuário atualizou dados básicos'); alert('Dados salvos. O perfil funcional só pode ser alterado por Administrador Geral.'); };
-window.approveReq=async(id)=>{ if(!isAdminGeral()) return alert('Somente Administrador Geral pode aprovar acesso.'); const r=v7Requests.find(x=>x.id===id); if(!r)return; const perfil=prompt('Perfil do usuário: Patrulheiro, Supervisor ou Administrador Geral','Patrulheiro')||'Patrulheiro'; const data={nome:r.nome,email:r.email,re:r.re,graduacao:r.graduacao,telefone:r.telefone,perfil,status:'Ativo',companhia:APP_INFO.companhia,approvedBy:v7User.email,approvedAt:serverTimestamp()}; await setDoc(doc(db,'usuarios',emailKey(r.email)),data,{merge:true}); await setDoc(doc(db,'solicitacoes_acesso',id),{status:'Aprovado',perfilAprovado:perfil,approvedBy:v7User.email,approvedAt:serverTimestamp()},{merge:true}); auditV7('acesso_aprovado',`${r.email} como ${perfil}. Criar/confirmar senha no Authentication.`); alert('Acesso aprovado. Se o usuário ainda não existir em Authentication, crie a senha provisória no Firebase.'); renderRequests(); renderUsersList(); };
+  if(!v7User) return; const data={nome:$v('admNome').value,re:$v('admRe').value,graduacao:$v('admGrad').value,email:v7User.email,companhia:APP_INFO.companhia,status:v7Profile?.status||'Ativo',updatedAt:serverTimestamp()}; await setDoc(doc(db,'usuarios',v7User.uid),data,{merge:true}); await setDoc(doc(db,'usuarios',emailKey(v7User.email)),{...data,uid:v7User.uid,perfil:v7Profile?.perfil||'Policial'},{merge:true}); v7Profile={...v7Profile,...data}; showLogged(); auditV7('perfil_atualizado','Usuário atualizou dados básicos'); alert('Dados salvos. O perfil funcional só pode ser alterado por Administrador Geral.'); };
+window.approveReq=async(id)=>{
+  if(!isAdminGeral()) return alert('Somente Administrador Geral pode aprovar acesso.');
+  const r=v7Requests.find(x=>x.id===id); if(!r) return;
+  const perfil=prompt('Perfil do usuário: Policial, Supervisor ou Administrador Geral','Policial')||'Policial';
+  const senha=prompt('Senha provisória para o primeiro acesso','Sisrural@2026')||'Sisrural@2026';
+  await createUserProfileAndAuth({nome:r.nome,re:r.re,graduacao:r.graduacao,email:r.email,telefone:r.telefone,perfil,status:'Ativo',senha}, false);
+  await setDoc(doc(db,'solicitacoes_acesso',id),{status:'Aprovado',perfilAprovado:perfil,approvedBy:v7User.email,approvedAt:serverTimestamp()},{merge:true});
+  auditV7('acesso_aprovado',`${r.email} como ${perfil}`);
+  alert(`Acesso aprovado pelo SISRURAL.
+
+E-mail: ${r.email}
+Senha provisória: ${senha}
+
+Oriente o policial a entrar e trocar a senha futuramente.`);
+  renderRequests(); renderUsersList();
+};
+
+async function createUserProfileAndAuth(info, showMsg=true){
+  if(!isAdminGeral()) throw new Error('Somente Administrador Geral pode criar acesso.');
+  const email=String(info.email||'').trim().toLowerCase();
+  const senha=String(info.senha||'Sisrural@2026').trim();
+  if(!info.nome||!email||!info.re||!info.graduacao) throw new Error('Preencha nome, RE, graduação e e-mail.');
+  if(senha.length<6) throw new Error('A senha provisória precisa ter pelo menos 6 caracteres.');
+  let authStatus='Conta criada no Authentication.';
+  try{
+    const cred=await createUserWithEmailAndPassword(secondaryAuth,email,senha);
+    await signOut(secondaryAuth).catch(()=>{});
+    info.uid=cred.user.uid;
+  }catch(e){
+    if(String(e.code||'').includes('email-already-in-use')) authStatus='Usuário já existia no Authentication. Perfil atualizado.';
+    else throw e;
+  }
+  const perfil=info.perfil||'Policial';
+  const data={nome:info.nome,re:info.re,graduacao:info.graduacao,email,telefone:info.telefone||'',perfil,status:info.status||'Ativo',createdBy:v7User.email,updatedBy:v7User.email,updatedAt:serverTimestamp(),createdAt:serverTimestamp()};
+  if(info.uid) data.uid=info.uid;
+  await setDoc(doc(db,'usuarios',emailKey(email)),data,{merge:true});
+  if(info.uid) await setDoc(doc(db,'usuarios',info.uid),data,{merge:true});
+  auditV7('usuario_cadastrado',`${email} · ${perfil}`);
+  return authStatus;
+}
+window.createPoliceUser=async()=>{
+  const btn=$v('btnCreatePoliceUser'), msg=$v('newUserMsg');
+  if(!isAdminGeral()) return alert('Somente Administrador Geral pode cadastrar policiais.');
+  const info={nome:$v('newUserNome').value.trim(),re:$v('newUserRe').value.trim(),graduacao:$v('newUserGrad').value.trim(),email:$v('newUserEmail').value.trim(),telefone:$v('newUserTel').value.trim(),perfil:$v('newUserPerfil').value,status:'Ativo',senha:$v('newUserPass').value.trim()};
+  try{
+    btn.disabled=true; btn.textContent='Criando acesso...'; msg.innerHTML='<span style="color:#facc15">Criando usuário e perfil...</span>';
+    const status=await createUserProfileAndAuth(info,true);
+    msg.innerHTML=`<span style="color:#22c55e">✅ Acesso criado. ${status}<br>E-mail: <b>${info.email}</b><br>Senha provisória: <b>${info.senha}</b></span>`;
+    ['newUserNome','newUserRe','newUserGrad','newUserEmail','newUserTel'].forEach(id=>$v(id).value=''); $v('newUserPerfil').value='Policial'; $v('newUserPass').value='Sisrural@2026';
+  }catch(e){ msg.innerHTML=`<span style="color:#ef4444">❌ ${e.message||e}</span>`; }
+  finally{ btn.disabled=false; btn.textContent='Criar acesso do policial'; }
+};
+
 window.denyReq=async(id)=>{ const r=v7Requests.find(x=>x.id===id); await setDoc(doc(db,'solicitacoes_acesso',id),{status:'Negado',deniedBy:v7User.email,deniedAt:serverTimestamp()},{merge:true}); auditV7('acesso_negado',r?.email||id); renderRequests(); };
 function renderRequests(){ const el=$v('v7Requests'); if(!el) return; const pend=v7Requests.filter(r=>r.status==='Pendente'); el.innerHTML=pend.length?pend.map(r=>`<div class="v7-card"><b>${r.nome||r.email}</b><div class="v7-small">${r.graduacao||''} · RE ${r.re||''}<br>${r.email||''} · ${r.telefone||''}</div><button class="btn-primary" onclick="approveReq('${r.id}')">Aprovar</button><button class="btn-secondary" onclick="denyReq('${r.id}')">Negar</button></div>`).join(''):'<div class="v7-card v7-small">Nenhuma solicitação pendente.</div>'; }
 
@@ -996,7 +1050,7 @@ function renderUsersList(){
     const selId='userPerfil_'+i;
     const stId='userStatus_'+i;
     const locked=!canEdit?'disabled':'';
-    return `<div class="v7-card" style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap"><div><b>${u.nome||u.email}</b><div class="v7-small">${u.graduacao||''} · RE ${u.re||''}<br>${u.email||''}<br>Status: <b>${u.status||'Ativo'}</b></div></div><div style="min-width:210px"><label class="field-lbl">PERFIL</label><select class="field-inp" id="${selId}" ${locked}>${roleOptions(u.perfil||'Patrulheiro')}</select><label class="field-lbl">SITUAÇÃO</label><select class="field-inp" id="${stId}" ${locked}><option ${String(u.status||'Ativo')==='Ativo'?'selected':''}>Ativo</option><option ${String(u.status||'Ativo')==='Bloqueado'?'selected':''}>Bloqueado</option></select>${canEdit?`<button class="btn-primary" onclick="saveUserProfile('${u.email}','${selId}','${stId}')">Salvar perfil</button>`:`<div class="v7-small" style="color:#facc15;margin-top:6px">Somente Administrador Geral altera perfil.</div>`}</div></div></div>`;
+    return `<div class="v7-card" style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap"><div><b>${u.nome||u.email}</b><div class="v7-small">${u.graduacao||''} · RE ${u.re||''}<br>${u.email||''}<br>Status: <b>${u.status||'Ativo'}</b></div></div><div style="min-width:210px"><label class="field-lbl">PERFIL</label><select class="field-inp" id="${selId}" ${locked}>${roleOptions(u.perfil||'Policial')}</select><label class="field-lbl">SITUAÇÃO</label><select class="field-inp" id="${stId}" ${locked}><option ${String(u.status||'Ativo')==='Ativo'?'selected':''}>Ativo</option><option ${String(u.status||'Ativo')==='Bloqueado'?'selected':''}>Bloqueado</option></select>${canEdit?`<button class="btn-primary" onclick="saveUserProfile('${u.email}','${selId}','${stId}')">Salvar perfil</button>`:`<div class="v7-small" style="color:#facc15;margin-top:6px">Somente Administrador Geral altera perfil.</div>`}</div></div></div>`;
   }).join('');
 }
 window.saveUserProfile=async(email,selId,stId)=>{

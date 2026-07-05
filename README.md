@@ -1,11 +1,12 @@
-# SISRURAL V8.2 - Ajuste dos Botões
+# SISRURAL V8.3 - Cadastro de Policiais
 
-Correção visual preservando a base atual:
+Inclui:
 
-- Move o controle de zoom (+/-) do Leaflet para o canto inferior esquerdo.
-- Impede que o botão +/zoom cubra a barra lateral de funções.
-- Barra lateral de botões passa a respeitar o rodapé/janela flutuante.
-- Mantém cadastro offline, sincronização, painel do comandante e usuários/perfis.
+- Mantém tudo da V8.2: mapa, offline, sincronização, painel, usuários e relatórios.
+- Cadastrar policial diretamente pelo SISRURAL.
+- Campos simples: nome, RE, graduação, e-mail, telefone, perfil e senha provisória.
+- Aprovar solicitação pelo SISRURAL com criação/atualização do usuário.
+- Sem quadrante, batalhão ou companhia no formulário.
 
-Teste com cache busting:
-https://subtenenteesargento-spec.github.io/SISRURAL/?v=82botoes
+Teste com:
+https://subtenenteesargento-spec.github.io/SISRURAL/?v=83policiais
