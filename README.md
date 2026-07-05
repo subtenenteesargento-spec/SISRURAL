@@ -1,17 +1,27 @@
-# SISRURAL V8.5 - Visual Premium e Gestão Operacional
+# SISRURAL V9 – Profissional
 
-Base preservada da V8.4.
+Versão reorganizada em módulos, preservando as funcionalidades validadas em campo.
 
-Inclui:
-- cadastro offline preservado;
-- visitas offline preservadas;
-- sincronização automática e manual preservada;
-- painel do comandante preservado;
-- usuários e perfis preservados;
-- cadastro/atualização de policial preservado;
-- auditoria preservada;
-- novo visual premium para desktop e celular;
-- botões, modais, cards, inputs e painel com aparência mais profissional.
+## Preservado
+- Cadastro de propriedades.
+- Cadastro e visita offline.
+- Sincronização automática.
+- Painel do Comandante.
+- Usuários e perfis.
+- Relatórios e CSV.
+- PWA instalável.
+- Mapa e quadrantes.
 
-Teste sugerido:
-https://subtenenteesargento-spec.github.io/SISRURAL/?v=85visual
+## Nova estrutura
+- `index.html` mais limpo.
+- `css/app.css` e `css/premium.css`.
+- `js/request-access.js`, `js/mapa-ui.js`, `js/firebase-admin.js` e `js/service-worker-register.js`.
+- Service Worker atualizado para cachear os novos módulos.
+
+## Teste
+Após publicar no GitHub Pages, acesse:
+
+https://subtenenteesargento-spec.github.io/SISRURAL/?v=9profissional
+
+## Observação
+Esta versão mantém a lógica da V8.5, apenas reorganizada para facilitar manutenção e reduzir erros em futuras atualizações.
