@@ -1,16 +1,17 @@
-# SISRURAL V8 - Completo Estável
+# SISRURAL V8.1 - Dashboard Operacional
 
-Versão consolidada para testes operacionais do Patrulhamento Rural.
+Versão baseada na última versão funcional enviada pelo usuário.
 
 Inclui:
-- Cadastro de propriedades com funcionamento offline.
-- Fila de sincronização automática quando voltar sinal.
-- Bloqueio contra clique repetido e cadastro duplicado.
-- Registro de visitas.
-- Painel do Capitão / relatórios.
-- Administração com usuários e perfis.
-- PWA instalável no celular.
-- Service Worker atualizado para forçar nova versão.
 
-Teste após publicar:
-https://subtenenteesargento-spec.github.io/SISRURAL/?v=8
+- Cadastro offline preservado.
+- Sincronização automática preservada.
+- Painel do Capitão ampliado.
+- Filtros por data, quadrante e busca.
+- Relatório operacional imprimível/PDF.
+- Exportação CSV filtrada.
+- Produtividade por policial.
+- Indicadores de propriedades nunca visitadas e sem visita há 30/60/90 dias.
+
+Teste com:
+https://subtenenteesargento-spec.github.io/SISRURAL/?v=81dashboard
