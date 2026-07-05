@@ -1,18 +1,17 @@
-# SISRURAL V8.4 - Consolidação
+# SISRURAL V8.5 - Visual Premium e Gestão Operacional
 
-Base preservada da V8.
+Base preservada da V8.4.
 
 Inclui:
 - cadastro offline preservado;
 - visitas offline preservadas;
-- sincronização manual pelo ADMIN;
-- indicador de pendências;
-- cadastro/atualização de perfil de policial no SISRURAL;
-- painel do comandante e relatórios preservados;
-- auditoria preservada.
-
-Observação importante:
-O SISRURAL consegue criar/alterar o PERFIL do policial no Firestore. Para o primeiro login, o e-mail também precisa existir em Firebase Authentication. A criação automática da conta de autenticação exigirá Cloud Functions em etapa futura.
+- sincronização automática e manual preservada;
+- painel do comandante preservado;
+- usuários e perfis preservados;
+- cadastro/atualização de policial preservado;
+- auditoria preservada;
+- novo visual premium para desktop e celular;
+- botões, modais, cards, inputs e painel com aparência mais profissional.
 
 Teste sugerido:
-https://subtenenteesargento-spec.github.io/SISRURAL/?v=84consolidacao
+https://subtenenteesargento-spec.github.io/SISRURAL/?v=85visual

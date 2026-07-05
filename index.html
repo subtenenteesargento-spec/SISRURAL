@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>SISRURAL V8.4 – Consolidação</title>
+<title>SISRURAL V8.5 – Visual Premium</title>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -207,6 +207,108 @@ html,body{
 .v7-modal.open{display:flex}.v7-box{width:100%;max-width:760px;max-height:92vh;overflow:auto;background:var(--sf);border:1px solid var(--bd);border-radius:18px;padding:16px}.v7-box h2{font-family:'Rajdhani',sans-serif;color:var(--ac);font-size:24px;margin-bottom:8px}.v7-close{float:right;cursor:pointer;color:var(--mu);font-size:24px}
 .v7-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}.v7-card{background:var(--s2);border:1px solid var(--bd);border-radius:12px;padding:10px;margin:8px 0}.v7-small{font-size:11px;color:var(--mu);line-height:1.4}.v7-pill{display:inline-block;border:1px solid var(--bd);border-radius:999px;padding:2px 7px;font-size:10px;color:var(--mu);margin:2px}
 
+
+
+/* ─────────────────────────────────────────────────────────────
+   SISRURAL V8.5 – VISUAL PREMIUM / sem alterar regras de negócio
+   ───────────────────────────────────────────────────────────── */
+:root{
+  --glass:rgba(10,18,32,.82);
+  --glass2:rgba(15,28,47,.88);
+  --line:rgba(148,163,184,.18);
+  --glow:0 0 0 1px rgba(255,215,0,.12),0 12px 34px rgba(0,0,0,.38);
+}
+body{
+  background:
+    radial-gradient(circle at 15% 0%,rgba(34,211,238,.13),transparent 32%),
+    radial-gradient(circle at 90% 10%,rgba(192,132,252,.11),transparent 35%),
+    linear-gradient(180deg,#050914 0%,#07111f 42%,#050914 100%);
+}
+.topbar{
+  height:58px;
+  background:linear-gradient(90deg,rgba(4,10,22,.96),rgba(9,18,34,.93));
+  border-bottom:1px solid rgba(255,215,0,.20);
+  box-shadow:0 10px 32px rgba(0,0,0,.22);
+}
+.tb-shield{
+  width:38px;height:38px;border-radius:12px;
+  box-shadow:0 0 18px rgba(255,215,0,.18), inset 0 0 18px rgba(34,211,238,.08);
+}
+.tb-text h1{font-size:17px;text-shadow:0 0 12px rgba(255,215,0,.18)}
+.tb-text p{color:#6f8cad}
+.tb-clock{font-size:15px;text-shadow:0 0 14px rgba(255,215,0,.38)}
+.qtabs{background:linear-gradient(180deg,rgba(7,12,23,.98),rgba(5,10,20,.96));box-shadow:0 8px 28px rgba(0,0,0,.20)}
+.qtab{min-height:64px;position:relative;overflow:hidden}
+.qtab::before{content:'';position:absolute;inset:auto 22% 0;height:1px;background:linear-gradient(90deg,transparent,var(--qc),transparent);opacity:.25}
+.qtab.active{background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.015));box-shadow:inset 0 -1px 0 var(--qc)}
+.qtab-ico{filter:drop-shadow(0 0 10px var(--qc));font-size:18px}
+.qtab-label{font-size:11px}
+.mbtn{
+  width:44px;height:44px;border-radius:14px;
+  background:linear-gradient(180deg,rgba(14,25,42,.96),rgba(7,13,25,.96));
+  border:1px solid rgba(255,215,0,.30);
+  box-shadow:0 10px 22px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.06);
+}
+.mbtn:hover,.mbtn.on{border-color:var(--ac);box-shadow:0 0 0 1px rgba(255,215,0,.25),0 12px 24px rgba(0,0,0,.36)}
+#bAdd{background:linear-gradient(180deg,rgba(34,197,94,.24),rgba(7,13,25,.96));border-color:#22c55e;text-shadow:0 0 10px rgba(34,197,94,.4)}
+.sheet{
+  background:linear-gradient(180deg,rgba(12,21,32,.97),rgba(6,13,24,.99));
+  border-top:1px solid rgba(255,215,0,.20);
+  box-shadow:0 -24px 60px rgba(0,0,0,.45);
+}
+.sheet-handle{background:linear-gradient(90deg,rgba(34,211,238,.4),rgba(255,215,0,.85),rgba(192,132,252,.4))!important;box-shadow:0 0 18px rgba(255,215,0,.25)}
+.prop-card,.v7-card,.modal-box,.v7-box{
+  background:linear-gradient(180deg,rgba(17,31,52,.90),rgba(10,19,33,.92))!important;
+  border:1px solid var(--line)!important;
+  box-shadow:0 14px 30px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.04);
+}
+.prop-card:hover{border-color:rgba(255,215,0,.38)!important;transform:translateY(-1px)}
+.prop-name{letter-spacing:.2px}
+.ref-card,.anchor-card{box-shadow:var(--glow)}
+.v7-box{
+  border-radius:22px!important;
+  max-width:760px!important;
+}
+.v7-modal.open .v7-box,.modal-over.open .modal-box{animation:sisPop .18s ease-out both}
+@keyframes sisPop{from{opacity:.6;transform:translateY(8px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+.v7-box h2,.modal-title,h3{letter-spacing:.2px;text-shadow:0 0 14px rgba(255,215,0,.13)}
+.field-inp{
+  background:rgba(3,8,18,.74)!important;
+  border:1px solid rgba(78,106,135,.45)!important;
+  border-radius:10px!important;
+  transition:border-color .15s,box-shadow .15s,background .15s;
+}
+.field-inp:focus{
+  outline:none!important;border-color:rgba(34,211,238,.9)!important;
+  box-shadow:0 0 0 3px rgba(34,211,238,.12),0 0 20px rgba(34,211,238,.10)!important;
+  background:rgba(4,12,25,.9)!important;
+}
+.btn-primary,.btn-secondary{
+  border-radius:12px!important;
+  box-shadow:0 12px 24px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.08);
+  transition:transform .12s,filter .12s,box-shadow .12s;
+}
+.btn-primary{
+  background:linear-gradient(90deg,#16a34a,#22c55e,#38d36b)!important;
+  border:1px solid rgba(74,222,128,.36)!important;
+}
+.btn-secondary{background:linear-gradient(180deg,rgba(30,46,72,.92),rgba(16,29,46,.92))!important;border:1px solid rgba(148,163,184,.16)!important}
+.btn-primary:active,.btn-secondary:active{transform:scale(.985)}
+.btn-primary:hover{filter:brightness(1.07)}
+#userPill{
+  background:linear-gradient(180deg,rgba(18,31,50,.94),rgba(7,13,25,.94))!important;
+  border:1px solid rgba(34,211,238,.20)!important;
+  border-radius:12px!important;
+  box-shadow:0 8px 22px rgba(0,0,0,.25);
+}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#0b1524!important;color:var(--tx)!important;border:1px solid rgba(255,215,0,.22)!important;box-shadow:0 16px 35px rgba(0,0,0,.35)!important}
+.leaflet-control-attribution{background:rgba(7,12,23,.75)!important;color:#94a3b8!important;border-radius:8px 0 0 0}
+@media(max-width:640px){
+  .topbar{height:54px;padding:0 10px}.tb-text h1{font-size:14px}.tb-text p{font-size:8px}.tb-clock{font-size:13px}
+  .qtab{min-height:58px}.mbtn{width:42px;height:42px;border-radius:13px}
+  .v7-box,.modal-box{border-radius:18px!important;margin:8px!important;max-height:88vh!important}
+}
+
 </style>
 
 <link rel="manifest" href="manifest.webmanifest">
@@ -256,7 +358,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   <div class="tb-shield">🛡️</div>
   <div class="tb-text">
     <h1>SIS<em>RURAL</em> · CASA BRANCA<span style="color:var(--mu);font-size:10px;font-weight:400"> /SP</span></h1>
-    <p>Patrulhamento Rural · 4 Quadrantes · Dados reais Google Maps</p>
+    <p>Patrulhamento Rural · 4 Quadrantes · V8.5 Visual Premium</p>
   </div>
   <div class="tb-clock" id="clk">--:--</div>
 </div>
@@ -1430,7 +1532,109 @@ window.openCommanderReport=()=>{
   const visits=st.filtered.slice().sort((a,b)=>(b._dt||0)-(a._dt||0));
   const linhas=visits.map(v=>`<tr><td>${v.dataLocal||v7FmtDate(v._dt)}</td><td>${v.horaLocal||v7FmtHour(v._dt)}</td><td>${v._prop||''}</td><td>${v7QLabel(v._q)}</td><td>${v.usuarioNome||v.usuario||''}</td><td>${v._obs||''}</td><td>${v.maps?`<a href="${v.maps}">Mapa</a>`:''}</td></tr>`).join('');
   const periodo=(f.ini||f.fim)?`${f.ini||'início'} até ${f.fim||'hoje'}`:'Todos os registros';
-  const html=`<!doctype html><html><head><meta charset="utf-8"><title>Relatório SISRURAL</title><style>body{font-family:Arial;margin:24px;color:#111}h1{font-size:20px}table{border-collapse:collapse;width:100%;font-size:12px}td,th{border:1px solid #999;padding:6px;text-align:left;vertical-align:top}.box{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.box div{border:1px solid #999;padding:8px}button{padding:10px;margin-bottom:12px}@media print{button{display:none}}</style></head><body><button onclick="window.print()">Imprimir / Salvar PDF</button><h1>SISRURAL - Relatório Operacional de Visitas</h1><p><b>2ª Companhia PM · 24º BPM/I</b><br>Emitido em ${today}<br>Período: ${periodo}<br>Quadrante: ${f.q?v7QLabel(f.q):'Todos'} · Busca: ${f.busca||'Todos'}</p><div class="box"><div><b>${st.props.length}</b><br>Propriedades</div><div><b>${st.filtered.length}</b><br>Visitas filtradas</div><div><b>${st.today.length}</b><br>Visitas hoje</div><div><b>${st.month.length}</b><br>Visitas no mês</div></div><h2>Visitas realizadas</h2><table><thead><tr><th>Data</th><th>Hora</th><th>Propriedade</th><th>Quadrante</th><th>Policial</th><th>Observação</th><th>Mapa</th></tr></thead><tbody>${linhas||'<tr><td colspan="7">Nenhuma visita localizada.</td></tr>'}</tbody></table><p style="margin-top:28px">_________________________________________<br>Comandante/Supervisor</p></body></html>`;
+  const html=`<!doctype html><html><head><meta charset="utf-8"><title>Relatório SISRURAL</title><style>body{font-family:Arial;margin:24px;color:#111}h1{font-size:20px}table{border-collapse:collapse;width:100%;font-size:12px}td,th{border:1px solid #999;padding:6px;text-align:left;vertical-align:top}.box{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.box div{border:1px solid #999;padding:8px}button{padding:10px;margin-bottom:12px}@media print{button{display:none}}
+
+/* ─────────────────────────────────────────────────────────────
+   SISRURAL V8.5 – VISUAL PREMIUM / sem alterar regras de negócio
+   ───────────────────────────────────────────────────────────── */
+:root{
+  --glass:rgba(10,18,32,.82);
+  --glass2:rgba(15,28,47,.88);
+  --line:rgba(148,163,184,.18);
+  --glow:0 0 0 1px rgba(255,215,0,.12),0 12px 34px rgba(0,0,0,.38);
+}
+body{
+  background:
+    radial-gradient(circle at 15% 0%,rgba(34,211,238,.13),transparent 32%),
+    radial-gradient(circle at 90% 10%,rgba(192,132,252,.11),transparent 35%),
+    linear-gradient(180deg,#050914 0%,#07111f 42%,#050914 100%);
+}
+.topbar{
+  height:58px;
+  background:linear-gradient(90deg,rgba(4,10,22,.96),rgba(9,18,34,.93));
+  border-bottom:1px solid rgba(255,215,0,.20);
+  box-shadow:0 10px 32px rgba(0,0,0,.22);
+}
+.tb-shield{
+  width:38px;height:38px;border-radius:12px;
+  box-shadow:0 0 18px rgba(255,215,0,.18), inset 0 0 18px rgba(34,211,238,.08);
+}
+.tb-text h1{font-size:17px;text-shadow:0 0 12px rgba(255,215,0,.18)}
+.tb-text p{color:#6f8cad}
+.tb-clock{font-size:15px;text-shadow:0 0 14px rgba(255,215,0,.38)}
+.qtabs{background:linear-gradient(180deg,rgba(7,12,23,.98),rgba(5,10,20,.96));box-shadow:0 8px 28px rgba(0,0,0,.20)}
+.qtab{min-height:64px;position:relative;overflow:hidden}
+.qtab::before{content:'';position:absolute;inset:auto 22% 0;height:1px;background:linear-gradient(90deg,transparent,var(--qc),transparent);opacity:.25}
+.qtab.active{background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.015));box-shadow:inset 0 -1px 0 var(--qc)}
+.qtab-ico{filter:drop-shadow(0 0 10px var(--qc));font-size:18px}
+.qtab-label{font-size:11px}
+.mbtn{
+  width:44px;height:44px;border-radius:14px;
+  background:linear-gradient(180deg,rgba(14,25,42,.96),rgba(7,13,25,.96));
+  border:1px solid rgba(255,215,0,.30);
+  box-shadow:0 10px 22px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.06);
+}
+.mbtn:hover,.mbtn.on{border-color:var(--ac);box-shadow:0 0 0 1px rgba(255,215,0,.25),0 12px 24px rgba(0,0,0,.36)}
+#bAdd{background:linear-gradient(180deg,rgba(34,197,94,.24),rgba(7,13,25,.96));border-color:#22c55e;text-shadow:0 0 10px rgba(34,197,94,.4)}
+.sheet{
+  background:linear-gradient(180deg,rgba(12,21,32,.97),rgba(6,13,24,.99));
+  border-top:1px solid rgba(255,215,0,.20);
+  box-shadow:0 -24px 60px rgba(0,0,0,.45);
+}
+.sheet-handle{background:linear-gradient(90deg,rgba(34,211,238,.4),rgba(255,215,0,.85),rgba(192,132,252,.4))!important;box-shadow:0 0 18px rgba(255,215,0,.25)}
+.prop-card,.v7-card,.modal-box,.v7-box{
+  background:linear-gradient(180deg,rgba(17,31,52,.90),rgba(10,19,33,.92))!important;
+  border:1px solid var(--line)!important;
+  box-shadow:0 14px 30px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.04);
+}
+.prop-card:hover{border-color:rgba(255,215,0,.38)!important;transform:translateY(-1px)}
+.prop-name{letter-spacing:.2px}
+.ref-card,.anchor-card{box-shadow:var(--glow)}
+.v7-box{
+  border-radius:22px!important;
+  max-width:760px!important;
+}
+.v7-modal.open .v7-box,.modal-over.open .modal-box{animation:sisPop .18s ease-out both}
+@keyframes sisPop{from{opacity:.6;transform:translateY(8px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+.v7-box h2,.modal-title,h3{letter-spacing:.2px;text-shadow:0 0 14px rgba(255,215,0,.13)}
+.field-inp{
+  background:rgba(3,8,18,.74)!important;
+  border:1px solid rgba(78,106,135,.45)!important;
+  border-radius:10px!important;
+  transition:border-color .15s,box-shadow .15s,background .15s;
+}
+.field-inp:focus{
+  outline:none!important;border-color:rgba(34,211,238,.9)!important;
+  box-shadow:0 0 0 3px rgba(34,211,238,.12),0 0 20px rgba(34,211,238,.10)!important;
+  background:rgba(4,12,25,.9)!important;
+}
+.btn-primary,.btn-secondary{
+  border-radius:12px!important;
+  box-shadow:0 12px 24px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.08);
+  transition:transform .12s,filter .12s,box-shadow .12s;
+}
+.btn-primary{
+  background:linear-gradient(90deg,#16a34a,#22c55e,#38d36b)!important;
+  border:1px solid rgba(74,222,128,.36)!important;
+}
+.btn-secondary{background:linear-gradient(180deg,rgba(30,46,72,.92),rgba(16,29,46,.92))!important;border:1px solid rgba(148,163,184,.16)!important}
+.btn-primary:active,.btn-secondary:active{transform:scale(.985)}
+.btn-primary:hover{filter:brightness(1.07)}
+#userPill{
+  background:linear-gradient(180deg,rgba(18,31,50,.94),rgba(7,13,25,.94))!important;
+  border:1px solid rgba(34,211,238,.20)!important;
+  border-radius:12px!important;
+  box-shadow:0 8px 22px rgba(0,0,0,.25);
+}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#0b1524!important;color:var(--tx)!important;border:1px solid rgba(255,215,0,.22)!important;box-shadow:0 16px 35px rgba(0,0,0,.35)!important}
+.leaflet-control-attribution{background:rgba(7,12,23,.75)!important;color:#94a3b8!important;border-radius:8px 0 0 0}
+@media(max-width:640px){
+  .topbar{height:54px;padding:0 10px}.tb-text h1{font-size:14px}.tb-text p{font-size:8px}.tb-clock{font-size:13px}
+  .qtab{min-height:58px}.mbtn{width:42px;height:42px;border-radius:13px}
+  .v7-box,.modal-box{border-radius:18px!important;margin:8px!important;max-height:88vh!important}
+}
+
+</style></head><body><button onclick="window.print()">Imprimir / Salvar PDF</button><h1>SISRURAL - Relatório Operacional de Visitas</h1><p><b>2ª Companhia PM · 24º BPM/I</b><br>Emitido em ${today}<br>Período: ${periodo}<br>Quadrante: ${f.q?v7QLabel(f.q):'Todos'} · Busca: ${f.busca||'Todos'}</p><div class="box"><div><b>${st.props.length}</b><br>Propriedades</div><div><b>${st.filtered.length}</b><br>Visitas filtradas</div><div><b>${st.today.length}</b><br>Visitas hoje</div><div><b>${st.month.length}</b><br>Visitas no mês</div></div><h2>Visitas realizadas</h2><table><thead><tr><th>Data</th><th>Hora</th><th>Propriedade</th><th>Quadrante</th><th>Policial</th><th>Observação</th><th>Mapa</th></tr></thead><tbody>${linhas||'<tr><td colspan="7">Nenhuma visita localizada.</td></tr>'}</tbody></table><p style="margin-top:28px">_________________________________________<br>Comandante/Supervisor</p></body></html>`;
   const w=window.open('','_blank'); w.document.open(); w.document.write(html); w.document.close();
 };
 window.exportCommanderReportCSV=()=>{
@@ -1453,4 +1657,3 @@ if ('serviceWorker' in navigator) {
 </script>
 </body>
 </html>
-

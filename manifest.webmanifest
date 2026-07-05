@@ -1,12 +1,12 @@
 {
-  "name": "SISRURAL V6",
+  "name": "SISRURAL V8.5",
   "short_name": "SISRURAL",
   "description": "Sistema Inteligente de Patrulhamento Rural - 2ª Cia PM",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#070c17",
-  "theme_color": "#0c1520",
+  "theme_color": "#07111f",
   "orientation": "portrait-primary",
   "icons": [
     {"src":"icons/icon-192.png","sizes":"192x192","type":"image/png"},
