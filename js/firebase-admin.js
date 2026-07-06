@@ -1,7 +1,7 @@
 // SISRURAL V9.1 - firebase-admin.js - LOGIN FIX
 import { firebaseConfig, ADMIN_EMAIL, APP_INFO, ADMIN_EMAILS_FIXOS } from '../config.firebase.js';
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
+import { initializeApp, deleteApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, updateProfile } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
 import { getFirestore, doc, getDoc, setDoc, collection, addDoc, onSnapshot, serverTimestamp, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
 
 const firebaseApp = initializeApp(firebaseConfig);
@@ -19,7 +19,24 @@ function isAdminGeral(){ const email=String(v7User?.email||'').toLowerCase(); co
 function isSupervisor(){ const p=perfilNorm(v7Profile?.perfil); return ['supervisor','capitao','capitao pm','tenente'].includes(p); }
 function canOpenAdminPanel(){ return isAdminGeral() || isSupervisor(); }
 function isAdmin(){ return isAdminGeral(); }
-async function auditV7(acao,detalhe){ try{ await addDoc(collection(db,'auditoria'),{acao,detalhe,usuario:v7User?.email||'',createdAt:serverTimestamp(),app:'SISRURAL V8.4 CONSOLIDACAO'}); }catch(e){} }
+async function auditV7(acao,detalhe){ try{ await addDoc(collection(db,'auditoria'),{acao,detalhe,usuario:v7User?.email||'',createdAt:serverTimestamp(),app:'SISRURAL V10.3 CAMPO FIX'}); }catch(e){} }
+async function createAuthUserForPolice(email,nome,senha='Sisrural@2026'){
+  const appName='sisrural-create-'+Date.now()+'-'+Math.random().toString(36).slice(2);
+  const app2=initializeApp(firebaseConfig, appName);
+  const auth2=getAuth(app2);
+  try{
+    const cred=await createUserWithEmailAndPassword(auth2,email,senha);
+    try{ await updateProfile(cred.user,{displayName:nome||email}); }catch(e){}
+    try{ await signOut(auth2); }catch(e){}
+    return {created:true,password:senha};
+  }catch(e){
+    if(e.code==='auth/email-already-in-use') return {created:false,exists:true,password:senha};
+    throw e;
+  }finally{
+    try{ await deleteApp(app2); }catch(e){}
+  }
+}
+
 async function loadProfile(u){
   const refUid=doc(db,'usuarios',u.uid);
   const refEmail=doc(db,'usuarios',emailKey(u.email));
@@ -91,7 +108,26 @@ window.sendAccessRequest=async()=>{
 window.openAdminPanel=()=>{ if(!canOpenAdminPanel()) return alert('Acesso restrito.'); $v('admNome').value=v7Profile.nome||''; $v('admRe').value=v7Profile.re||''; $v('admGrad').value=v7Profile.graduacao||''; const pf=$v('admPerfilTxt'); if(pf) pf.value=v7Profile?.perfil||'Policial'; $v('v7AdminModal').classList.add('open'); renderUsersList(); renderRequests(); renderAudit(); renderCommanderDashboard(); updateOfflineBadge(); const ss=$v('syncStatus'); if(ss) ss.innerHTML='Pendências no aparelho: '+(pendingProps().length+pendingVisits().length); };
 window.saveMyBasicProfile=async()=>{
   if(!v7User) return; const data={nome:$v('admNome').value,re:$v('admRe').value,graduacao:$v('admGrad').value,email:v7User.email,companhia:APP_INFO.companhia,status:v7Profile?.status||'Ativo',updatedAt:serverTimestamp()}; await setDoc(doc(db,'usuarios',v7User.uid),data,{merge:true}); await setDoc(doc(db,'usuarios',emailKey(v7User.email)),{...data,uid:v7User.uid,perfil:v7Profile?.perfil||'Policial'},{merge:true}); v7Profile={...v7Profile,...data}; showLogged(); auditV7('perfil_atualizado','Usuário atualizou dados básicos'); alert('Dados salvos. O perfil funcional só pode ser alterado por Administrador Geral.'); };
-window.approveReq=async(id)=>{ if(!isAdminGeral()) return alert('Somente Administrador Geral pode aprovar acesso.'); const r=v7Requests.find(x=>x.id===id); if(!r)return; const perfil=prompt('Perfil do usuário: Policial, Supervisor ou Administrador Geral','Policial')||'Policial'; const data={nome:r.nome,email:r.email,re:r.re,graduacao:r.graduacao,telefone:r.telefone,perfil,status:'Ativo',companhia:APP_INFO.companhia,approvedBy:v7User.email,approvedAt:serverTimestamp()}; await setDoc(doc(db,'usuarios',emailKey(r.email)),data,{merge:true}); await setDoc(doc(db,'solicitacoes_acesso',id),{status:'Aprovado',perfilAprovado:perfil,approvedBy:v7User.email,approvedAt:serverTimestamp()},{merge:true}); auditV7('acesso_aprovado',`${r.email} como ${perfil}. Criar/confirmar senha no Authentication.`); alert('Acesso aprovado no SISRURAL. Se o e-mail ainda não existir em Authentication, crie o usuário no Firebase com senha provisória para permitir o primeiro login.'); renderRequests(); renderUsersList(); };
+window.approveReq=async(id)=>{ 
+  if(!isAdminGeral()) return alert('Somente Administrador Geral pode aprovar acesso.'); 
+  const r=v7Requests.find(x=>x.id===id); if(!r)return; 
+  const perfil=prompt('Perfil do usuário: Policial, Supervisor ou Administrador Geral','Policial')||'Policial'; 
+  const email=String(r.email||'').trim().toLowerCase();
+  const data={nome:r.nome,email,re:r.re,graduacao:r.graduacao,telefone:r.telefone,perfil,status:'Ativo',companhia:APP_INFO.companhia,approvedBy:v7User.email,approvedAt:serverTimestamp()}; 
+  await setDoc(doc(db,'usuarios',emailKey(email)),data,{merge:true}); 
+  await setDoc(doc(db,'solicitacoes_acesso',id),{status:'Aprovado',perfilAprovado:perfil,approvedBy:v7User.email,approvedAt:serverTimestamp()},{merge:true}); 
+  let authMsg='';
+  try{
+    const cr=await createAuthUserForPolice(email,r.nome||email);
+    authMsg=cr.created?`\n\nUsuário criado no Firebase Authentication.\nSenha provisória: ${cr.password}`:`\n\nO e-mail já existia no Firebase Authentication. Use a senha já cadastrada ou redefina no Firebase.`;
+    auditV7('acesso_aprovado',`${email} como ${perfil}. Auth: ${cr.created?'criado':'já existia'}`);
+  }catch(e){
+    authMsg=`\n\nATENÇÃO: perfil aprovado, mas não foi possível criar no Authentication. Erro: ${e.message||e}`;
+    auditV7('acesso_aprovado_auth_erro',`${email}: ${e.message||e}`);
+  }
+  alert('Acesso aprovado no SISRURAL.'+authMsg); 
+  renderRequests(); renderUsersList(); 
+};
 window.denyReq=async(id)=>{ const r=v7Requests.find(x=>x.id===id); await setDoc(doc(db,'solicitacoes_acesso',id),{status:'Negado',deniedBy:v7User.email,deniedAt:serverTimestamp()},{merge:true}); auditV7('acesso_negado',r?.email||id); renderRequests(); };
 
 window.adminCreatePoliceProfile=async()=>{
@@ -107,8 +143,16 @@ window.adminCreatePoliceProfile=async()=>{
     if(!nome||!email){ if(msg) msg.innerHTML='<span style="color:#f87171">Preencha nome e e-mail.</span>'; return; }
     const data={nome,re,graduacao,email,telefone,perfil,status:'Ativo',updatedBy:v7User.email,updatedAt:serverTimestamp(),origem:'admin_sisrural'};
     await setDoc(doc(db,'usuarios',emailKey(email)),data,{merge:true});
-    await auditV7('policial_cadastrado',`${nome} (${email}) como ${perfil}`);
-    if(msg) msg.innerHTML='✅ Perfil salvo no SISRURAL. Se ainda não existir, crie o mesmo e-mail em Firebase Authentication com senha provisória.';
+    let authText='';
+    try{
+      const cr=await createAuthUserForPolice(email,nome);
+      authText=cr.created?`<br>✅ Usuário criado no Firebase Authentication.<br><b>Senha provisória: ${cr.password}</b>`:`<br>ℹ️ Este e-mail já existia no Firebase Authentication. Use a senha já cadastrada ou redefina no Firebase.`;
+      await auditV7('policial_cadastrado',`${nome} (${email}) como ${perfil}. Auth: ${cr.created?'criado':'já existia'}`);
+    }catch(e){
+      authText=`<br><span style="color:#facc15">⚠️ Perfil salvo, mas não foi possível criar no Authentication: ${e.message||e}</span>`;
+      await auditV7('policial_cadastrado_auth_erro',`${email}: ${e.message||e}`);
+    }
+    if(msg) msg.innerHTML='✅ Perfil salvo no SISRURAL.'+authText;
     ['polNome','polRe','polGrad','polEmail','polTel'].forEach(id=>{ const e=$v(id); if(e) e.value=''; });
     renderUsersList();
   }catch(e){ const msg=$v('polMsg'); if(msg) msg.innerHTML='<span style="color:#f87171">Erro: '+(e.message||e)+'</span>'; }

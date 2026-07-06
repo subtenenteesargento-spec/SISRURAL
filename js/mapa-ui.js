@@ -340,11 +340,17 @@ function openAdd(){
   const m=document.getElementById('mAdd');
   m.classList.add('open');
   ['aNome','aTipo','aEnd','aTel'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('aLat').value='';
-  document.getElementById('aLng').value='';
   document.getElementById('aMsg').style.display='none';
-  document.getElementById('miniMapWrap').style.display='none';
-  // GPS automático ao abrir
+  // Mostra o mapa de cadastro imediatamente, mesmo sem GPS ou sem internet.
+  const c=(window.map&&map.getCenter)?map.getCenter():{lat:CX,lng:CY};
+  document.getElementById('aLat').value=Number(c.lat).toFixed(6);
+  document.getElementById('aLng').value=Number(c.lng).toFixed(6);
+  document.getElementById('miniMapWrap').style.display='block';
+  document.getElementById('gpsTxt').textContent='Toque no mapa abaixo para ajustar o ponto, ou aguarde o GPS.';
+  document.getElementById('gpsCoord').textContent=`${Math.abs(c.lat).toFixed(5)}°S  ${Math.abs(c.lng).toFixed(5)}°W  (centro do mapa)`;
+  document.getElementById('gpsIco').textContent='📍';
+  initMiniMap(c.lat,c.lng);
+  // GPS automático atualiza o ponto se conseguir sinal.
   captGPS();
 }
 function closeAdd(){
@@ -382,10 +388,15 @@ function captGPS(){
   }, err=>{
     const msg={1:'Permissão negada – ative o GPS',2:'Sinal GPS indisponível',3:'Tempo esgotado'}[err.code]||'Erro GPS';
     txt.textContent='⚠️ '+msg;
-    coord.textContent='Insira lat/lng manualmente nos campos abaixo';
+    coord.textContent='Use o ponto já aberto no mapa abaixo ou toque no local correto.';
     ico.textContent='⚠️';
     retry.style.display='block';
     retry.textContent='↺ Tentar novamente';
+    try{
+      const lat=parseFloat(document.getElementById('aLat').value)||CX;
+      const lng=parseFloat(document.getElementById('aLng').value)||CY;
+      initMiniMap(lat,lng);
+    }catch(e){}
   },{enableHighAccuracy:true,timeout:25000,maximumAge:60000});
 }
 

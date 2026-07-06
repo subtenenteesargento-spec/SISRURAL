@@ -1,14 +1,8 @@
-# SISRURAL V10.2 – Operacional
+# SISRURAL V10.3 - Campo Fix
 
-Correções priorizadas após teste em campo.
+- Corrige criação de usuário no Firebase Authentication pelo painel ADMIN com senha provisória Sisrural@2026.
+- Mantém perfil no Firestore.
+- Corrige cadastro de propriedade: mapa de ajuste aparece imediatamente, mesmo sem GPS.
+- Mantém offline e sincronização.
 
-Inclui:
-- celular voltou ao padrão operacional com botões laterais visíveis;
-- ícones dos botões restaurados;
-- relatório/PDF oficial com fundo branco e texto preto;
-- cabeçalho institucional PMESP;
-- tabela de visitas pronta para impressão;
-- mantém login, Firebase, cadastro de policiais, propriedades, offline e sincronização.
-
-Teste com cache busting:
-https://subtenenteesargento-spec.github.io/SISRURAL/?v=102operacional
+Teste: ?v=103campofix
