@@ -526,11 +526,32 @@ function renderCommanderDashboard(){
 window.openCommanderReport=()=>{
   const st=v7ReportStats();
   const f=v7GetReportFilters();
-  const today=new Date().toLocaleDateString('pt-BR');
-  const visits=st.filtered.slice().sort((a,b)=>(b._dt||0)-(a._dt||0));
-  const linhas=visits.map(v=>`<tr><td>${v.dataLocal||v7FmtDate(v._dt)}</td><td>${v.horaLocal||v7FmtHour(v._dt)}</td><td>${v._prop||''}</td><td>${v7QLabel(v._q)}</td><td>${v.usuarioNome||v.usuario||''}</td><td>${v._obs||''}</td><td>${v.maps?`<a href="${v.maps}">Mapa</a>`:''}</td></tr>`).join('');
+  const hoje=new Date();
+  const hojeBR=hoje.toLocaleDateString('pt-BR');
+  const horaBR=hoje.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  const esc=(x)=>String(x||'').replace(/[&<>"']/g,(m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const visits=st.filtered.slice().sort((a,b)=>(a._dt||0)-(b._dt||0));
+  const linhas=visits.map((v,i)=>`<tr><td>${i+1}</td><td>${esc(v.dataLocal||v7FmtDate(v._dt))}</td><td>${esc(v.horaLocal||v7FmtHour(v._dt))}</td><td>${esc(v._prop)}</td><td>${esc(v7QLabel(v._q))}</td><td>${esc(v.usuarioNome||v.usuario)}</td><td>${esc(v._obs)}</td><td>${v.maps?`<a href="${esc(v.maps)}">Abrir</a>`:''}</td></tr>`).join('');
   const periodo=(f.ini||f.fim)?`${f.ini||'início'} até ${f.fim||'hoje'}`:'Todos os registros';
-  const html=`<!doctype html><html><head><meta charset="utf-8"><title>Relatório SISRURAL</title><link rel="stylesheet" href="./css/premium.css"></head><body><button onclick="window.print()">Imprimir / Salvar PDF</button><h1>SISRURAL - Relatório Operacional de Visitas</h1><p><b>2ª Companhia PM · 24º BPM/I</b><br>Emitido em ${today}<br>Período: ${periodo}<br>Quadrante: ${f.q?v7QLabel(f.q):'Todos'} · Busca: ${f.busca||'Todos'}</p><div class="box"><div><b>${st.props.length}</b><br>Propriedades</div><div><b>${st.filtered.length}</b><br>Visitas filtradas</div><div><b>${st.today.length}</b><br>Visitas hoje</div><div><b>${st.month.length}</b><br>Visitas no mês</div></div><h2>Visitas realizadas</h2><table><thead><tr><th>Data</th><th>Hora</th><th>Propriedade</th><th>Quadrante</th><th>Policial</th><th>Observação</th><th>Mapa</th></tr></thead><tbody>${linhas||'<tr><td colspan="7">Nenhuma visita localizada.</td></tr>'}</tbody></table><p style="margin-top:28px">_________________________________________<br>Comandante/Supervisor</p></body></html>`;
+  const quadrante=f.q?v7QLabel(f.q):'Todos';
+  const busca=f.busca||'Todos';
+  const html=`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Relatório Operacional de Visitas - SISRURAL</title>
+  <style>
+    *{box-sizing:border-box} body{margin:0;background:#fff;color:#111;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.35} .page{max-width:1120px;margin:0 auto;padding:22px 28px 36px}.printbar{position:sticky;top:0;background:#f8fafc;border-bottom:1px solid #cbd5e1;padding:10px 28px;display:flex;gap:8px;z-index:5}.btn{border:1px solid #0f172a;background:#0f172a;color:#fff;border-radius:6px;padding:9px 14px;font-weight:700;cursor:pointer}.btn2{background:#fff;color:#0f172a}.header{border:2px solid #111;padding:12px 14px;margin-bottom:12px;display:grid;grid-template-columns:80px 1fr 190px;gap:12px;align-items:center}.brasao{width:64px;height:64px;border:2px solid #111;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:34px}.org{text-align:center;text-transform:uppercase}.org h1{font-size:18px;margin:0 0 4px;font-weight:800}.org h2{font-size:15px;margin:2px 0}.meta{font-size:11px;border-left:1px solid #111;padding-left:12px}.title{text-align:center;border:1px solid #111;background:#e5e7eb;padding:8px;margin:12px 0;font-size:16px;font-weight:800;text-transform:uppercase}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.card{border:1px solid #111;padding:9px;background:#fff}.card b{font-size:18px;display:block}.info{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}.info div{border:1px solid #111;padding:8px}table{border-collapse:collapse;width:100%;margin-top:10px;font-size:11px}th,td{border:1px solid #333;padding:5px 6px;vertical-align:top}th{background:#e5e7eb;text-align:left;text-transform:uppercase;font-size:10px}.obs{max-width:260px}.assinaturas{display:grid;grid-template-columns:1fr 1fr;gap:70px;margin-top:44px;text-align:center}.linha{border-top:1px solid #111;padding-top:6px}.rodape{margin-top:26px;border-top:1px solid #999;padding-top:8px;font-size:10px;color:#333;text-align:center}@media print{.printbar{display:none}.page{padding:12mm;max-width:none}.header{break-inside:avoid}.grid,.info{break-inside:avoid} a{color:#111;text-decoration:none} body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+  </style></head><body>
+  <div class="printbar"><button class="btn" onclick="window.print()">Imprimir / Salvar PDF</button><button class="btn btn2" onclick="window.close()">Fechar</button></div>
+  <div class="page">
+    <div class="header"><div class="brasao">🛡️</div><div class="org"><h1>Polícia Militar do Estado de São Paulo</h1><h2>24º BPM/I</h2><h2>2ª Companhia PM</h2><h2>Patrulha Rural de Casa Branca</h2></div><div class="meta"><b>Emitido em:</b><br>${hojeBR} às ${horaBR}<br><br><b>Sistema:</b><br>SISRURAL V10.2</div></div>
+    <div class="title">Relatório Operacional de Visitas</div>
+    <div class="info"><div><b>Período:</b> ${esc(periodo)}<br><b>Quadrante:</b> ${esc(quadrante)}<br><b>Filtro:</b> ${esc(busca)}</div><div><b>Finalidade:</b> acompanhamento da Patrulha Rural, produtividade operacional e controle de visitas às propriedades cadastradas.</div></div>
+    <div class="grid"><div class="card"><b>${st.props.length}</b>Propriedades cadastradas</div><div class="card"><b>${st.filtered.length}</b>Visitas no filtro</div><div class="card"><b>${st.today.length}</b>Visitas hoje</div><div class="card"><b>${st.month.length}</b>Visitas no mês</div></div>
+    <h3>1. Visitas realizadas</h3>
+    <table><thead><tr><th>Nº</th><th>Data</th><th>Hora</th><th>Propriedade</th><th>Quadrante</th><th>Policial</th><th>Observação</th><th>Mapa</th></tr></thead><tbody>${linhas||'<tr><td colspan="8">Nenhuma visita localizada para os filtros selecionados.</td></tr>'}</tbody></table>
+    <h3>2. Resumo estatístico</h3>
+    <table><tbody><tr><th>Q1 - Alfa</th><td>${st.filtQ[1]||0}</td><th>Q2 - Bravo</th><td>${st.filtQ[2]||0}</td><th>Q3 - Charlie</th><td>${st.filtQ[3]||0}</td><th>Q4 - Delta</th><td>${st.filtQ[4]||0}</td></tr><tr><th>Nunca visitadas</th><td>${st.never.length}</td><th>+30 dias</th><td>${st.older30.length}</td><th>+60 dias</th><td>${st.older60.length}</td><th>+90 dias</th><td>${st.older90.length}</td></tr></tbody></table>
+    <div class="assinaturas"><div class="linha">Comandante da Companhia</div><div class="linha">Responsável pela Patrulha Rural</div></div>
+    <div class="rodape">Relatório gerado automaticamente pelo SISRURAL. Dados dependem da sincronização dos dispositivos em campo.</div>
+  </div></body></html>`;
   const w=window.open('','_blank'); w.document.open(); w.document.write(html); w.document.close();
 };
 window.exportCommanderReportCSV=()=>{

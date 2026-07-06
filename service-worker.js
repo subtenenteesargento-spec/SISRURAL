@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sisrural-v9-1-login-fix';
+const CACHE_NAME = 'sisrural-v10-2-operacional';
 const APP_SHELL=[
   './','./index.html','./offline.html','./manifest.webmanifest','./config.firebase.js',
   './css/app.css','./css/premium.css',
@@ -9,4 +9,4 @@ self.addEventListener('install',event=>{self.skipWaiting();event.waitUntil(cache
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE_NAME).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;event.respondWith(fetch(event.request).then(resp=>{const copy=resp.clone();caches.open(CACHE_NAME).then(cache=>cache.put(event.request,copy)).catch(()=>{});return resp;}).catch(()=>caches.match(event.request).then(r=>r||caches.match('./offline.html'))));});
 
-// V9.1 LOGIN FIX - cache atualizado
+// V10.2 OPERACIONAL - cache atualizado

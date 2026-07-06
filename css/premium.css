@@ -365,3 +365,62 @@ body{
   #bAdd{width:54px!important;min-width:54px!important;height:48px!important;min-height:48px!important}
   .sheet{max-height:68%!important;transform:translateY(calc(100% - 72px))!important}
 }
+
+/* ─────────────────────────────────────────────────────────────
+   SISRURAL V10.2 OPERACIONAL – correções de campo
+   1) Celular volta ao uso simples: botões laterais sempre visíveis.
+   2) Relatórios/PDF usam CSS próprio no JS, sem herdar tema escuro.
+   ───────────────────────────────────────────────────────────── */
+@media(max-width:820px){
+  /* no celular: botões laterais como antes, sem esconder atalhos */
+  .map-btns{
+    left:auto!important;
+    right:8px!important;
+    top:96px!important;
+    bottom:auto!important;
+    transform:none!important;
+    width:50px!important;
+    max-width:50px!important;
+    max-height:calc(100% - 185px)!important;
+    display:flex!important;
+    flex-direction:column!important;
+    gap:6px!important;
+    padding:5px!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    border-radius:16px!important;
+    background:rgba(3,8,18,.74)!important;
+    backdrop-filter:blur(10px)!important;
+    box-shadow:0 12px 26px rgba(0,0,0,.35)!important;
+  }
+  #bSat,#bRoads,#bRef,#bDirt,#bUser,#bQR,#bRst,#bProps,#bVisit,#bAdd,#bAdmin{
+    display:flex!important;
+  }
+  .mbtn{
+    width:40px!important;
+    height:40px!important;
+    min-height:40px!important;
+    border-radius:12px!important;
+    font-size:17px!important;
+    flex:0 0 auto!important;
+  }
+  #bAdd{
+    width:40px!important;
+    min-width:40px!important;
+    height:46px!important;
+    min-height:46px!important;
+    font-size:22px!important;
+    border-radius:13px!important;
+    order:initial!important;
+  }
+  #bAdd::before{display:none!important}
+  .mbtn::after{display:none!important}
+  .leaflet-bottom.leaflet-left{bottom:18px!important;left:10px!important}
+  .sheet{max-height:64%!important;transform:translateY(calc(100% - 72px))!important}
+  .sheet.open{transform:translateY(0)!important}
+}
+@media(max-width:430px){
+  .map-btns{right:6px!important;top:92px!important;max-height:calc(100% - 178px)!important;padding:4px!important;gap:5px!important}
+  .mbtn{width:38px!important;height:38px!important;min-height:38px!important;font-size:16px!important;border-radius:11px!important}
+  #bAdd{width:38px!important;min-width:38px!important;height:42px!important;min-height:42px!important;font-size:21px!important}
+}
