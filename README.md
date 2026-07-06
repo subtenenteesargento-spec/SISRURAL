@@ -1,12 +1,13 @@
-# SISRURAL V10 Profissional
+# SISRURAL V10.1 - Campo/Teste
 
-Visual profissional aplicado sobre a V9.1 Login Fix.
+Versão para teste em campo.
 
 Inclui:
-- Cabeçalho “PATRULHA RURAL DE CASA BRANCA”;
-- Botões do mapa em grade para aparecerem todos;
-- Melhor visual no computador e celular;
-- Login com identidade nova;
-- Mantém Firebase, login, mapa, painel, offline e sincronização.
+- botões do mapa com ícones visíveis;
+- no celular, apenas botões principais: Propriedades, Registrar Visita, Nova Propriedade e Administração/Mais;
+- cabeçalho Patrulha Rural de Casa Branca preservado;
+- login, Firebase, cadastro offline, visitas e sincronização preservados;
+- foco do teste: cadastro de policial e inclusão de propriedades.
 
-Teste com: https://subtenenteesargento-spec.github.io/SISRURAL/?v=10profissional
+Teste com:
+https://subtenenteesargento-spec.github.io/SISRURAL/?v=101campo

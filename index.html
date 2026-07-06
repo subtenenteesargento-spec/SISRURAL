@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>SISRURAL V10 – Patrulha Rural de Casa Branca</title>
+<title>SISRURAL V10.1 – Patrulha Rural de Casa Branca</title>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -17,7 +17,7 @@
 <meta name="apple-mobile-web-app-title" content="SISRURAL">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-<meta name="sisrural-version" content="V10 Profissional - visual operacional">
+<meta name="sisrural-version" content="V10.1 Campo - menus simplificados">
 </head>
 <body>
 <div id="authGate">
@@ -41,7 +41,7 @@
   <div class="tb-shield">🛡️</div>
   <div class="tb-text">
     <h1>PATRULHA RURAL DE CASA BRANCA</h1>
-    <p>2ª Companhia PM · 4 Quadrantes · 24º BPM/I · V10 Profissional</p>
+    <p>2ª Companhia PM · 4 Quadrantes · 24º BPM/I · V10.1 Campo</p>
   </div>
   <div class="tb-clock" id="clk">--:--</div>
 </div>
@@ -77,17 +77,17 @@
 <div id="map">
   <!-- Botões flutuantes dentro do mapa -->
   <div class="map-btns">
-    <div class="mbtn on" id="bSat" onclick="togSat()" title="Satélite/Mapa">🛰</div>
-    <div class="mbtn on" id="bRoads" onclick="togLayer('roads')" title="Rodovias">🛣</div>
-    <div class="mbtn on" id="bProps" onclick="togLayer('props')" title="Fazendas">🏡</div>
-    <div class="mbtn on" id="bRef" onclick="togLayer('refs')" title="Referências">⭐</div>
-    <div class="mbtn on" id="bDirt" onclick="togLayer('dirt')" title="Estradas de terra">🟫</div>
-    <div class="mbtn on" id="bUser" onclick="togLayer('user')" title="Pontos PM">📌</div>
-    <div class="mbtn" id="bAdd" onclick="openAdd()" title="Cadastrar fazenda">＋</div>
-    <div class="mbtn" id="bQR" onclick="openQR()" title="QR Code">📲</div>
-    <div class="mbtn" id="bVisit" onclick="openVisitModal()" title="Registrar visita">📋</div>
-    <div class="mbtn" id="bAdmin" onclick="openAdminPanel()" title="Administração">⚙️</div>
-    <div class="mbtn" id="bRst" onclick="rv()" title="Visão geral">⟲</div>
+    <div class="mbtn on" id="bSat" onclick="togSat()" title="Satélite/Mapa" data-label="Mapa">🗺️</div>
+    <div class="mbtn on" id="bRoads" onclick="togLayer('roads')" title="Rodovias" data-label="Rodovias">R</div>
+    <div class="mbtn on" id="bProps" onclick="togLayer('props')" title="Propriedades" data-label="Propriedades">🏡</div>
+    <div class="mbtn on" id="bRef" onclick="togLayer('refs')" title="Referências" data-label="Referências">⭐</div>
+    <div class="mbtn on" id="bDirt" onclick="togLayer('dirt')" title="Estradas de terra" data-label="Vicinais">▣</div>
+    <div class="mbtn on" id="bUser" onclick="togLayer('user')" title="Pontos PM" data-label="Pontos PM">📍</div>
+    <div class="mbtn" id="bAdd" onclick="openAdd()" title="Cadastrar propriedade" data-label="Nova propriedade">＋</div>
+    <div class="mbtn" id="bQR" onclick="openQR()" title="QR Code" data-label="QR Code">▦</div>
+    <div class="mbtn" id="bVisit" onclick="openVisitModal()" title="Registrar visita" data-label="Registrar visita">📝</div>
+    <div class="mbtn" id="bAdmin" onclick="openAdminPanel()" title="Administração" data-label="Administração">⚙️</div>
+    <div class="mbtn" id="bRst" onclick="rv()" title="Visão geral" data-label="Visão geral">↺</div>
   </div>
   <!-- Sheet backdrop -->
   <div class="sheet-bg" id="sbg" onclick="closeSheet()"></div>
