@@ -100,3 +100,181 @@ body{
   .qtab{min-height:58px}.mbtn{width:42px;height:42px;border-radius:13px}
   .v7-box,.modal-box{border-radius:18px!important;margin:8px!important;max-height:88vh!important}
 }
+
+/* ─────────────────────────────────────────────────────────────
+   SISRURAL V10 – VISUAL PROFISSIONAL / CORREÇÃO DE BOTÕES
+   Preserva regras de negócio e ajusta interface desktop/celular
+   ───────────────────────────────────────────────────────────── */
+:root{
+  --v10-panel:rgba(8,17,31,.92);
+  --v10-panel2:rgba(14,27,47,.94);
+  --v10-stroke:rgba(148,163,184,.20);
+  --v10-green:#22c55e;
+  --v10-gold:#ffd700;
+  --v10-blue:#38bdf8;
+}
+
+/* Cabeçalho institucional */
+.topbar{
+  min-height:72px!important;
+  height:72px!important;
+  padding:0 22px!important;
+  background:linear-gradient(90deg,#020815 0%,#071529 55%,#020815 100%)!important;
+  border-bottom:1px solid rgba(255,215,0,.30)!important;
+}
+.tb-shield{
+  width:50px!important;height:50px!important;border-radius:14px!important;
+  font-size:23px!important;
+  background:linear-gradient(160deg,#0b2e54,#0b1526)!important;
+  box-shadow:0 0 0 1px rgba(255,215,0,.22),0 0 28px rgba(56,189,248,.18)!important;
+}
+.tb-text h1{
+  font-size:26px!important;
+  color:#fff!important;
+  letter-spacing:.7px!important;
+  text-shadow:0 0 18px rgba(255,215,0,.18)!important;
+  white-space:nowrap!important;
+}
+.tb-text h1 em{color:#fff!important}
+.tb-text p{
+  font-size:12px!important;
+  color:#b8c7d9!important;
+  letter-spacing:.45px!important;
+}
+.tb-clock{
+  font-size:22px!important;
+  color:var(--v10-green)!important;
+  min-width:90px;text-align:right;
+  text-shadow:0 0 20px rgba(34,197,94,.35)!important;
+}
+#userPill{
+  top:14px!important;right:116px!important;
+  padding:9px 14px!important;
+  min-width:180px!important;
+  background:linear-gradient(180deg,rgba(11,23,40,.96),rgba(4,10,20,.96))!important;
+}
+
+/* Quadrantes: cartões compactos e responsivos */
+.qtabs{
+  min-height:74px!important;
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:10px!important;
+  padding:10px 18px!important;
+  background:linear-gradient(180deg,rgba(4,10,21,.98),rgba(5,12,23,.98))!important;
+  border-bottom:1px solid rgba(148,163,184,.14)!important;
+}
+.qtab{
+  min-height:54px!important;
+  border:1px solid rgba(148,163,184,.12)!important;
+  border-radius:14px!important;
+  background:linear-gradient(180deg,rgba(17,31,52,.74),rgba(7,14,27,.88))!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 10px 22px rgba(0,0,0,.18)!important;
+}
+.qtab.active{
+  border-color:var(--qc)!important;
+  box-shadow:inset 0 -3px 0 var(--qc),0 0 30px color-mix(in srgb,var(--qc) 18%,transparent)!important;
+}
+.qtab-ico{font-size:20px!important}
+.qtab-label{font-size:15px!important}
+.qtab-sub{font-size:9px!important;color:#9fb2c8!important}
+.qtab .pb{font-size:8px!important;border-radius:8px!important;padding:2px 7px!important}
+
+/* Botões do mapa: duas colunas no desktop para todos aparecerem */
+.map-btns{
+  right:18px!important;
+  top:18px!important;
+  bottom:auto!important;
+  max-height:calc(100% - 120px)!important;
+  width:104px!important;
+  display:grid!important;
+  grid-template-columns:repeat(2,48px)!important;
+  grid-auto-rows:48px!important;
+  gap:8px!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  padding:6px!important;
+  background:rgba(3,8,18,.42)!important;
+  border:1px solid rgba(148,163,184,.12)!important;
+  border-radius:18px!important;
+  backdrop-filter:blur(10px)!important;
+  box-shadow:0 18px 36px rgba(0,0,0,.28)!important;
+}
+.mbtn{
+  width:48px!important;height:48px!important;border-radius:15px!important;
+  font-size:19px!important;
+  background:linear-gradient(180deg,rgba(11,25,43,.98),rgba(4,11,22,.98))!important;
+  border:1px solid rgba(255,215,0,.28)!important;
+  box-shadow:0 8px 20px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.06)!important;
+}
+.mbtn:hover,.mbtn.on{transform:translateY(-1px);border-color:rgba(34,197,94,.85)!important;box-shadow:0 0 0 1px rgba(34,197,94,.25),0 12px 24px rgba(0,0,0,.38)!important}
+#bAdd{grid-column:1 / -1;width:100%!important;background:linear-gradient(90deg,rgba(22,163,74,.96),rgba(34,197,94,.96))!important;color:#fff!important}
+.leaflet-bottom.leaflet-left{bottom:18px!important;left:18px!important}
+
+/* Painéis e modais mais elegantes */
+.v7-box,.modal-box{
+  background:linear-gradient(180deg,rgba(11,22,39,.97),rgba(5,12,23,.98))!important;
+  border:1px solid rgba(148,163,184,.20)!important;
+  box-shadow:0 24px 80px rgba(0,0,0,.52),inset 0 1px 0 rgba(255,255,255,.05)!important;
+}
+.v7-box h2,.modal-box h2,h3{color:var(--v10-gold)!important}
+
+/* Login com identidade nova */
+#authGate{background:radial-gradient(circle at 20% 10%,rgba(56,189,248,.16),transparent 35%),radial-gradient(circle at 90% 15%,rgba(34,197,94,.10),transparent 32%),#06101f!important}
+.authBox{
+  max-width:430px!important;
+  border-radius:26px!important;
+  padding:32px!important;
+  background:linear-gradient(180deg,rgba(9,20,36,.96),rgba(4,10,20,.98))!important;
+  border:1px solid rgba(148,163,184,.20)!important;
+}
+.authBox h2{font-size:34px!important;line-height:1.05!important;color:#ffd700!important}
+.authBox p{font-size:14px!important;color:#c6d3e3!important}
+.authBox::after{
+  content:'POLÍCIA MILITAR DO ESTADO DE SÃO PAULO';
+  display:block;margin-top:20px;padding-top:16px;border-top:1px solid rgba(148,163,184,.14);
+  text-align:center;font-family:'JetBrains Mono',monospace;font-size:10px;color:#cbd5e1;letter-spacing:2px;
+}
+
+/* Celular / PWA */
+@media(max-width:820px){
+  .topbar{height:66px!important;min-height:66px!important;padding:0 12px!important}
+  .tb-shield{width:42px!important;height:42px!important;font-size:20px!important}
+  .tb-text h1{font-size:18px!important;white-space:normal!important;line-height:1!important}
+  .tb-text p{font-size:9px!important}
+  .tb-clock{display:none!important}
+  #userPill{right:10px!important;top:74px!important;min-width:auto!important;max-width:160px!important;font-size:9px!important;z-index:900!important}
+  .qtabs{
+    display:flex!important;
+    overflow-x:auto!important;
+    gap:8px!important;
+    padding:8px 10px!important;
+    min-height:62px!important;
+    scrollbar-width:none!important;
+  }
+  .qtabs::-webkit-scrollbar{display:none!important}
+  .qtab{min-width:120px!important;min-height:48px!important;border-radius:13px!important;padding:5px 8px!important}
+  .qtab-label{font-size:13px!important}.qtab-sub{font-size:8px!important}.qtab .pb{font-size:7px!important}
+  .map-btns{
+    right:10px!important;
+    top:14px!important;
+    width:54px!important;
+    display:flex!important;
+    flex-direction:column!important;
+    max-height:calc(100% - 170px)!important;
+    gap:7px!important;
+    padding:5px!important;
+    border-radius:16px!important;
+  }
+  .mbtn{width:44px!important;height:44px!important;min-height:44px!important;border-radius:14px!important;font-size:18px!important}
+  #bAdd{width:44px!important;min-height:48px!important;font-size:24px!important}
+  .sheet{max-height:72%!important;transform:translateY(calc(100% - 76px))!important}
+  .sheet.open{transform:translateY(0)!important}
+}
+
+@media(max-width:440px){
+  .tb-text h1{font-size:16px!important}
+  .tb-text p{font-size:8px!important}
+  .authBox{margin:14px!important;padding:24px!important;border-radius:22px!important}
+  .authBox h2{font-size:28px!important}
+}

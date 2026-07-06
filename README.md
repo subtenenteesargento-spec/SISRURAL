@@ -1,11 +1,12 @@
-# SISRURAL V9.1 - LOGIN FIX
+# SISRURAL V10 Profissional
 
-Correção do login da V9.
+Visual profissional aplicado sobre a V9.1 Login Fix.
 
-- Corrige o caminho do módulo Firebase.
-- Atualiza cache do Service Worker.
-- Mantém estrutura modular da V9.
-- Mantém cadastro offline, painel, usuários e relatórios.
+Inclui:
+- Cabeçalho “PATRULHA RURAL DE CASA BRANCA”;
+- Botões do mapa em grade para aparecerem todos;
+- Melhor visual no computador e celular;
+- Login com identidade nova;
+- Mantém Firebase, login, mapa, painel, offline e sincronização.
 
-Teste com:
-https://subtenenteesargento-spec.github.io/SISRURAL/?v=91loginfix
+Teste com: https://subtenenteesargento-spec.github.io/SISRURAL/?v=10profissional
