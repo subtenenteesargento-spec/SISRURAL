@@ -7,13 +7,60 @@ import { getFirestore, doc, getDoc, setDoc, collection, addDoc, onSnapshot, serv
 const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
-let v7User=null, v7Profile=null, v7Requests=[], v7Visits=[], v7Audits=[], v7CloudProps=[], v7Users=[]; window.v7CloudProps=v7CloudProps;
+let v7User=null, v7Profile=null, v7Requests=[], v7Visits=[], v7Audits=[], v7CloudProps=[], v7Users=[], v7Devices=[]; window.v7CloudProps=v7CloudProps;
 const PENDING_PROPS_KEY='sisrural_pending_props_v1';
 const MIGRATED_LOCAL_KEY='sisrural_local_props_migrated_v1';
 const ADMIN = ADMIN_EMAIL || 'ferpozzer@gmail.com';
 const ADMIN_EMAILS = Array.from(new Set([String(ADMIN).toLowerCase(),'ferpozzer@gmail.com',...(Array.isArray(ADMIN_EMAILS_FIXOS)?ADMIN_EMAILS_FIXOS:[]).map(e=>String(e).toLowerCase())]));
 const $v=id=>document.getElementById(id);
 const emailKey = email => String(email||'').toLowerCase().replace(/[^a-z0-9]/g,'_');
+const DEVICE_KEY='sisrural_device_id_v1';
+function getSisruralDeviceId(){
+  try{
+    let id=localStorage.getItem(DEVICE_KEY);
+    if(!id){
+      const raw=(globalThis.crypto?.randomUUID?.() || ('dev-'+Date.now()+'-'+Math.random().toString(36).slice(2)));
+      id='sis-'+raw;
+      localStorage.setItem(DEVICE_KEY,id);
+    }
+    return id;
+  }catch(e){ return 'sessao-'+Date.now()+'-'+Math.random().toString(36).slice(2); }
+}
+function devicePlatformInfo(){
+  const ua=navigator.userAgent||'';
+  let plataforma='Navegador';
+  if(/Android/i.test(ua)) plataforma='Android / PWA';
+  else if(/iPhone|iPad|iPod/i.test(ua)) plataforma='iPhone/iPad / PWA';
+  else if(/Windows/i.test(ua)) plataforma='Windows';
+  else if(/Macintosh|Mac OS/i.test(ua)) plataforma='macOS';
+  return {plataforma,userAgent:ua.slice(0,240),idioma:navigator.language||'',tela:`${screen?.width||0}x${screen?.height||0}`};
+}
+async function registerCurrentDevice(){
+  if(!v7User) return;
+  try{
+    const deviceId=getSisruralDeviceId();
+    const info=devicePlatformInfo();
+    const ref=doc(db,'dispositivos_acesso',deviceId);
+    const snap=await getDoc(ref);
+    const old=snap.exists()?snap.data():{};
+    await setDoc(ref,{
+      deviceId,
+      usuarioUid:v7User.uid,
+      email:String(v7User.email||'').toLowerCase(),
+      nome:v7Profile?.nome||v7User.email||'',
+      re:v7Profile?.re||'',
+      perfil:v7Profile?.perfil||'Policial',
+      plataforma:info.plataforma,
+      userAgent:info.userAgent,
+      idioma:info.idioma,
+      tela:info.tela,
+      status:old.status||'Pendente',
+      primeiroAcesso:old.primeiroAcesso||serverTimestamp(),
+      ultimoAcesso:serverTimestamp(),
+      observacao:'Fase A - registro de dispositivo sem bloqueio'
+    },{merge:true});
+  }catch(e){ console.warn('SISRURAL: falha ao registrar dispositivo (não bloqueante).',e); }
+}
 function perfilNorm(p){ return String(p||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
 function isAdminGeral(){ const email=String(v7User?.email||'').toLowerCase(); const p=perfilNorm(v7Profile?.perfil); return !!v7User && (ADMIN_EMAILS.includes(email) || ['administrador','administrador geral','comandante'].includes(p)); }
 function isSupervisor(){ const p=perfilNorm(v7Profile?.perfil); return ['supervisor','capitao','capitao pm','tenente'].includes(p); }
@@ -68,13 +115,14 @@ window.v7Login=async()=>{
 window.v7Logout=async()=>{ await signOut(auth); location.reload(); };
 onAuthStateChanged(auth, async u=>{
   if(!u){ showLogin(); return; }
-  v7User=u; v7Profile=await loadProfile(u); showLogged(); auditV7('login','Usuário entrou no sistema'); startRealtime();
+  v7User=u; v7Profile=await loadProfile(u); showLogged(); await registerCurrentDevice(); auditV7('login','Usuário entrou no sistema'); startRealtime();
 });
 function startRealtime(){
   onSnapshot(query(collection(db,'solicitacoes_acesso'),orderBy('createdAt','desc')),s=>{v7Requests=s.docs.map(d=>({id:d.id,...d.data()})); renderRequests();});
   onSnapshot(query(collection(db,'visitas'),orderBy('createdAt','desc')),s=>{v7Visits=s.docs.map(d=>({id:d.id,...d.data()})); renderCommanderDashboard();});
   onSnapshot(query(collection(db,'auditoria'),orderBy('createdAt','desc')),s=>{v7Audits=s.docs.map(d=>({id:d.id,...d.data()})); renderAudit();});
   onSnapshot(collection(db,'usuarios'),s=>{v7Users=s.docs.map(d=>({docId:d.id,...d.data()})); renderUsersList();});
+  onSnapshot(collection(db,'dispositivos_acesso'),s=>{v7Devices=s.docs.map(d=>({docId:d.id,...d.data()})); renderDevicesList();});
   onSnapshot(collection(db,'propriedades_cadastradas'),s=>{v7CloudProps=s.docs.map(d=>({id:d.id,...d.data()})); window.v7CloudProps=v7CloudProps; renderCloudProperties(); renderCommanderDashboard();});
   syncPendingProperties();
       syncPendingVisits();
@@ -105,7 +153,7 @@ window.sendAccessRequest=async()=>{
     btnMsg.innerHTML='<span style="color:#ef4444">'+(e.code==='permission-denied'?'Permissão negada no Firebase. Atualize as regras do Firestore conforme orientação.':e.message)+'</span>';
   }
 };
-window.openAdminPanel=()=>{ if(!canOpenAdminPanel()) return alert('Acesso restrito.'); $v('admNome').value=v7Profile.nome||''; $v('admRe').value=v7Profile.re||''; $v('admGrad').value=v7Profile.graduacao||''; const pf=$v('admPerfilTxt'); if(pf) pf.value=v7Profile?.perfil||'Policial'; $v('v7AdminModal').classList.add('open'); renderUsersList(); renderRequests(); renderAudit(); renderCommanderDashboard(); updateOfflineBadge(); const ss=$v('syncStatus'); if(ss) ss.innerHTML='Pendências no aparelho: '+(pendingProps().length+pendingVisits().length); };
+window.openAdminPanel=()=>{ if(!canOpenAdminPanel()) return alert('Acesso restrito.'); $v('admNome').value=v7Profile.nome||''; $v('admRe').value=v7Profile.re||''; $v('admGrad').value=v7Profile.graduacao||''; const pf=$v('admPerfilTxt'); if(pf) pf.value=v7Profile?.perfil||'Policial'; $v('v7AdminModal').classList.add('open'); renderUsersList(); renderDevicesList(); renderRequests(); renderAudit(); renderCommanderDashboard(); updateOfflineBadge(); const ss=$v('syncStatus'); if(ss) ss.innerHTML='Pendências no aparelho: '+(pendingProps().length+pendingVisits().length); };
 window.saveMyBasicProfile=async()=>{
   if(!v7User) return; const data={nome:$v('admNome').value,re:$v('admRe').value,graduacao:$v('admGrad').value,email:v7User.email,companhia:APP_INFO.companhia,status:v7Profile?.status||'Ativo',updatedAt:serverTimestamp()}; await setDoc(doc(db,'usuarios',v7User.uid),data,{merge:true}); await setDoc(doc(db,'usuarios',emailKey(v7User.email)),{...data,uid:v7User.uid,perfil:v7Profile?.perfil||'Policial'},{merge:true}); v7Profile={...v7Profile,...data}; showLogged(); auditV7('perfil_atualizado','Usuário atualizou dados básicos'); alert('Dados salvos. O perfil funcional só pode ser alterado por Administrador Geral.'); };
 window.approveReq=async(id)=>{ 
@@ -220,6 +268,32 @@ window.saveUserProfile=async(email,selId,stId)=>{
   auditV7('perfil_usuario_alterado',`${email}: ${perfil} / ${status}`);
   alert('Perfil atualizado. Peça para o usuário sair e entrar novamente.');
   renderUsersList();
+};
+function deviceStatusOptions(sel){
+  const opts=['Pendente','Autorizado','Revogado'];
+  return opts.map(o=>`<option ${String(sel||'Pendente')===o?'selected':''}>${o}</option>`).join('');
+}
+function deviceDate(v){
+  try{ if(v?.seconds) return new Date(v.seconds*1000).toLocaleString('pt-BR'); }catch(e){}
+  return '-';
+}
+function renderDevicesList(){
+  const el=$v('v7DevicesList'); if(!el) return;
+  if(!isAdminGeral()){ el.innerHTML='<div class="v7-card v7-small">Somente Administrador Geral visualiza dispositivos.</div>'; return; }
+  const arr=[...(v7Devices||[])].sort((a,b)=>(b.ultimoAcesso?.seconds||0)-(a.ultimoAcesso?.seconds||0));
+  if(!arr.length){ el.innerHTML='<div class="v7-card v7-small">Nenhum dispositivo registrado ainda. Eles aparecerão automaticamente após o próximo login.</div>'; return; }
+  el.innerHTML=arr.map((d,i)=>{
+    const sid='deviceStatus_'+i;
+    const short=String(d.deviceId||d.docId||'').slice(-12);
+    return `<div class="v7-card device-card"><div class="device-head"><div><b>${d.nome||d.email||'Usuário'}</b><div class="v7-small">${d.email||''}${d.re?` · RE ${d.re}`:''}<br>${d.plataforma||'Dispositivo'} · Tela ${d.tela||'-'}<br>ID: ...${short}<br>Último acesso: ${deviceDate(d.ultimoAcesso)}</div></div><span class="device-badge device-${String(d.status||'Pendente').toLowerCase()}">${d.status||'Pendente'}</span></div><div class="device-actions"><select class="field-inp" id="${sid}">${deviceStatusOptions(d.status)}</select><button class="btn-primary" onclick="saveDeviceStatus('${d.docId||d.deviceId}','${sid}')">Salvar dispositivo</button></div></div>`;
+  }).join('');
+}
+window.saveDeviceStatus=async(id,selId)=>{
+  if(!isAdminGeral()) return alert('Somente Administrador Geral pode gerenciar dispositivos.');
+  const status=$v(selId)?.value||'Pendente';
+  await setDoc(doc(db,'dispositivos_acesso',id),{status,updatedBy:v7User.email,updatedAt:serverTimestamp(),...(status==='Autorizado'?{aprovadoPor:v7User.email,aprovadoEm:serverTimestamp()}:{})},{merge:true});
+  await auditV7('dispositivo_status_alterado',`${id}: ${status}`);
+  alert(`Dispositivo marcado como ${status}. Nesta Fase A o status ainda não bloqueia o acesso.`);
 };
 function renderAudit(){ const el=$v('v7Audit'); if(!el)return; el.innerHTML=v7Audits.slice(0,20).map(a=>`<div class="v7-card"><b>${a.acao||''}</b><div class="v7-small">${a.detalhe||''}<br>${a.usuario||''}</div></div>`).join('')||'<div class="v7-card v7-small">Sem auditoria.</div>'; }
 function allVisitProps(){

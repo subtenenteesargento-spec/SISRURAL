@@ -1,0 +1,40 @@
+SISRURAL V10.4 DEV - OS-002A SEGURANÇA DE DISPOSITIVOS
+
+STATUS: DESENVOLVIMENTO / NÃO PUBLICAR DIRETAMENTE EM PRODUÇÃO
+
+OBJETIVO
+Registrar e visualizar dispositivos usados no login, sem bloquear usuários nesta fase.
+
+ARQUIVOS ALTERADOS
+- js/firebase-admin.js
+- index.html
+- css/premium.css
+- service-worker.js (somente nome do cache)
+
+NÃO ALTERADOS
+- config.firebase.js
+- js/mapa-ui.js
+- js/request-access.js
+- offline.html
+- manifest.webmanifest
+- cadastro de propriedades
+- cadastro/registro de visitas
+- sincronização/offline
+- relatórios existentes
+
+COMPORTAMENTO DA FASE A
+- Login continua como antes.
+- Após login, o navegador gera/recupera um ID local do dispositivo.
+- O Firestore recebe/atualiza a coleção dispositivos_acesso.
+- Administrador Geral visualiza os dispositivos no painel.
+- Status disponíveis: Pendente, Autorizado e Revogado.
+- NENHUM desses status bloqueia acesso nesta fase.
+
+OBSERVAÇÃO TÉCNICA
+O ID de navegador armazenado localmente não equivale a IMEI/número de série. Esta Fase A serve para inventário e homologação. A etapa de bloqueio só será ativada depois de testes e endurecimento das regras de segurança.
+
+VISUAL
+O Painel Administrativo recebeu estilo claro (fundo branco/cinza claro, texto escuro, campos claros e ações verdes), restrito ao modal administrativo.
+
+ROLLBACK
+Restaurar os quatro arquivos originais da V10.3 estável.
