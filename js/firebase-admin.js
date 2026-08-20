@@ -1,7 +1,7 @@
 // SISRURAL V9.1 - firebase-admin.js - LOGIN FIX
 import { firebaseConfig, ADMIN_EMAIL, APP_INFO, ADMIN_EMAILS_FIXOS } from '../config.firebase.js';
 import { initializeApp, deleteApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, updateProfile } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
 import { getFirestore, doc, getDoc, setDoc, collection, addDoc, onSnapshot, serverTimestamp, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
 
 const firebaseApp = initializeApp(firebaseConfig);
@@ -67,17 +67,35 @@ function isSupervisor(){ const p=perfilNorm(v7Profile?.perfil); return ['supervi
 function canOpenAdminPanel(){ return isAdminGeral() || isSupervisor(); }
 function isAdmin(){ return isAdminGeral(); }
 async function auditV7(acao,detalhe){ try{ await addDoc(collection(db,'auditoria'),{acao,detalhe,usuario:v7User?.email||'',createdAt:serverTimestamp(),app:'SISRURAL V10.3 CAMPO FIX'}); }catch(e){} }
-async function createAuthUserForPolice(email,nome,senha='Sisrural@2026'){
+function generateTemporarySecret(){
+  try{
+    const bytes=new Uint8Array(24);
+    crypto.getRandomValues(bytes);
+    return 'Sr!'+Array.from(bytes,b=>b.toString(36).padStart(2,'0')).join('').slice(0,30)+'9a';
+  }catch(e){
+    return 'Sr!'+Date.now().toString(36)+Math.random().toString(36).slice(2)+'9a';
+  }
+}
+async function createAuthUserForPolice(email,nome){
   const appName='sisrural-create-'+Date.now()+'-'+Math.random().toString(36).slice(2);
   const app2=initializeApp(firebaseConfig, appName);
   const auth2=getAuth(app2);
+  let created=false, exists=false;
   try{
-    const cred=await createUserWithEmailAndPassword(auth2,email,senha);
-    try{ await updateProfile(cred.user,{displayName:nome||email}); }catch(e){}
-    try{ await signOut(auth2); }catch(e){}
-    return {created:true,password:senha};
+    try{
+      const cred=await createUserWithEmailAndPassword(auth2,email,generateTemporarySecret());
+      created=true;
+      try{ await updateProfile(cred.user,{displayName:nome||email}); }catch(e){}
+      try{ await signOut(auth2); }catch(e){}
+    }catch(e){
+      if(e.code==='auth/email-already-in-use') exists=true;
+      else throw e;
+    }
+    await sendPasswordResetEmail(auth2,email);
+    return {created,exists,resetSent:true};
   }catch(e){
-    if(e.code==='auth/email-already-in-use') return {created:false,exists:true,password:senha};
+    e.accountCreated=created;
+    e.accountExists=exists;
     throw e;
   }finally{
     try{ await deleteApp(app2); }catch(e){}
@@ -111,6 +129,26 @@ window.v7Login=async()=>{
   const msg=$v('v7LoginMsg'); msg.style.display='none';
   try{ await signInWithEmailAndPassword(auth,$v('v7Email').value.trim(),$v('v7Senha').value); }
   catch(e){ msg.style.display='block'; msg.textContent = e.code==='auth/invalid-credential'?'E-mail ou senha incorretos.':e.message; }
+};
+window.v7ForgotPassword=async()=>{
+  const msg=$v('v7LoginMsg');
+  const email=String($v('v7Email')?.value||'').trim().toLowerCase();
+  msg.classList.remove('ok');
+  if(!email){
+    msg.style.display='block';
+    msg.textContent='Informe seu e-mail e clique novamente em “Esqueci minha senha”.';
+    return;
+  }
+  try{
+    await sendPasswordResetEmail(auth,email);
+    msg.style.display='block';
+    msg.classList.add('ok');
+    msg.textContent='E-mail enviado. Abra sua caixa de entrada e use o link do Firebase para definir uma nova senha.';
+  }catch(e){
+    msg.style.display='block';
+    msg.classList.remove('ok');
+    msg.textContent='Não foi possível enviar o e-mail agora. Confira o endereço informado e tente novamente.';
+  }
 };
 window.v7Logout=async()=>{ await signOut(auth); location.reload(); };
 onAuthStateChanged(auth, async u=>{
@@ -167,10 +205,22 @@ window.approveReq=async(id)=>{
   let authMsg='';
   try{
     const cr=await createAuthUserForPolice(email,r.nome||email);
-    authMsg=cr.created?`\n\nUsuário criado no Firebase Authentication.\nSenha provisória: ${cr.password}`:`\n\nO e-mail já existia no Firebase Authentication. Use a senha já cadastrada ou redefina no Firebase.`;
-    auditV7('acesso_aprovado',`${email} como ${perfil}. Auth: ${cr.created?'criado':'já existia'}`);
+    authMsg=cr.created
+      ?`
+
+Usuário criado no Firebase Authentication.
+Um e-mail foi enviado para ${email} para que o policial defina a própria senha.`
+      :`
+
+O e-mail já existia no Firebase Authentication.
+Foi enviado um link para ${email} para definir/redefinir a senha.`;
+    auditV7('acesso_aprovado',`${email} como ${perfil}. Auth: ${cr.created?'criado':'já existia'}; link de senha enviado`);
   }catch(e){
-    authMsg=`\n\nATENÇÃO: perfil aprovado, mas não foi possível criar no Authentication. Erro: ${e.message||e}`;
+    const estado=e.accountCreated?'A conta foi criada, porém o e-mail de definição de senha não pôde ser enviado.':'Não foi possível concluir o Authentication.';
+    authMsg=`
+
+ATENÇÃO: perfil aprovado. ${estado}
+O policial pode usar “Esqueci minha senha” na tela de login.`;
     auditV7('acesso_aprovado_auth_erro',`${email}: ${e.message||e}`);
   }
   alert('Acesso aprovado no SISRURAL.'+authMsg); 
@@ -194,10 +244,13 @@ window.adminCreatePoliceProfile=async()=>{
     let authText='';
     try{
       const cr=await createAuthUserForPolice(email,nome);
-      authText=cr.created?`<br>✅ Usuário criado no Firebase Authentication.<br><b>Senha provisória: ${cr.password}</b>`:`<br>ℹ️ Este e-mail já existia no Firebase Authentication. Use a senha já cadastrada ou redefina no Firebase.`;
-      await auditV7('policial_cadastrado',`${nome} (${email}) como ${perfil}. Auth: ${cr.created?'criado':'já existia'}`);
+      authText=cr.created
+        ?`<br>✅ Usuário criado no Firebase Authentication.<br>📧 Link para definição de senha enviado para <b>${email}</b>.`
+        :`<br>ℹ️ Este e-mail já existia no Firebase Authentication.<br>📧 Link para definir/redefinir a senha enviado para <b>${email}</b>.`;
+      await auditV7('policial_cadastrado',`${nome} (${email}) como ${perfil}. Auth: ${cr.created?'criado':'já existia'}; link de senha enviado`);
     }catch(e){
-      authText=`<br><span style="color:#facc15">⚠️ Perfil salvo, mas não foi possível criar no Authentication: ${e.message||e}</span>`;
+      const detalhe=e.accountCreated?'A conta foi criada, mas o e-mail de senha não pôde ser enviado.':'Não foi possível concluir o Authentication.';
+      authText=`<br><span style="color:#b45309">⚠️ Perfil salvo. ${detalhe} O policial pode usar “Esqueci minha senha” na tela de login.</span>`;
       await auditV7('policial_cadastrado_auth_erro',`${email}: ${e.message||e}`);
     }
     if(msg) msg.innerHTML='✅ Perfil salvo no SISRURAL.'+authText;

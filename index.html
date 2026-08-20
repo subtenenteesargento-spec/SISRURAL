@@ -17,7 +17,7 @@
 <meta name="apple-mobile-web-app-title" content="SISRURAL">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-<meta name="sisrural-version" content="V10.2 Operacional - menus simplificados">
+<meta name="sisrural-version" content="V10.4 OS-002A DEV - dispositivos e senha segura">
 </head>
 <body>
 <div id="authGate">
@@ -27,6 +27,7 @@
     <label class="field-lbl">E-MAIL</label><input class="field-inp" id="v7Email" type="email" placeholder="seuemail@..." autocomplete="username">
     <label class="field-lbl">SENHA</label><input class="field-inp" id="v7Senha" type="password" placeholder="Senha" autocomplete="current-password">
     <div class="btn-primary" onclick="v7Login()">Entrar</div>
+    <button type="button" class="auth-link-btn" id="btnEsqueciSenha" onclick="v7ForgotPassword()">Esqueci minha senha</button>
     <button type="button" class="btn-secondary" id="btnSolicitarAcesso" onclick="openRequestAccess()" style="width:100%;cursor:pointer;pointer-events:auto;opacity:1;background:rgba(255,255,255,.09);color:#93c5fd">Solicitar acesso</button>
     <div id="v7LoginMsg" class="err"></div>
   </div>

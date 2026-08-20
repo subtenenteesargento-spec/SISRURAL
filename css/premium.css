@@ -489,3 +489,8 @@ body{
   #v7AdminModal .device-actions{grid-template-columns:1fr}
   #v7AdminModal .v7-grid{grid-template-columns:1fr!important}
 }
+
+/* OS-002A - redefinição de senha pelo próprio usuário */
+.auth-link-btn{display:block;width:100%;margin:8px 0 4px;padding:8px 10px;border:0;background:transparent;color:#93c5fd;cursor:pointer;font:inherit;font-size:.88rem;text-decoration:underline;text-underline-offset:3px}
+.auth-link-btn:hover{color:#bfdbfe}
+#v7LoginMsg.ok{color:#4ade80!important}
