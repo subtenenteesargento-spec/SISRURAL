@@ -12,3 +12,9 @@ Teste: ?v=103campofix
 - Mantidos os 11 comandos originais e suas funções.
 - Brasão do 24º BPM/I aplicado no login, cabeçalho e ícones PWA.
 - Testar na branch `dev-seguranca` antes de qualquer promoção para produção.
+
+
+---
+
+## V11.0 RC — Homologação Final
+Base consolidada da V10.7 para teste final. Nenhuma nova funcionalidade foi acrescentada nesta consolidação.

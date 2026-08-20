@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sisrural-v10-7-fotos-propriedade-dev';
+const CACHE_NAME = 'sisrural-v11-0-rc-supervisao-fotos';
 const APP_SHELL=[
   './','./index.html','./offline.html','./manifest.webmanifest','./config.firebase.js',
   './css/app.css','./css/premium.css',
