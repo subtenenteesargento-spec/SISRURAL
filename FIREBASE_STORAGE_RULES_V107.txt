@@ -1,0 +1,16 @@
+// MODELO INICIAL – aplicar somente após conferência no Console Firebase Storage
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /propriedades/{propertyId}/{fileName} {
+      // V10.7: nenhuma foto é pública. É obrigatório estar autenticado.
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && request.resource.size < 2 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+  }
+}
+
+// OBS.: Esta regra é deliberadamente compatível com a Fase A atual.
+// Em etapa posterior de endurecimento, vincular a permissão ao status/perfil do usuário no Firestore.

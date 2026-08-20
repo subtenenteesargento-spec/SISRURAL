@@ -3,10 +3,12 @@ import { firebaseConfig, ADMIN_EMAIL, APP_INFO, ADMIN_EMAILS_FIXOS } from '../co
 import { initializeApp, deleteApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
 import { getFirestore, doc, getDoc, setDoc, collection, addDoc, onSnapshot, serverTimestamp, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
+import { getStorage, ref as storageRef, uploadBytes, getBlob } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js';
 
 const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
+const storage = getStorage(firebaseApp);
 let v7User=null, v7Profile=null, v7Requests=[], v7Visits=[], v7Audits=[], v7CloudProps=[], v7Users=[], v7Devices=[]; window.v7CloudProps=v7CloudProps;
 const PENDING_PROPS_KEY='sisrural_pending_props_v1';
 const MIGRATED_LOCAL_KEY='sisrural_local_props_migrated_v1';
@@ -102,6 +104,129 @@ async function createAuthUserForPolice(email,nome){
   }
 }
 
+
+// ─────────────────────────────────────────────────────────────
+// SISRURAL V10.7 DEV – Fotos de referência da propriedade
+// Máximo 2 fotos. Arquivos ficam no Firebase Storage; Firestore
+// guarda apenas caminhos/metadados. Sem URLs públicas permanentes.
+// ─────────────────────────────────────────────────────────────
+const PROPERTY_PHOTO_MAX=2;
+const PROPERTY_PHOTO_MAX_EDGE=1280;
+const PROPERTY_PHOTO_QUALITY=.74;
+let propertyPhotoBlobs=[null,null];
+let propertyPhotoObjectUrls=[];
+let viewerPhotoObjectUrls=[];
+const PHOTO_DB='sisrural_media_v1', PHOTO_STORE='property_photos';
+function photoDb(){
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open(PHOTO_DB,1);
+    req.onupgradeneeded=()=>{ const db=req.result; if(!db.objectStoreNames.contains(PHOTO_STORE)) db.createObjectStore(PHOTO_STORE,{keyPath:'id'}); };
+    req.onsuccess=()=>resolve(req.result); req.onerror=()=>reject(req.error);
+  });
+}
+async function photoDbPut(rec){ const db=await photoDb(); return new Promise((res,rej)=>{ const tx=db.transaction(PHOTO_STORE,'readwrite'); tx.objectStore(PHOTO_STORE).put(rec); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }
+async function photoDbAll(){ const db=await photoDb(); return new Promise((res,rej)=>{ const tx=db.transaction(PHOTO_STORE,'readonly'); const r=tx.objectStore(PHOTO_STORE).getAll(); r.onsuccess=()=>res(r.result||[]); r.onerror=()=>rej(r.error); }); }
+async function photoDbDelete(id){ const db=await photoDb(); return new Promise((res,rej)=>{ const tx=db.transaction(PHOTO_STORE,'readwrite'); tx.objectStore(PHOTO_STORE).delete(id); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }
+async function compressPropertyPhoto(file){
+  if(!file || !String(file.type||'').startsWith('image/')) throw Error('Selecione uma imagem válida.');
+  const bmp=await createImageBitmap(file);
+  const scale=Math.min(1,PROPERTY_PHOTO_MAX_EDGE/Math.max(bmp.width,bmp.height));
+  const w=Math.max(1,Math.round(bmp.width*scale)), h=Math.max(1,Math.round(bmp.height*scale));
+  const canvas=document.createElement('canvas'); canvas.width=w; canvas.height=h;
+  canvas.getContext('2d',{alpha:false}).drawImage(bmp,0,0,w,h); try{bmp.close();}catch(e){}
+  return await new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(Error('Falha ao comprimir a foto.')),'image/jpeg',PROPERTY_PHOTO_QUALITY));
+}
+function clearPhotoObjectUrls(arr){ while(arr.length){ try{URL.revokeObjectURL(arr.pop())}catch(e){} } }
+window.resetPropertyPhotoInputs=()=>{
+  propertyPhotoBlobs=[null,null]; clearPhotoObjectUrls(propertyPhotoObjectUrls);
+  for(let i=0;i<2;i++){
+    const input=$v('aFoto'+(i+1)), img=$v('aFotoPreview'+(i+1)), empty=$v('aFotoEmpty'+(i+1));
+    if(input) input.value=''; if(img){img.removeAttribute('src');img.style.display='none';} if(empty) empty.style.display='flex';
+  }
+  const st=$v('aFotoStatus'); if(st) st.textContent='Até 2 fotos opcionais. O SISRURAL comprime automaticamente antes do envio.';
+};
+window.handlePropertyPhotoInput=async(index,input)=>{
+  const st=$v('aFotoStatus');
+  try{
+    const file=input?.files?.[0]; if(!file){propertyPhotoBlobs[index]=null;return;}
+    if(st) st.textContent='⏳ Otimizando foto...';
+    const blob=await compressPropertyPhoto(file); propertyPhotoBlobs[index]=blob;
+    if(propertyPhotoObjectUrls[index]) try{URL.revokeObjectURL(propertyPhotoObjectUrls[index])}catch(e){}
+    const url=URL.createObjectURL(blob); propertyPhotoObjectUrls[index]=url;
+    const img=$v('aFotoPreview'+(index+1)), empty=$v('aFotoEmpty'+(index+1)); if(img){img.src=url;img.style.display='block';} if(empty) empty.style.display='none';
+    const kb=Math.round(blob.size/1024); if(st) st.textContent=`✅ Foto ${index+1} pronta (${kb} KB). Máximo de 2 fotos por propriedade.`;
+  }catch(e){ input.value=''; propertyPhotoBlobs[index]=null; if(st) st.textContent='⚠️ '+e.message; }
+};
+async function queuePropertyPhotos(batchId,blobs,propertyId=''){
+  for(let i=0;i<blobs.length;i++) if(blobs[i]) await photoDbPut({id:`${batchId}_${i}`,batchId,index:i,blob:blobs[i],propertyId,createdAt:Date.now()});
+  await refreshPendingPhotoBadge();
+}
+async function bindPhotoBatchToProperty(batchId,propertyId){
+  const all=await photoDbAll(); for(const r of all.filter(x=>x.batchId===batchId)){ r.propertyId=propertyId; await photoDbPut(r); }
+}
+async function uploadQueuedPhotosForProperty(propertyId,batchId=''){
+  const all=await photoDbAll(); const rows=all.filter(r=>r.propertyId===propertyId || (batchId && r.batchId===batchId)); if(!rows.length) return [];
+  const paths=[];
+  for(const r of rows.sort((a,b)=>a.index-b.index)){
+    const path=`propriedades/${propertyId}/foto_${r.index+1}.jpg`;
+    await uploadBytes(storageRef(storage,path),r.blob,{contentType:'image/jpeg',customMetadata:{sisrural:'propriedade-referencia'}});
+    paths.push(path); await photoDbDelete(r.id);
+  }
+  if(paths.length) await setDoc(doc(db,'propriedades_cadastradas',propertyId),{fotosPaths:paths,fotosQuantidade:paths.length,fotosAtualizadasEm:serverTimestamp()},{merge:true});
+  await refreshPendingPhotoBadge(); return paths;
+}
+async function savePhotosForCloudProperty(propertyId,blobs){
+  const clean=blobs.filter(Boolean).slice(0,PROPERTY_PHOTO_MAX); if(!clean.length) return [];
+  const batchId='photo-'+Date.now()+'-'+Math.random().toString(36).slice(2); await queuePropertyPhotos(batchId,clean,propertyId);
+  return await uploadQueuedPhotosForProperty(propertyId,batchId);
+}
+async function syncPendingPropertyPhotos(){
+  if(!v7User || !navigator.onLine) return;
+  const all=await photoDbAll(); const ids=[...new Set(all.map(r=>r.propertyId).filter(Boolean))];
+  for(const id of ids){ try{await uploadQueuedPhotosForProperty(id);}catch(e){console.warn('SISRURAL: foto pendente ainda não enviada.',e);} }
+  await refreshPendingPhotoBadge();
+}
+async function refreshPendingPhotoBadge(){
+  try{
+    const n=(await photoDbAll()).length; let el=$v('photoSyncBadge');
+    if(!el){el=document.createElement('div');el.id='photoSyncBadge';el.style.cssText='position:fixed;left:10px;bottom:126px;z-index:9999;background:#111827;color:#93c5fd;border:1px solid #60a5fa;border-radius:10px;padding:7px 10px;font:700 11px Rajdhani,Arial;box-shadow:0 0 12px rgba(0,0,0,.45);display:none';document.body.appendChild(el);}
+    el.style.display=n?'block':'none'; if(n) el.textContent=`📷 ${n} foto(s) aguardando envio`;
+  }catch(e){}
+}
+window.openPropertyPhotos=async(propertyId)=>{
+  if(!v7User){ alert('Faça login no SISRURAL para visualizar as fotos.'); return; }
+  const modal=$v('v7PhotoModal'), list=$v('v7PhotoList'), title=$v('v7PhotoTitle'); if(!modal||!list) return;
+  modal.classList.add('open'); list.innerHTML='<div class="v7-small">⏳ Carregando fotos protegidas...</div>'; clearPhotoObjectUrls(viewerPhotoObjectUrls);
+  try{
+    let p=(v7CloudProps||[]).find(x=>String(x.id)===String(propertyId));
+    if(!p){const snap=await getDoc(doc(db,'propriedades_cadastradas',propertyId)); if(snap.exists()) p={id:snap.id,...snap.data()};}
+    if(!p) throw Error('Propriedade não localizada.'); title.textContent='📷 '+(p.nome||'Fotos da propriedade');
+    const paths=Array.isArray(p.fotosPaths)?p.fotosPaths.slice(0,2):[];
+    if(!paths.length){list.innerHTML='<div class="v7-card"><b>Nenhuma foto cadastrada.</b><br><span class="v7-small">As fotos são opcionais e servem apenas como referência visual da propriedade.</span></div>';return;}
+    const cards=[];
+    for(let i=0;i<paths.length;i++){
+      const blob=await getBlob(storageRef(storage,paths[i])); const url=URL.createObjectURL(blob); viewerPhotoObjectUrls.push(url);
+      cards.push(`<div class="property-photo-view-card"><img src="${url}" alt="Foto ${i+1} da propriedade"><div>Foto ${i+1}</div></div>`);
+    }
+    list.innerHTML=`<div class="property-photo-view-grid">${cards.join('')}</div>`;
+  }catch(e){ list.innerHTML='<div class="v7-card" style="color:#dc2626"><b>Não foi possível abrir as fotos.</b><br><span class="v7-small">'+String(e.message||e)+'</span></div>'; }
+};
+window.closePropertyPhotos=()=>{clearPhotoObjectUrls(viewerPhotoObjectUrls); $v('v7PhotoModal')?.classList.remove('open');};
+function propertyPhotoLink(propertyId){
+  if(!propertyId) return '';
+  const u=new URL(location.href); u.search=''; u.hash=''; u.searchParams.set('fotos',propertyId); return u.toString();
+}
+function v7PropertyForVisit(v){
+  if(v?.propriedadeId){const byId=(v7CloudProps||[]).find(p=>String(p.id)===String(v.propriedadeId));if(byId)return byId;}
+  const nome=normTxt(v?._prop||v?.propriedade||''); return (v7CloudProps||[]).find(p=>normTxt(p.nome||p.nm)===nome)||null;
+}
+let photoDeepLinkHandled=false;
+function maybeOpenPhotoDeepLink(){
+  if(photoDeepLinkHandled||!v7User) return; const id=new URL(location.href).searchParams.get('fotos'); if(!id) return;
+  const exists=(v7CloudProps||[]).some(p=>String(p.id)===String(id)); if(!exists) return;
+  photoDeepLinkHandled=true; setTimeout(()=>window.openPropertyPhotos(id),250);
+}
+
 async function loadProfile(u){
   const refUid=doc(db,'usuarios',u.uid);
   const refEmail=doc(db,'usuarios',emailKey(u.email));
@@ -161,9 +286,11 @@ function startRealtime(){
   onSnapshot(query(collection(db,'auditoria'),orderBy('createdAt','desc')),s=>{v7Audits=s.docs.map(d=>({id:d.id,...d.data()})); renderAudit();});
   onSnapshot(collection(db,'usuarios'),s=>{v7Users=s.docs.map(d=>({docId:d.id,...d.data()})); renderUsersList();});
   onSnapshot(collection(db,'dispositivos_acesso'),s=>{v7Devices=s.docs.map(d=>({docId:d.id,...d.data()})); renderDevicesList();});
-  onSnapshot(collection(db,'propriedades_cadastradas'),s=>{v7CloudProps=s.docs.map(d=>({id:d.id,...d.data()})); window.v7CloudProps=v7CloudProps; renderCloudProperties(); renderCommanderDashboard();});
+  onSnapshot(collection(db,'propriedades_cadastradas'),s=>{v7CloudProps=s.docs.map(d=>({id:d.id,...d.data()})); window.v7CloudProps=v7CloudProps; renderCloudProperties(); renderCommanderDashboard(); maybeOpenPhotoDeepLink();});
   syncPendingProperties();
       syncPendingVisits();
+  syncPendingPropertyPhotos();
+  refreshPendingPhotoBadge();
   migrateLocalPointsToCloudOnce();
 }
 window.closeV7Modal=id=>$v(id).classList.remove('open');
@@ -517,6 +644,7 @@ async function syncPendingProperties(){
   for(const pt of arr){
     try{
       const r=await savePropCloud({...pt,_offline:true});
+      if(!r?.duplicado && r?.id && pt._photoBatchId){ await bindPhotoBatchToProperty(pt._photoBatchId,r.id); try{await uploadQueuedPhotosForProperty(r.id,pt._photoBatchId);}catch(e){console.warn('SISRURAL: cadastro sincronizado; fotos permanecem na fila.',e);} }
       await auditV7(r?.duplicado?'propriedade_offline_duplicada_ignorada':'propriedade_sincronizada',pt.nm||pt.nome||'sem nome');
     }
     catch(e){ rest.push(pt); }
@@ -540,13 +668,14 @@ async function migrateLocalPointsToCloudOnce(){
   window.userPts.length=0; pend.forEach(p=>window.userPts.push(p));
   try{ savePts(); userPtsG.clearLayers(); window.userPts.forEach((p,i)=>renderPt(p,i)); }catch(e){}
 }
-window.addEventListener('online',()=>{ syncPendingProperties(); syncPendingVisits(); });
+window.addEventListener('online',()=>{ syncPendingProperties(); syncPendingVisits(); syncPendingPropertyPhotos(); });
 
 window.salvar=async function(){
   const msg=document.getElementById('aMsg');
   const btn=document.getElementById('btnSalvarPonto');
   if(btn && btn.disabled) return;
   const pt=formProp();
+  const selectedPhotos=propertyPhotoBlobs.filter(Boolean).slice(0,PROPERTY_PHOTO_MAX);
   if(!pt.nm){msg.style.cssText='display:block;background:rgba(239,68,68,.15);color:#ef4444';msg.textContent='⚠️ Informe o nome da fazenda.';return;}
   if(isNaN(pt.lat)||isNaN(pt.lng)){msg.style.cssText='display:block;background:rgba(239,68,68,.15);color:#ef4444';msg.textContent='⚠️ Coordenadas inválidas. Use o GPS ou insira manualmente.';return;}
   if(isDuplicateProp(pt)){
@@ -565,17 +694,25 @@ window.salvar=async function(){
     try{
       const r=await savePropCloud(pt); await auditV7(r?.duplicado?'propriedade_duplicada_ignorada':'propriedade_cadastrada',pt.nm);
       if(r?.duplicado){ finish('⚠️ Este ponto já existia no sistema. Não foi cadastrado novamente.',false); return; }
-      finish(`✅ "${pt.nm}" salvo na nuvem e sincronizado.`,true);
-      setTimeout(closeAdd,1400);
+      let fotoMsg='';
+      if(selectedPhotos.length && r?.id){
+        try{await savePhotosForCloudProperty(r.id,selectedPhotos); fotoMsg=`<br>📷 ${selectedPhotos.length} foto(s) enviada(s).`;}
+        catch(e){const batchId='photo-'+Date.now()+'-'+Math.random().toString(36).slice(2);await queuePropertyPhotos(batchId,selectedPhotos,r.id);fotoMsg='<br>🟡 Cadastro salvo; foto(s) aguardando sincronização.';}
+      }
+      finish(`✅ "${pt.nm}" salvo na nuvem e sincronizado.${fotoMsg}`,true);
+      window.resetPropertyPhotoInputs();
+      setTimeout(closeAdd,1800);
     }catch(e){
-      const added=pushPendingPropOnce({...pt, erro:e.message, _offline:true});
+      let photoBatchId=''; if(selectedPhotos.length){photoBatchId='photo-'+Date.now()+'-'+Math.random().toString(36).slice(2); try{await queuePropertyPhotos(photoBatchId,selectedPhotos,'');}catch(err){console.warn(err);} }
+      const added=pushPendingPropOnce({...pt, erro:e.message, _offline:true, _photoBatchId:photoBatchId});
       if(added){ userPts.push(pt); savePts(); renderPt(pt,userPts.length-1); }
       try{ if(document.getElementById('sheet')?.classList.contains('open')) selQ(activeQ||classQ(pt.lat,pt.lng)); }catch(e){}
       finish(`🟡 <b>SEM INTERNET / SEM ENVIO</b><br>Cadastro salvo no aparelho.<br>Quando o celular voltar a ter sinal, o SISRURAL enviará automaticamente.<br><b>Não clique novamente.</b>`,false);
       setTimeout(closeAdd,2600);
     }
   } else {
-    const added=pushPendingPropOnce({...pt,_offline:true});
+    let photoBatchId=''; if(selectedPhotos.length){photoBatchId='photo-'+Date.now()+'-'+Math.random().toString(36).slice(2); try{await queuePropertyPhotos(photoBatchId,selectedPhotos,'');}catch(err){console.warn(err);} }
+    const added=pushPendingPropOnce({...pt,_offline:true,_photoBatchId:photoBatchId});
     if(added){ userPts.push(pt); savePts(); renderPt(pt,userPts.length-1); }
     try{ if(document.getElementById('sheet')?.classList.contains('open')) selQ(activeQ||classQ(pt.lat,pt.lng)); }catch(e){}
     finish(`🟡 <b>SEM INTERNET</b><br>"${pt.nm}" foi salvo no aparelho.<br>Quando voltar o sinal, o SISRURAL fará o envio automático.<br><b>Não é necessário clicar novamente.</b>`,false);
@@ -702,7 +839,7 @@ window.openCommanderReport=()=>{
   const horaBR=hoje.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   const esc=(x)=>String(x||'').replace(/[&<>"']/g,(m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const visits=st.filtered.slice().sort((a,b)=>(a._dt||0)-(b._dt||0));
-  const linhas=visits.map((v,i)=>`<tr><td>${i+1}</td><td>${esc(v.dataLocal||v7FmtDate(v._dt))}</td><td>${esc(v.horaLocal||v7FmtHour(v._dt))}</td><td>${esc(v._prop)}</td><td>${esc(v7QLabel(v._q))}</td><td>${esc(v.usuarioNome||v.usuario)}</td><td>${esc(v._obs)}</td><td>${v.maps?`<a href="${esc(v.maps)}">Abrir</a>`:''}</td></tr>`).join('');
+  const linhas=visits.map((v,i)=>{const pp=v7PropertyForVisit(v);const fotoLink=(pp&&Array.isArray(pp.fotosPaths)&&pp.fotosPaths.length)?propertyPhotoLink(pp.id):'';return `<tr><td>${i+1}</td><td>${esc(v.dataLocal||v7FmtDate(v._dt))}</td><td>${esc(v.horaLocal||v7FmtHour(v._dt))}</td><td>${esc(v._prop)}</td><td>${esc(v7QLabel(v._q))}</td><td>${esc(v.usuarioNome||v.usuario)}</td><td>${esc(v._obs)}</td><td>${v.maps?`<a target="_blank" href="${esc(v.maps)}">Abrir</a>`:''}</td><td>${fotoLink?`<a target="_blank" href="${esc(fotoLink)}">📷 Ver fotos</a>`:'-'}</td></tr>`;}).join('');
   const periodo=(f.ini||f.fim)?`${f.ini||'início'} até ${f.fim||'hoje'}`:'Todos os registros';
   const quadrante=f.q?v7QLabel(f.q):'Todos';
   const busca=f.busca||'Todos';
@@ -717,7 +854,7 @@ window.openCommanderReport=()=>{
     <div class="info"><div><b>Período:</b> ${esc(periodo)}<br><b>Quadrante:</b> ${esc(quadrante)}<br><b>Filtro:</b> ${esc(busca)}</div><div><b>Finalidade:</b> acompanhamento da Patrulha Rural, produtividade operacional e controle de visitas às propriedades cadastradas.</div></div>
     <div class="grid"><div class="card"><b>${st.props.length}</b>Propriedades cadastradas</div><div class="card"><b>${st.filtered.length}</b>Visitas no filtro</div><div class="card"><b>${st.today.length}</b>Visitas hoje</div><div class="card"><b>${st.month.length}</b>Visitas no mês</div></div>
     <h3>1. Visitas realizadas</h3>
-    <table><thead><tr><th>Nº</th><th>Data</th><th>Hora</th><th>Propriedade</th><th>Quadrante</th><th>Policial</th><th>Observação</th><th>Mapa</th></tr></thead><tbody>${linhas||'<tr><td colspan="8">Nenhuma visita localizada para os filtros selecionados.</td></tr>'}</tbody></table>
+    <table><thead><tr><th>Nº</th><th>Data</th><th>Hora</th><th>Propriedade</th><th>Quadrante</th><th>Policial</th><th>Observação</th><th>Mapa</th><th>Fotos</th></tr></thead><tbody>${linhas||'<tr><td colspan="9">Nenhuma visita localizada para os filtros selecionados.</td></tr>'}</tbody></table>
     <h3>2. Resumo estatístico</h3>
     <table><tbody><tr><th>Q1 - Alfa</th><td>${st.filtQ[1]||0}</td><th>Q2 - Bravo</th><td>${st.filtQ[2]||0}</td><th>Q3 - Charlie</th><td>${st.filtQ[3]||0}</td><th>Q4 - Delta</th><td>${st.filtQ[4]||0}</td></tr><tr><th>Nunca visitadas</th><td>${st.never.length}</td><th>+30 dias</th><td>${st.older30.length}</td><th>+60 dias</th><td>${st.older60.length}</td><th>+90 dias</th><td>${st.older90.length}</td></tr></tbody></table>
     <div class="assinaturas"><div class="linha">Comandante da Companhia</div><div class="linha">Responsável pela Patrulha Rural</div></div>

@@ -340,6 +340,7 @@ function openAdd(){
   const m=document.getElementById('mAdd');
   m.classList.add('open');
   ['aNome','aTipo','aEnd','aTel'].forEach(id=>document.getElementById(id).value='');
+  try{ window.resetPropertyPhotoInputs && window.resetPropertyPhotoInputs(); }catch(e){}
   document.getElementById('aMsg').style.display='none';
   // Mostra o mapa de cadastro imediatamente, mesmo sem GPS ou sem internet.
   const c=(window.map&&map.getCenter)?map.getCenter():{lat:CX,lng:CY};

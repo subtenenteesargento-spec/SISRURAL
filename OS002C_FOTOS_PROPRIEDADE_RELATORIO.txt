@@ -1,0 +1,21 @@
+SISRURAL V10.7 DEV – FOTOS DE REFERÊNCIA DA PROPRIEDADE
+
+ALTERAÇÕES
+- Até 2 fotos opcionais no cadastro da propriedade.
+- Compressão automática (máx. 1280 px; JPEG otimizado).
+- Fotos armazenadas no Firebase Storage; Firestore guarda apenas caminhos/metadados.
+- Se estiver offline ou falhar o upload, fotos ficam em IndexedDB aguardando sincronização.
+- Relatório do Painel do Comandante inclui link “Ver fotos” quando a propriedade possui imagens.
+- O link abre o próprio SISRURAL e exige autenticação; não é criada URL pública permanente de imagem.
+- Visitas permanecem sem fotos.
+
+ARQUIVOS ALTERADOS
+index.html
+js/firebase-admin.js
+js/mapa-ui.js
+css/premium.css
+service-worker.js
+
+ATENÇÃO
+Para upload/visualização funcionar, Firebase Storage precisa estar habilitado e com regras de acesso configuradas.
+Não publicar em main antes de homologação na dev-seguranca.

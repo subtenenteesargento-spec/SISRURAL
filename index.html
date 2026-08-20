@@ -175,6 +175,23 @@
     <label class="field-lbl">TELEFONE DO PROPRIETÁRIO</label>
     <input class="field-inp" id="aTel" type="tel" placeholder="(19) 99999-0000">
 
+    <div class="property-photo-section">
+      <div class="property-photo-head"><div><b>📷 FOTOS DE REFERÊNCIA</b><span>Opcional · máximo 2 fotos</span></div></div>
+      <div class="property-photo-grid">
+        <label class="property-photo-slot">
+          <input id="aFoto1" type="file" accept="image/*" capture="environment" onchange="handlePropertyPhotoInput(0,this)">
+          <span id="aFotoEmpty1" class="property-photo-empty">📷<b>Foto 1</b><small>Entrada / porteira</small></span>
+          <img id="aFotoPreview1" alt="Prévia da foto 1">
+        </label>
+        <label class="property-photo-slot">
+          <input id="aFoto2" type="file" accept="image/*" capture="environment" onchange="handlePropertyPhotoInput(1,this)">
+          <span id="aFotoEmpty2" class="property-photo-empty">📷<b>Foto 2</b><small>Sede / referência</small></span>
+          <img id="aFotoPreview2" alt="Prévia da foto 2">
+        </label>
+      </div>
+      <div id="aFotoStatus" class="property-photo-status">Até 2 fotos opcionais. O SISRURAL comprime automaticamente antes do envio.</div>
+    </div>
+
     <div style="display:flex;align-items:center;gap:8px;margin-top:12px">
       <input id="aDirt" type="checkbox" checked style="accent-color:var(--ye);width:16px;height:16px">
       <label for="aDirt" style="font-size:11px;color:var(--tx);cursor:pointer">🟫 Acesso por estrada de terra</label>
@@ -202,6 +219,7 @@
 <!-- MODAIS V7 FIREBASE -->
 <div class="v7-modal" id="v7VisitModal"><div class="v7-box"><span class="v7-close" onclick="closeV7Modal('v7VisitModal')">×</span><h2>📋 Registrar visita</h2><div class="v7-small" id="v7VisitInfo">Selecione a propriedade. O sistema preencherá data, hora, policial e GPS automaticamente.</div><input type="hidden" id="v7VisitKey"><label class="field-lbl">PROPRIEDADE</label><select class="field-inp" id="v7VisitProp" onchange="selectVisitPropFromList()"></select><label class="field-lbl">OBSERVAÇÃO</label><textarea class="field-inp" id="v7VisitTexto" style="min-height:100px" placeholder="Ex: Visita realizada. Proprietário orientado. Tudo em ordem."></textarea><button type="button" id="btnSalvarVisita" class="btn-primary" onclick="saveV7Visit()">Salvar visita</button><div id="v7VisitMsg" class="v7-small"></div></div></div>
 <div class="v7-modal" id="v7HistoryModal"><div class="v7-box"><span class="v7-close" onclick="closeV7Modal('v7HistoryModal')">×</span><h2 id="v7HistoryTitle">📜 Histórico da propriedade</h2><div class="v7-small" id="v7HistorySub">Últimas visitas registradas no Firestore.</div><div id="v7HistoryList" style="margin-top:12px"></div></div></div>
+<div class="v7-modal" id="v7PhotoModal"><div class="v7-box property-photo-modal-box"><span class="v7-close" onclick="closePropertyPhotos()">×</span><h2 id="v7PhotoTitle">📷 Fotos da propriedade</h2><div class="v7-small">Acesso protegido pelo login do SISRURAL. As imagens são apenas referência visual do local.</div><div id="v7PhotoList" style="margin-top:12px"></div></div></div>
 <div class="v7-modal" id="v7RequestModal"><div class="v7-box"><span class="v7-close" onclick="closeV7Modal('v7RequestModal')">×</span><h2>👮 Solicitar acesso</h2><div class="v7-grid"><div><label class="field-lbl">NOME</label><input class="field-inp" id="reqNome"></div><div><label class="field-lbl">RE</label><input class="field-inp" id="reqRe"></div><div><label class="field-lbl">GRADUAÇÃO</label><input class="field-inp" id="reqGrad"></div><div><label class="field-lbl">E-MAIL</label><input class="field-inp" id="reqEmail" type="email"></div><div><label class="field-lbl">TELEFONE</label><input class="field-inp" id="reqTel"></div></div><div class="btn-primary" onclick="sendAccessRequest()">Enviar solicitação</div><div id="reqMsg" class="v7-small"></div></div></div>
 <div class="v7-modal" id="v7AdminModal"><div class="v7-box"><span class="v7-close" onclick="closeV7Modal('v7AdminModal')">×</span><h2>⚙️ Administração SISRURAL</h2><div class="v7-small">Painel de gestão, usuários, solicitações, auditoria, sincronização e relatórios.</div>
 <h3 style="color:var(--ac);margin-top:12px">Sincronização</h3>
