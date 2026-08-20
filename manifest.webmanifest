@@ -1,7 +1,7 @@
 {
-  "name": "SISRURAL V9",
+  "name": "SISRURAL – 24º BPM/I",
   "short_name": "SISRURAL",
-  "description": "Sistema Inteligente de Patrulhamento Rural - 2ª Cia PM",
+  "description": "Sistema Integrado de Patrulhamento Rural – 2ª Cia PM / 24º BPM/I",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

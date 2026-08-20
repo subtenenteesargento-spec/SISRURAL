@@ -6,3 +6,9 @@
 - Mantém offline e sincronização.
 
 Teste: ?v=103campofix
+
+## V10.6 DEV – Mobile + identidade 24º BPM/I
+- Dock lateral recolhível/arrastável no smartphone.
+- Mantidos os 11 comandos originais e suas funções.
+- Brasão do 24º BPM/I aplicado no login, cabeçalho e ícones PWA.
+- Testar na branch `dev-seguranca` antes de qualquer promoção para produção.

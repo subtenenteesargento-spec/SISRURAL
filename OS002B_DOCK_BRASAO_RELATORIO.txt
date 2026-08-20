@@ -1,0 +1,31 @@
+SISRURAL V10.6 DEV – OS-002B AJUSTE MOBILE + IDENTIDADE 24º BPM/I
+
+ALTERAÇÕES DE INTERFACE:
+- Dock móvel lateral recolhível no smartphone.
+- Alça flutuante ☰; toque abre/fecha os comandos.
+- Alça pode ser arrastada verticalmente; posição fica salva no aparelho.
+- Todos os 11 comandos originais permanecem com os mesmos IDs e onclicks.
+- Botão Administração permanece condicionado ao perfil pelo código existente.
+- Brasão do 24º BPM/I no login e no cabeçalho interno.
+- Ícones PWA 192/512 atualizados para o brasão.
+
+ARQUIVOS ALTERADOS/ADICIONADOS:
+- index.html
+- css/premium.css
+- js/mobile-dock.js (novo, apenas UI)
+- icons/brasao-24bpmi.png (novo)
+- icons/icon-192.png
+- icons/icon-512.png
+- service-worker.js
+
+PRESERVADO:
+- Login e definição de senha por e-mail
+- Firebase Authentication / Firestore
+- Cadastro/solicitação de policiais
+- Dispositivos de acesso
+- Mapa e camadas
+- Propriedades e visitas
+- Offline/sincronização
+- Relatórios
+
+TESTAR SOMENTE NA BRANCH DEV-SEGURANCA ANTES DE HOMOLOGAR.

@@ -17,12 +17,12 @@
 <meta name="apple-mobile-web-app-title" content="SISRURAL">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-<meta name="sisrural-version" content="V10.4 OS-002A DEV - dispositivos e senha segura">
+<meta name="sisrural-version" content="V10.6 DEV - dock mobile + brasão 24º BPM/I">
 </head>
 <body>
 <div id="authGate">
   <div class="authBox">
-    <h2>🛡️ PATRULHA RURAL</h2>
+    <div class="auth-brand"><img src="./icons/brasao-24bpmi.png" alt="Brasão do 24º BPM/I"><div><h2>PATRULHA RURAL</h2><span>24º BPM/I</span></div></div>
     <p>Casa Branca/SP · acesso restrito</p>
     <label class="field-lbl">E-MAIL</label><input class="field-inp" id="v7Email" type="email" placeholder="seuemail@..." autocomplete="username">
     <label class="field-lbl">SENHA</label><input class="field-inp" id="v7Senha" type="password" placeholder="Senha" autocomplete="current-password">
@@ -39,7 +39,7 @@
 
 <!-- TOPBAR -->
 <div class="topbar">
-  <div class="tb-shield">🛡️</div>
+  <div class="tb-shield"><img src="./icons/brasao-24bpmi.png" alt="Brasão do 24º BPM/I"></div>
   <div class="tb-text">
     <h1>PATRULHA RURAL DE CASA BRANCA</h1>
     <p>2ª Companhia PM · 4 Quadrantes · 24º BPM/I · V10.2 Operacional</p>
@@ -77,7 +77,8 @@
 <!-- CONTAINER DO MAPA (flex:1) -->
 <div id="map">
   <!-- Botões flutuantes dentro do mapa -->
-  <div class="map-btns">
+  <button type="button" class="map-dock-handle" id="mapDockHandle" aria-label="Abrir comandos" title="Comandos">☰</button>
+  <div class="map-btns" id="mapDock">
     <div class="mbtn on" id="bSat" onclick="togSat()" title="Satélite/Mapa" data-label="Mapa">🗺️</div>
     <div class="mbtn on" id="bRoads" onclick="togLayer('roads')" title="Rodovias" data-label="Rodovias">🛣️</div>
     <div class="mbtn on" id="bProps" onclick="togLayer('props')" title="Propriedades" data-label="Propriedades">🏡</div>
@@ -227,6 +228,7 @@
 
 <script src="./js/mapa-ui.js"></script>
 
+<script src="./js/mobile-dock.js"></script>
 <script type="module" src="./js/firebase-admin.js"></script>
 
 <script src="./js/service-worker-register.js"></script>
