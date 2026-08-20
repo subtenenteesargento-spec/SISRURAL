@@ -1,0 +1,27 @@
+OS-002B – QUALIDADE MOBILE
+
+Objetivo:
+Garantir que todos os botões do mapa estejam acessíveis em smartphones.
+
+Alterações:
+- css/premium.css: override responsivo final para grade inferior de comandos.
+- service-worker.js: atualização de cache para forçar carregamento do CSS novo.
+
+Não alterado:
+- Login / senha por e-mail
+- Firebase / Firestore
+- Dispositivos de acesso
+- Cadastro de policial
+- Propriedades
+- Visitas
+- Offline / sincronização
+- Relatórios
+- Funções onclick dos botões
+
+Comportamento esperado:
+- Até 820px: 6 colunas, todos os 11 comandos visíveis em duas linhas.
+- Até 430px: 5 colunas, todos os comandos visíveis em três linhas.
+- Até 350px: botões compactados para permanecer dentro da tela.
+
+Rollback:
+Restaurar apenas css/premium.css e service-worker.js da versão OS-002A validada.

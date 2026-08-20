@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sisrural-v10-4-os002a-senha-dev';
+const CACHE_NAME = 'sisrural-v10-4-os002a-senha-dev-os002b-mobile';
 const APP_SHELL=[
   './','./index.html','./offline.html','./manifest.webmanifest','./config.firebase.js',
   './css/app.css','./css/premium.css',
