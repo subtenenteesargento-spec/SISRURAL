@@ -424,3 +424,73 @@ body{
   .mbtn{width:38px!important;height:38px!important;min-height:38px!important;font-size:16px!important;border-radius:11px!important}
   #bAdd{width:38px!important;min-width:38px!important;height:42px!important;min-height:42px!important;font-size:21px!important}
 }
+
+
+/* ─────────────────────────────────────────────────────────────
+   SISRURAL V10.4 DEV – OS-002A
+   Painel Administrativo claro + Dispositivos (somente visual)
+   Escopo restrito ao #v7AdminModal para preservar demais telas.
+   ───────────────────────────────────────────────────────────── */
+#v7AdminModal .v7-box{
+  background:#f8fafc!important;
+  color:#172033!important;
+  border:1px solid #d7dee8!important;
+  box-shadow:0 28px 80px rgba(2,8,23,.42)!important;
+}
+#v7AdminModal .v7-box h2,
+#v7AdminModal .v7-box h3,
+#v7AdminModal .admin-section-title{
+  color:#111827!important;
+  text-shadow:none!important;
+}
+#v7AdminModal .v7-small{color:#64748b!important}
+#v7AdminModal .v7-card{
+  background:#ffffff!important;
+  color:#172033!important;
+  border:1px solid #dce3ec!important;
+  box-shadow:0 4px 14px rgba(15,23,42,.055)!important;
+}
+#v7AdminModal .field-lbl{color:#475569!important}
+#v7AdminModal .field-inp{
+  background:#ffffff!important;
+  color:#172033!important;
+  border:1px solid #cbd5e1!important;
+  box-shadow:none!important;
+}
+#v7AdminModal .field-inp:focus{
+  border-color:#16a34a!important;
+  box-shadow:0 0 0 3px rgba(22,163,74,.12)!important;
+  background:#ffffff!important;
+}
+#v7AdminModal .field-inp:disabled{background:#eef2f7!important;color:#475569!important}
+#v7AdminModal .btn-secondary{
+  background:#ffffff!important;
+  color:#334155!important;
+  border:1px solid #cbd5e1!important;
+  box-shadow:none!important;
+}
+#v7AdminModal .v7-close{color:#475569!important}
+#v7AdminModal .admin-help{margin:-2px 0 8px}
+#v7AdminModal .admin-phase{
+  display:inline-block;margin-left:6px;padding:3px 7px;border-radius:999px;
+  background:#e0f2fe;color:#075985;font:700 10px/1 'Inter',sans-serif;vertical-align:middle;
+}
+#v7AdminModal .device-card{padding:12px!important}
+#v7AdminModal .device-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+#v7AdminModal .device-actions{display:grid;grid-template-columns:minmax(160px,220px) 1fr;gap:8px;align-items:end;margin-top:9px}
+#v7AdminModal .device-actions .btn-primary{margin-top:0!important}
+#v7AdminModal .device-badge{display:inline-flex;align-items:center;border-radius:999px;padding:5px 9px;font-size:10px;font-weight:800;white-space:nowrap}
+#v7AdminModal .device-pendente{background:#fef3c7;color:#92400e}
+#v7AdminModal .device-autorizado{background:#dcfce7;color:#166534}
+#v7AdminModal .device-revogado{background:#fee2e2;color:#991b1b}
+@media(max-width:640px){
+  #v7AdminModal{padding:6px!important}
+  #v7AdminModal .v7-box{margin:0!important;max-height:96vh!important;padding:14px!important;border-radius:16px!important}
+  #v7AdminModal .device-actions{grid-template-columns:1fr}
+  #v7AdminModal .v7-grid{grid-template-columns:1fr!important}
+}
+
+/* OS-002A - redefinição de senha pelo próprio usuário */
+.auth-link-btn{display:block;width:100%;margin:8px 0 4px;padding:8px 10px;border:0;background:transparent;color:#93c5fd;cursor:pointer;font:inherit;font-size:.88rem;text-decoration:underline;text-underline-offset:3px}
+.auth-link-btn:hover{color:#bfdbfe}
+#v7LoginMsg.ok{color:#4ade80!important}

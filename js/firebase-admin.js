@@ -1,36 +1,101 @@
 // SISRURAL V9.1 - firebase-admin.js - LOGIN FIX
 import { firebaseConfig, ADMIN_EMAIL, APP_INFO, ADMIN_EMAILS_FIXOS } from '../config.firebase.js';
 import { initializeApp, deleteApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, updateProfile } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
 import { getFirestore, doc, getDoc, setDoc, collection, addDoc, onSnapshot, serverTimestamp, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
 
 const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
-let v7User=null, v7Profile=null, v7Requests=[], v7Visits=[], v7Audits=[], v7CloudProps=[], v7Users=[]; window.v7CloudProps=v7CloudProps;
+let v7User=null, v7Profile=null, v7Requests=[], v7Visits=[], v7Audits=[], v7CloudProps=[], v7Users=[], v7Devices=[]; window.v7CloudProps=v7CloudProps;
 const PENDING_PROPS_KEY='sisrural_pending_props_v1';
 const MIGRATED_LOCAL_KEY='sisrural_local_props_migrated_v1';
 const ADMIN = ADMIN_EMAIL || 'ferpozzer@gmail.com';
 const ADMIN_EMAILS = Array.from(new Set([String(ADMIN).toLowerCase(),'ferpozzer@gmail.com',...(Array.isArray(ADMIN_EMAILS_FIXOS)?ADMIN_EMAILS_FIXOS:[]).map(e=>String(e).toLowerCase())]));
 const $v=id=>document.getElementById(id);
 const emailKey = email => String(email||'').toLowerCase().replace(/[^a-z0-9]/g,'_');
+const DEVICE_KEY='sisrural_device_id_v1';
+function getSisruralDeviceId(){
+  try{
+    let id=localStorage.getItem(DEVICE_KEY);
+    if(!id){
+      const raw=(globalThis.crypto?.randomUUID?.() || ('dev-'+Date.now()+'-'+Math.random().toString(36).slice(2)));
+      id='sis-'+raw;
+      localStorage.setItem(DEVICE_KEY,id);
+    }
+    return id;
+  }catch(e){ return 'sessao-'+Date.now()+'-'+Math.random().toString(36).slice(2); }
+}
+function devicePlatformInfo(){
+  const ua=navigator.userAgent||'';
+  let plataforma='Navegador';
+  if(/Android/i.test(ua)) plataforma='Android / PWA';
+  else if(/iPhone|iPad|iPod/i.test(ua)) plataforma='iPhone/iPad / PWA';
+  else if(/Windows/i.test(ua)) plataforma='Windows';
+  else if(/Macintosh|Mac OS/i.test(ua)) plataforma='macOS';
+  return {plataforma,userAgent:ua.slice(0,240),idioma:navigator.language||'',tela:`${screen?.width||0}x${screen?.height||0}`};
+}
+async function registerCurrentDevice(){
+  if(!v7User) return;
+  try{
+    const deviceId=getSisruralDeviceId();
+    const info=devicePlatformInfo();
+    const ref=doc(db,'dispositivos_acesso',deviceId);
+    const snap=await getDoc(ref);
+    const old=snap.exists()?snap.data():{};
+    await setDoc(ref,{
+      deviceId,
+      usuarioUid:v7User.uid,
+      email:String(v7User.email||'').toLowerCase(),
+      nome:v7Profile?.nome||v7User.email||'',
+      re:v7Profile?.re||'',
+      perfil:v7Profile?.perfil||'Policial',
+      plataforma:info.plataforma,
+      userAgent:info.userAgent,
+      idioma:info.idioma,
+      tela:info.tela,
+      status:old.status||'Pendente',
+      primeiroAcesso:old.primeiroAcesso||serverTimestamp(),
+      ultimoAcesso:serverTimestamp(),
+      observacao:'Fase A - registro de dispositivo sem bloqueio'
+    },{merge:true});
+  }catch(e){ console.warn('SISRURAL: falha ao registrar dispositivo (não bloqueante).',e); }
+}
 function perfilNorm(p){ return String(p||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
 function isAdminGeral(){ const email=String(v7User?.email||'').toLowerCase(); const p=perfilNorm(v7Profile?.perfil); return !!v7User && (ADMIN_EMAILS.includes(email) || ['administrador','administrador geral','comandante'].includes(p)); }
 function isSupervisor(){ const p=perfilNorm(v7Profile?.perfil); return ['supervisor','capitao','capitao pm','tenente'].includes(p); }
 function canOpenAdminPanel(){ return isAdminGeral() || isSupervisor(); }
 function isAdmin(){ return isAdminGeral(); }
 async function auditV7(acao,detalhe){ try{ await addDoc(collection(db,'auditoria'),{acao,detalhe,usuario:v7User?.email||'',createdAt:serverTimestamp(),app:'SISRURAL V10.3 CAMPO FIX'}); }catch(e){} }
-async function createAuthUserForPolice(email,nome,senha='Sisrural@2026'){
+function generateTemporarySecret(){
+  try{
+    const bytes=new Uint8Array(24);
+    crypto.getRandomValues(bytes);
+    return 'Sr!'+Array.from(bytes,b=>b.toString(36).padStart(2,'0')).join('').slice(0,30)+'9a';
+  }catch(e){
+    return 'Sr!'+Date.now().toString(36)+Math.random().toString(36).slice(2)+'9a';
+  }
+}
+async function createAuthUserForPolice(email,nome){
   const appName='sisrural-create-'+Date.now()+'-'+Math.random().toString(36).slice(2);
   const app2=initializeApp(firebaseConfig, appName);
   const auth2=getAuth(app2);
+  let created=false, exists=false;
   try{
-    const cred=await createUserWithEmailAndPassword(auth2,email,senha);
-    try{ await updateProfile(cred.user,{displayName:nome||email}); }catch(e){}
-    try{ await signOut(auth2); }catch(e){}
-    return {created:true,password:senha};
+    try{
+      const cred=await createUserWithEmailAndPassword(auth2,email,generateTemporarySecret());
+      created=true;
+      try{ await updateProfile(cred.user,{displayName:nome||email}); }catch(e){}
+      try{ await signOut(auth2); }catch(e){}
+    }catch(e){
+      if(e.code==='auth/email-already-in-use') exists=true;
+      else throw e;
+    }
+    await sendPasswordResetEmail(auth2,email);
+    return {created,exists,resetSent:true};
   }catch(e){
-    if(e.code==='auth/email-already-in-use') return {created:false,exists:true,password:senha};
+    e.accountCreated=created;
+    e.accountExists=exists;
     throw e;
   }finally{
     try{ await deleteApp(app2); }catch(e){}
@@ -65,16 +130,37 @@ window.v7Login=async()=>{
   try{ await signInWithEmailAndPassword(auth,$v('v7Email').value.trim(),$v('v7Senha').value); }
   catch(e){ msg.style.display='block'; msg.textContent = e.code==='auth/invalid-credential'?'E-mail ou senha incorretos.':e.message; }
 };
+window.v7ForgotPassword=async()=>{
+  const msg=$v('v7LoginMsg');
+  const email=String($v('v7Email')?.value||'').trim().toLowerCase();
+  msg.classList.remove('ok');
+  if(!email){
+    msg.style.display='block';
+    msg.textContent='Informe seu e-mail e clique novamente em “Esqueci minha senha”.';
+    return;
+  }
+  try{
+    await sendPasswordResetEmail(auth,email);
+    msg.style.display='block';
+    msg.classList.add('ok');
+    msg.textContent='E-mail enviado. Abra sua caixa de entrada e use o link do Firebase para definir uma nova senha.';
+  }catch(e){
+    msg.style.display='block';
+    msg.classList.remove('ok');
+    msg.textContent='Não foi possível enviar o e-mail agora. Confira o endereço informado e tente novamente.';
+  }
+};
 window.v7Logout=async()=>{ await signOut(auth); location.reload(); };
 onAuthStateChanged(auth, async u=>{
   if(!u){ showLogin(); return; }
-  v7User=u; v7Profile=await loadProfile(u); showLogged(); auditV7('login','Usuário entrou no sistema'); startRealtime();
+  v7User=u; v7Profile=await loadProfile(u); showLogged(); await registerCurrentDevice(); auditV7('login','Usuário entrou no sistema'); startRealtime();
 });
 function startRealtime(){
   onSnapshot(query(collection(db,'solicitacoes_acesso'),orderBy('createdAt','desc')),s=>{v7Requests=s.docs.map(d=>({id:d.id,...d.data()})); renderRequests();});
   onSnapshot(query(collection(db,'visitas'),orderBy('createdAt','desc')),s=>{v7Visits=s.docs.map(d=>({id:d.id,...d.data()})); renderCommanderDashboard();});
   onSnapshot(query(collection(db,'auditoria'),orderBy('createdAt','desc')),s=>{v7Audits=s.docs.map(d=>({id:d.id,...d.data()})); renderAudit();});
   onSnapshot(collection(db,'usuarios'),s=>{v7Users=s.docs.map(d=>({docId:d.id,...d.data()})); renderUsersList();});
+  onSnapshot(collection(db,'dispositivos_acesso'),s=>{v7Devices=s.docs.map(d=>({docId:d.id,...d.data()})); renderDevicesList();});
   onSnapshot(collection(db,'propriedades_cadastradas'),s=>{v7CloudProps=s.docs.map(d=>({id:d.id,...d.data()})); window.v7CloudProps=v7CloudProps; renderCloudProperties(); renderCommanderDashboard();});
   syncPendingProperties();
       syncPendingVisits();
@@ -105,7 +191,7 @@ window.sendAccessRequest=async()=>{
     btnMsg.innerHTML='<span style="color:#ef4444">'+(e.code==='permission-denied'?'Permissão negada no Firebase. Atualize as regras do Firestore conforme orientação.':e.message)+'</span>';
   }
 };
-window.openAdminPanel=()=>{ if(!canOpenAdminPanel()) return alert('Acesso restrito.'); $v('admNome').value=v7Profile.nome||''; $v('admRe').value=v7Profile.re||''; $v('admGrad').value=v7Profile.graduacao||''; const pf=$v('admPerfilTxt'); if(pf) pf.value=v7Profile?.perfil||'Policial'; $v('v7AdminModal').classList.add('open'); renderUsersList(); renderRequests(); renderAudit(); renderCommanderDashboard(); updateOfflineBadge(); const ss=$v('syncStatus'); if(ss) ss.innerHTML='Pendências no aparelho: '+(pendingProps().length+pendingVisits().length); };
+window.openAdminPanel=()=>{ if(!canOpenAdminPanel()) return alert('Acesso restrito.'); $v('admNome').value=v7Profile.nome||''; $v('admRe').value=v7Profile.re||''; $v('admGrad').value=v7Profile.graduacao||''; const pf=$v('admPerfilTxt'); if(pf) pf.value=v7Profile?.perfil||'Policial'; $v('v7AdminModal').classList.add('open'); renderUsersList(); renderDevicesList(); renderRequests(); renderAudit(); renderCommanderDashboard(); updateOfflineBadge(); const ss=$v('syncStatus'); if(ss) ss.innerHTML='Pendências no aparelho: '+(pendingProps().length+pendingVisits().length); };
 window.saveMyBasicProfile=async()=>{
   if(!v7User) return; const data={nome:$v('admNome').value,re:$v('admRe').value,graduacao:$v('admGrad').value,email:v7User.email,companhia:APP_INFO.companhia,status:v7Profile?.status||'Ativo',updatedAt:serverTimestamp()}; await setDoc(doc(db,'usuarios',v7User.uid),data,{merge:true}); await setDoc(doc(db,'usuarios',emailKey(v7User.email)),{...data,uid:v7User.uid,perfil:v7Profile?.perfil||'Policial'},{merge:true}); v7Profile={...v7Profile,...data}; showLogged(); auditV7('perfil_atualizado','Usuário atualizou dados básicos'); alert('Dados salvos. O perfil funcional só pode ser alterado por Administrador Geral.'); };
 window.approveReq=async(id)=>{ 
@@ -119,10 +205,22 @@ window.approveReq=async(id)=>{
   let authMsg='';
   try{
     const cr=await createAuthUserForPolice(email,r.nome||email);
-    authMsg=cr.created?`\n\nUsuário criado no Firebase Authentication.\nSenha provisória: ${cr.password}`:`\n\nO e-mail já existia no Firebase Authentication. Use a senha já cadastrada ou redefina no Firebase.`;
-    auditV7('acesso_aprovado',`${email} como ${perfil}. Auth: ${cr.created?'criado':'já existia'}`);
+    authMsg=cr.created
+      ?`
+
+Usuário criado no Firebase Authentication.
+Um e-mail foi enviado para ${email} para que o policial defina a própria senha.`
+      :`
+
+O e-mail já existia no Firebase Authentication.
+Foi enviado um link para ${email} para definir/redefinir a senha.`;
+    auditV7('acesso_aprovado',`${email} como ${perfil}. Auth: ${cr.created?'criado':'já existia'}; link de senha enviado`);
   }catch(e){
-    authMsg=`\n\nATENÇÃO: perfil aprovado, mas não foi possível criar no Authentication. Erro: ${e.message||e}`;
+    const estado=e.accountCreated?'A conta foi criada, porém o e-mail de definição de senha não pôde ser enviado.':'Não foi possível concluir o Authentication.';
+    authMsg=`
+
+ATENÇÃO: perfil aprovado. ${estado}
+O policial pode usar “Esqueci minha senha” na tela de login.`;
     auditV7('acesso_aprovado_auth_erro',`${email}: ${e.message||e}`);
   }
   alert('Acesso aprovado no SISRURAL.'+authMsg); 
@@ -146,10 +244,13 @@ window.adminCreatePoliceProfile=async()=>{
     let authText='';
     try{
       const cr=await createAuthUserForPolice(email,nome);
-      authText=cr.created?`<br>✅ Usuário criado no Firebase Authentication.<br><b>Senha provisória: ${cr.password}</b>`:`<br>ℹ️ Este e-mail já existia no Firebase Authentication. Use a senha já cadastrada ou redefina no Firebase.`;
-      await auditV7('policial_cadastrado',`${nome} (${email}) como ${perfil}. Auth: ${cr.created?'criado':'já existia'}`);
+      authText=cr.created
+        ?`<br>✅ Usuário criado no Firebase Authentication.<br>📧 Link para definição de senha enviado para <b>${email}</b>.`
+        :`<br>ℹ️ Este e-mail já existia no Firebase Authentication.<br>📧 Link para definir/redefinir a senha enviado para <b>${email}</b>.`;
+      await auditV7('policial_cadastrado',`${nome} (${email}) como ${perfil}. Auth: ${cr.created?'criado':'já existia'}; link de senha enviado`);
     }catch(e){
-      authText=`<br><span style="color:#facc15">⚠️ Perfil salvo, mas não foi possível criar no Authentication: ${e.message||e}</span>`;
+      const detalhe=e.accountCreated?'A conta foi criada, mas o e-mail de senha não pôde ser enviado.':'Não foi possível concluir o Authentication.';
+      authText=`<br><span style="color:#b45309">⚠️ Perfil salvo. ${detalhe} O policial pode usar “Esqueci minha senha” na tela de login.</span>`;
       await auditV7('policial_cadastrado_auth_erro',`${email}: ${e.message||e}`);
     }
     if(msg) msg.innerHTML='✅ Perfil salvo no SISRURAL.'+authText;
@@ -220,6 +321,32 @@ window.saveUserProfile=async(email,selId,stId)=>{
   auditV7('perfil_usuario_alterado',`${email}: ${perfil} / ${status}`);
   alert('Perfil atualizado. Peça para o usuário sair e entrar novamente.');
   renderUsersList();
+};
+function deviceStatusOptions(sel){
+  const opts=['Pendente','Autorizado','Revogado'];
+  return opts.map(o=>`<option ${String(sel||'Pendente')===o?'selected':''}>${o}</option>`).join('');
+}
+function deviceDate(v){
+  try{ if(v?.seconds) return new Date(v.seconds*1000).toLocaleString('pt-BR'); }catch(e){}
+  return '-';
+}
+function renderDevicesList(){
+  const el=$v('v7DevicesList'); if(!el) return;
+  if(!isAdminGeral()){ el.innerHTML='<div class="v7-card v7-small">Somente Administrador Geral visualiza dispositivos.</div>'; return; }
+  const arr=[...(v7Devices||[])].sort((a,b)=>(b.ultimoAcesso?.seconds||0)-(a.ultimoAcesso?.seconds||0));
+  if(!arr.length){ el.innerHTML='<div class="v7-card v7-small">Nenhum dispositivo registrado ainda. Eles aparecerão automaticamente após o próximo login.</div>'; return; }
+  el.innerHTML=arr.map((d,i)=>{
+    const sid='deviceStatus_'+i;
+    const short=String(d.deviceId||d.docId||'').slice(-12);
+    return `<div class="v7-card device-card"><div class="device-head"><div><b>${d.nome||d.email||'Usuário'}</b><div class="v7-small">${d.email||''}${d.re?` · RE ${d.re}`:''}<br>${d.plataforma||'Dispositivo'} · Tela ${d.tela||'-'}<br>ID: ...${short}<br>Último acesso: ${deviceDate(d.ultimoAcesso)}</div></div><span class="device-badge device-${String(d.status||'Pendente').toLowerCase()}">${d.status||'Pendente'}</span></div><div class="device-actions"><select class="field-inp" id="${sid}">${deviceStatusOptions(d.status)}</select><button class="btn-primary" onclick="saveDeviceStatus('${d.docId||d.deviceId}','${sid}')">Salvar dispositivo</button></div></div>`;
+  }).join('');
+}
+window.saveDeviceStatus=async(id,selId)=>{
+  if(!isAdminGeral()) return alert('Somente Administrador Geral pode gerenciar dispositivos.');
+  const status=$v(selId)?.value||'Pendente';
+  await setDoc(doc(db,'dispositivos_acesso',id),{status,updatedBy:v7User.email,updatedAt:serverTimestamp(),...(status==='Autorizado'?{aprovadoPor:v7User.email,aprovadoEm:serverTimestamp()}:{})},{merge:true});
+  await auditV7('dispositivo_status_alterado',`${id}: ${status}`);
+  alert(`Dispositivo marcado como ${status}. Nesta Fase A o status ainda não bloqueia o acesso.`);
 };
 function renderAudit(){ const el=$v('v7Audit'); if(!el)return; el.innerHTML=v7Audits.slice(0,20).map(a=>`<div class="v7-card"><b>${a.acao||''}</b><div class="v7-small">${a.detalhe||''}<br>${a.usuario||''}</div></div>`).join('')||'<div class="v7-card v7-small">Sem auditoria.</div>'; }
 function allVisitProps(){

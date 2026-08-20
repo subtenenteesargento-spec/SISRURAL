@@ -1,0 +1,20 @@
+SISRURAL V10.4 - OS-002A DEV - SENHA SEGURA
+
+OBJETIVO
+Eliminar a exposição da senha provisória fixa e permitir que cada policial defina/redefina a própria senha por e-mail oficial do Firebase Authentication.
+
+ALTERAÇÕES
+1. Aprovação de solicitação envia e-mail para definição de senha.
+2. Cadastro manual pelo Administrador usa o mesmo fluxo.
+3. Tela de login recebe “Esqueci minha senha”.
+4. Dispositivos seguem em FASE A, sem bloqueio.
+5. Cache PWA atualizado.
+
+ARQUIVOS ALTERADOS
+- js/firebase-admin.js
+- index.html
+- css/premium.css
+- service-worker.js
+
+TESTE
+Solicitar acesso -> aprovar -> verificar e-mail -> definir senha -> login -> confirmar dispositivo registrado.
