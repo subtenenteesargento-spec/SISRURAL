@@ -195,13 +195,40 @@ async function persistCloudinaryPhotoSlot(propertyId,index,uploaded){
   await setDoc(ref,patch,{merge:true});
 }
 async function uploadQueuedPhotosForProperty(propertyId,batchId=''){
-  const all=await photoDbAll(); const rows=all.filter(r=>r.propertyId===propertyId || (batchId && r.batchId===batchId)); if(!rows.length) return [];
+  const all=await photoDbAll();
+  const rows=all.filter(r=>r.propertyId===propertyId || (batchId && r.batchId===batchId));
+  if(!rows.length) return [];
   const urls=[];
   for(const r of rows.sort((a,b)=>a.index-b.index)){
-    const uploaded=await uploadPhotoToCloudinary(r.blob);
-    await persistCloudinaryPhotoSlot(propertyId,r.index,uploaded);
-    urls.push(uploaded.url);
-    await photoDbDelete(r.id);
+    // V11.3: se o Cloudinary já recebeu a imagem mas o Firestore falhou,
+    // reutiliza a URL salva na fila e NÃO envia a mesma foto novamente.
+    let uploaded = r.uploadedUrl ? {
+      url:r.uploadedUrl,
+      publicId:r.uploadedPublicId||'',
+      width:r.uploadedWidth||0,
+      height:r.uploadedHeight||0,
+      bytes:r.uploadedBytes||r.blob?.size||0
+    } : null;
+    if(!uploaded){
+      uploaded=await uploadPhotoToCloudinary(r.blob);
+      r.uploadedUrl=uploaded.url;
+      r.uploadedPublicId=uploaded.publicId||'';
+      r.uploadedWidth=uploaded.width||0;
+      r.uploadedHeight=uploaded.height||0;
+      r.uploadedBytes=uploaded.bytes||0;
+      r.lastError='';
+      await photoDbPut(r);
+    }
+    try{
+      await persistCloudinaryPhotoSlot(propertyId,r.index,uploaded);
+      urls.push(uploaded.url);
+      await photoDbDelete(r.id);
+    }catch(e){
+      r.lastError=String(e?.message||e||'Falha ao gravar URL da foto no Firestore.');
+      r.lastAttemptAt=Date.now();
+      await photoDbPut(r);
+      throw e;
+    }
   }
   await refreshPendingPhotoBadge(); return urls;
 }
@@ -212,15 +239,26 @@ async function savePhotosForCloudProperty(propertyId,blobs){
 }
 async function syncPendingPropertyPhotos(){
   if(!v7User || !navigator.onLine) return;
-  const all=await photoDbAll(); const ids=[...new Set(all.map(r=>r.propertyId).filter(Boolean))];
-  for(const id of ids){ try{await uploadQueuedPhotosForProperty(id);}catch(e){console.warn('SISRURAL: foto pendente ainda não enviada.',e);} }
+  const all=await photoDbAll();
+  const ids=[...new Set(all.map(r=>r.propertyId).filter(Boolean))];
+  let lastError='';
+  for(const id of ids){
+    try{ await uploadQueuedPhotosForProperty(id); }
+    catch(e){ lastError=String(e?.message||e||'Falha no envio'); console.warn('SISRURAL: foto pendente ainda não enviada.',e); }
+  }
+  window.__sisruralLastPhotoSyncError=lastError;
   await refreshPendingPhotoBadge();
 }
 async function refreshPendingPhotoBadge(){
   try{
     const n=(await photoDbAll()).length; let el=$v('photoSyncBadge');
     if(!el){el=document.createElement('div');el.id='photoSyncBadge';el.style.cssText='position:fixed;left:10px;bottom:126px;z-index:9999;background:#111827;color:#93c5fd;border:1px solid #60a5fa;border-radius:10px;padding:7px 10px;font:700 11px Rajdhani,Arial;box-shadow:0 0 12px rgba(0,0,0,.45);display:none';document.body.appendChild(el);}
-    el.style.display=n?'block':'none'; if(n) el.textContent=`📷 ${n} foto(s) aguardando envio`;
+    el.style.display=n?'block':'none';
+    if(n){
+      const err=window.__sisruralLastPhotoSyncError||'';
+      el.textContent=`📷 ${n} foto(s) aguardando envio${err?' · toque em Sincronizar agora':''}`;
+      el.title=err||'Fotos aguardando sincronização';
+    }
   }catch(e){}
 }
 window.openPropertyPhotos=async(propertyId)=>{
@@ -438,9 +476,11 @@ window.forceSyncNow=async()=>{
   try{
     await syncPendingProperties();
     await syncPendingVisits();
+    await syncPendingPropertyPhotos();
     await auditV7('sincronizacao_manual','Administrador acionou sincronização manual.');
     updateOfflineBadge();
-    if(el) el.innerHTML='✅ Sincronização concluída. Pendências restantes: '+(pendingProps().length+pendingVisits().length);
+    const fotosPend=(await photoDbAll()).length;
+    if(el) el.innerHTML='✅ Sincronização concluída. Pendências: '+(pendingProps().length+pendingVisits().length)+' cadastro(s)/visita(s) e '+fotosPend+' foto(s).';
     try{toastV7('✅ Dados sincronizados.');}catch(e){}
   }catch(e){ if(el) el.innerHTML='⚠️ Falha na sincronização: '+(e.message||e); }
 };
@@ -448,6 +488,7 @@ window.refreshSisruralData=async()=>{
   try{
     await syncPendingProperties();
     await syncPendingVisits();
+    await syncPendingPropertyPhotos();
     if(typeof renderCloudProperties==='function') renderCloudProperties();
     if(typeof renderCommanderDashboard==='function') renderCommanderDashboard();
     updateOfflineBadge();
@@ -742,8 +783,15 @@ window.salvar=async function(){
       if(r?.duplicado){ finish('⚠️ Este ponto já existia no sistema. Não foi cadastrado novamente.',false); return; }
       let fotoMsg='';
       if(selectedPhotos.length && r?.id){
-        try{await savePhotosForCloudProperty(r.id,selectedPhotos); fotoMsg=`<br>📷 ${selectedPhotos.length} foto(s) enviada(s).`;}
-        catch(e){const batchId='photo-'+Date.now()+'-'+Math.random().toString(36).slice(2);await queuePropertyPhotos(batchId,selectedPhotos,r.id);fotoMsg='<br>🟡 Cadastro salvo; foto(s) aguardando sincronização.';}
+        try{
+          await savePhotosForCloudProperty(r.id,selectedPhotos);
+          fotoMsg=`<br>📷 ${selectedPhotos.length} foto(s) enviada(s).`;
+        }catch(e){
+          // V11.3: savePhotosForCloudProperty JÁ colocou as fotos na fila.
+          // Não enfileirar novamente, evitando 2 fotos virarem 4 pendências.
+          console.warn('SISRURAL: fotos permaneceram na fila para nova tentativa.',e);
+          fotoMsg=`<br>🟡 Cadastro salvo; foto(s) aguardando sincronização.<br><small>${String(e?.message||e||'')}</small>`;
+        }
       }
       finish(`✅ "${pt.nm}" salvo na nuvem e sincronizado.${fotoMsg}`,true);
       window.resetPropertyPhotoInputs();

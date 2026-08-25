@@ -1,0 +1,14 @@
+SISRURAL V11.3 DEV - HOTFIX FOTOS CLOUDINARY
+
+Correções:
+1. Evita duplicação da fila: 2 fotos não viram mais 4 pendências quando o upload falha.
+2. Sincronização manual agora também processa fotos pendentes.
+3. Atualizar dados da nuvem também tenta sincronizar fotos.
+4. Se o Cloudinary já recebeu a imagem e apenas o Firestore falhou, a tentativa seguinte reutiliza a URL em vez de reenviar a imagem.
+5. Erro de sincronização de fotos é preservado para diagnóstico.
+6. Cache do PWA incrementado para forçar carregamento do JS corrigido.
+
+Configuração mantida:
+Cloud name: bgbxcibj
+Upload preset: sisrural_propriedades
+Máximo: 2 fotos por propriedade.

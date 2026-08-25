@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sisrural-v11-1-cloudinary-fotos';
+const CACHE_NAME = 'sisrural-v11-3-cloudinary-fotos-fix';
 const APP_SHELL=[
   './','./index.html','./offline.html','./manifest.webmanifest','./config.firebase.js',
   './css/app.css','./css/premium.css',
