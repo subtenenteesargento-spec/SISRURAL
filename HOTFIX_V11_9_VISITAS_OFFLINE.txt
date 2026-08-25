@@ -1,0 +1,10 @@
+SISRURAL V11.9 — VISITAS ÚNICAS + ALERTA OFFLINE
+
+1. Botão Salvar visita agora é bloqueado imediatamente após o primeiro toque.
+2. Cada visita recebe clientVisitId único.
+3. Firestore usa setDoc com esse ID: reconexões/retries não duplicam a visita.
+4. Fila local rejeita a mesma visita duas vezes.
+5. Relatórios, dashboard, histórico e CSV neutralizam duplicidades históricas idênticas.
+6. Banner visível informa quando o aparelho está sem conexão/dados móveis.
+7. Ao recuperar internet, o SISRURAL informa o retorno e sincroniza automaticamente.
+8. Dados já gravados no Firestore não são apagados automaticamente; duplicatas históricas deixam de ser contabilizadas/exibidas quando idênticas.

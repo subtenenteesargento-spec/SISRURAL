@@ -1,4 +1,4 @@
-const CACHE_NAME='sisrural-v11-8-safra-alertas';
+const CACHE_NAME='sisrural-v11-9-visitas-offline-fix';
 const APP_SHELL=[
   './','./index.html','./offline.html','./manifest.webmanifest','./config.firebase.js',
   './css/app.css','./css/premium.css',
