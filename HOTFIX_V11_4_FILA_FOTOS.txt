@@ -1,0 +1,9 @@
+SISRURAL V11.4 DEV - REPARO DA FILA DE FOTOS
+
+1. Remove automaticamente apenas fotos órfãs de versões antigas que não possuem propertyId e não pertencem a cadastro offline ainda pendente.
+2. Elimina duplicatas do mesmo slot de foto na fila, preservando o registro mais recente/mais avançado.
+3. Sincroniza normalmente fotos válidas que possuem propertyId.
+4. Exibe no badge e no painel de sincronização a mensagem real do erro do Cloudinary/Firestore, caso ainda ocorra.
+5. Atualiza cache do PWA para sisrural-v11-4-photo-queue-repair.
+
+IMPORTANTE: o reparo não apaga fotos vinculadas a propriedades ou a cadastros offline ainda pendentes.

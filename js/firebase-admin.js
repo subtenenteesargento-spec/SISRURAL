@@ -237,8 +237,36 @@ async function savePhotosForCloudProperty(propertyId,blobs){
   const batchId='photo-'+Date.now()+'-'+Math.random().toString(36).slice(2); await queuePropertyPhotos(batchId,clean,propertyId);
   return await uploadQueuedPhotosForProperty(propertyId,batchId);
 }
+async function repairPendingPhotoQueue(){
+  // V11.4: remove apenas resíduos impossíveis de sincronizar de versões antigas.
+  // Fotos sem propertyId só são preservadas quando ainda pertencem a um cadastro
+  // de propriedade realmente pendente (_photoBatchId). Também elimina duplicatas
+  // do mesmo slot, mantendo o registro mais recente/mais avançado.
+  const all=await photoDbAll();
+  const activeBatches=new Set(pendingProps().map(p=>p?._photoBatchId).filter(Boolean));
+  const keep=[];
+  const byKey=new Map();
+  for(const r of all){
+    if(!r) continue;
+    if(!r.propertyId && !activeBatches.has(r.batchId)){
+      try{ await photoDbDelete(r.id); }catch(e){}
+      continue;
+    }
+    const key=`${r.propertyId||('batch:'+r.batchId)}::${Number(r.index)||0}`;
+    const prev=byKey.get(key);
+    if(!prev){ byKey.set(key,r); continue; }
+    // prioriza item que já foi enviado ao Cloudinary; em empate, o mais recente
+    const score=x=>(x.uploadedUrl?1e15:0)+(Number(x.createdAt)||0);
+    const winner=score(r)>=score(prev)?r:prev;
+    const loser=winner===r?prev:r;
+    byKey.set(key,winner);
+    try{ await photoDbDelete(loser.id); }catch(e){}
+  }
+  await refreshPendingPhotoBadge();
+}
 async function syncPendingPropertyPhotos(){
   if(!v7User || !navigator.onLine) return;
+  await repairPendingPhotoQueue();
   const all=await photoDbAll();
   const ids=[...new Set(all.map(r=>r.propertyId).filter(Boolean))];
   let lastError='';
@@ -256,7 +284,8 @@ async function refreshPendingPhotoBadge(){
     el.style.display=n?'block':'none';
     if(n){
       const err=window.__sisruralLastPhotoSyncError||'';
-      el.textContent=`📷 ${n} foto(s) aguardando envio${err?' · toque em Sincronizar agora':''}`;
+      const curto=err?String(err).replace(/\s+/g,' ').slice(0,72):'';
+      el.textContent=`📷 ${n} foto(s) aguardando envio${err?' · '+curto:''}`;
       el.title=err||'Fotos aguardando sincronização';
     }
   }catch(e){}
@@ -371,8 +400,8 @@ function startRealtime(){
   onSnapshot(collection(db,'usuarios'),s=>{v7Users=s.docs.map(d=>({docId:d.id,...d.data()})); renderUsersList();});
   onSnapshot(collection(db,'dispositivos_acesso'),s=>{v7Devices=s.docs.map(d=>({docId:d.id,...d.data()})); renderDevicesList();});
   onSnapshot(collection(db,'propriedades_cadastradas'),s=>{v7CloudProps=s.docs.map(d=>({id:d.id,...d.data()})); window.v7CloudProps=v7CloudProps; renderCloudProperties(); renderCommanderDashboard(); maybeOpenPhotoDeepLink();});
-  syncPendingProperties();
-      syncPendingVisits();
+  repairPendingPhotoQueue().then(()=>syncPendingProperties()).catch(()=>syncPendingProperties());
+  syncPendingVisits();
   syncPendingPropertyPhotos();
   refreshPendingPhotoBadge();
   migrateLocalPointsToCloudOnce();
@@ -480,7 +509,8 @@ window.forceSyncNow=async()=>{
     await auditV7('sincronizacao_manual','Administrador acionou sincronização manual.');
     updateOfflineBadge();
     const fotosPend=(await photoDbAll()).length;
-    if(el) el.innerHTML='✅ Sincronização concluída. Pendências: '+(pendingProps().length+pendingVisits().length)+' cadastro(s)/visita(s) e '+fotosPend+' foto(s).';
+    const fotoErr=window.__sisruralLastPhotoSyncError||'';
+    if(el) el.innerHTML=(fotoErr?'⚠️':'✅')+' Sincronização concluída. Pendências: '+(pendingProps().length+pendingVisits().length)+' cadastro(s)/visita(s) e '+fotosPend+' foto(s).'+(fotoErr?'<br><small>Fotos: '+String(fotoErr).replace(/[<>]/g,'').slice(0,180)+'</small>':'');
     try{toastV7('✅ Dados sincronizados.');}catch(e){}
   }catch(e){ if(el) el.innerHTML='⚠️ Falha na sincronização: '+(e.message||e); }
 };
