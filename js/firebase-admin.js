@@ -873,11 +873,48 @@ function v7ToDate(v){
 function v7SameDay(a,b){ return a&&b&&a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate(); }
 function v7MonthKey(d){ return d?`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`:''; }
 function v7AllPropsForReport(){
-  const base=(window.PROPS||[]).map(p=>({nome:p.nm||p.nome,tipo:p.tp||p.tipo,lat:p.lat,lng:p.lng,quadrante:p.q||classQ(p.lat,p.lng),origem:'base'}));
-  const cloud=(v7CloudProps||[]).map(p=>({nome:p.nome||p.nm,tipo:p.tipo||p.tp,lat:p.lat,lng:p.lng,quadrante:p.quadrante||classQ(p.lat,p.lng),origem:'nuvem',ultimaVisitaEm:p.ultimaVisitaEm,ultimaVisitaTexto:p.ultimaVisitaTexto}));
-  const local=(window.userPts||[]).map(p=>({nome:p.nm||p.nome,tipo:p.tp||p.tipo,lat:p.lat,lng:p.lng,quadrante:p.q||classQ(p.lat,p.lng),origem:'local'}));
+  // V11.6: preserva os metadados das fotos vindos do Firestore no Painel do Capitão.
+  // Antes, o mapeamento descartava foto1Url/foto2Url/fotosUrls e a deduplicação
+  // priorizava a base estática, fazendo o painel mostrar "0 com fotos" mesmo após upload.
+  const base=(window.PROPS||[]).map(p=>({
+    nome:p.nm||p.nome,tipo:p.tp||p.tipo,lat:p.lat,lng:p.lng,
+    quadrante:p.q||classQ(p.lat,p.lng),origem:'base'
+  }));
+  const local=(window.userPts||[]).map(p=>({
+    nome:p.nm||p.nome,tipo:p.tp||p.tipo,lat:p.lat,lng:p.lng,
+    quadrante:p.q||classQ(p.lat,p.lng),origem:'local'
+  }));
+  const cloud=(v7CloudProps||[]).map(p=>({
+    id:p.id,
+    nome:p.nome||p.nm,
+    tipo:p.tipo||p.tp,
+    lat:p.lat,lng:p.lng,
+    quadrante:p.quadrante||classQ(p.lat,p.lng),
+    municipio:p.municipio||'',
+    endereco:p.endereco||'',
+    telefone:p.telefone||'',
+    maps:p.maps||'',
+    origem:'nuvem',
+    ultimaVisitaEm:p.ultimaVisitaEm,
+    ultimaVisitaTexto:p.ultimaVisitaTexto,
+    foto1Url:p.foto1Url||'',
+    foto2Url:p.foto2Url||'',
+    foto1PublicId:p.foto1PublicId||'',
+    foto2PublicId:p.foto2PublicId||'',
+    fotosUrls:Array.isArray(p.fotosUrls)?p.fotosUrls:[],
+    fotosPublicIds:Array.isArray(p.fotosPublicIds)?p.fotosPublicIds:[],
+    fotosPaths:Array.isArray(p.fotosPaths)?p.fotosPaths:[],
+    fotosQuantidade:Number(p.fotosQuantidade)||0,
+    fotosProvider:p.fotosProvider||''
+  }));
   const m=new Map();
-  [...base,...cloud,...local].forEach(p=>{ const k=normTxt(p.nome)+'|'+(p.quadrante||''); if(p.nome&&!m.has(k)) m.set(k,p); });
+  // Base/local entram primeiro; a nuvem entra por último e prevalece/mescla os dados,
+  // garantindo que cadastro sincronizado e URLs das fotos sejam usados no painel/relatório.
+  [...base,...local,...cloud].forEach(p=>{
+    if(!p.nome) return;
+    const k=normTxt(p.nome)+'|'+(p.quadrante||'');
+    m.set(k,{...(m.get(k)||{}),...p});
+  });
   return [...m.values()];
 }
 

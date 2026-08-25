@@ -1,0 +1,10 @@
+SISRURAL V11.6 - HOTFIX PAINEL DO CAPITÃO / FOTOS
+
+Correção:
+- preserva foto1Url, foto2Url, fotosUrls, fotosQuantidade e id no conjunto usado pelo painel/relatório;
+- altera a deduplicação para priorizar/mesclar o registro sincronizado do Firestore sobre a base estática;
+- corrige o card "Com fotos" e a lista "Propriedades com fotos de referência";
+- mantém compatibilidade com fotosPaths antigas;
+- atualiza cache PWA para sisrural-v11-6-painel-fotos-fix.
+
+Não altera o fluxo de upload Cloudinary que já foi validado.
