@@ -1,0 +1,10 @@
+SISRURAL V11.7 DEV
+
+Melhorias implementadas:
+- Sincronização automática ao recuperar internet, ao retornar ao app, ao focar a janela e em verificação periódica.
+- Botão manual Sincronizar agora preservado.
+- Fotos de referência podem ser adicionadas/atualizadas em propriedades já cadastradas, inclusive cadastros antigos da base.
+- Cadastro rural ampliado com Atividade/Cultura principal e períodos estruturados de plantio e colheita.
+- Painel do Capitão dividido em Operacional e Estatístico.
+- Novo Relatório Estatístico do Capitão, com cobertura territorial, visitas, atividades/culturas, sazonalidade, fotos e regularidade das visitas.
+- Cache PWA atualizado para V11.7.

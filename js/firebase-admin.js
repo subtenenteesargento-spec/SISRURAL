@@ -121,6 +121,7 @@ const CLOUDINARY_UPLOAD_URL=`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_
 let propertyPhotoBlobs=[null,null];
 let propertyPhotoObjectUrls=[];
 let viewerPhotoObjectUrls=[];
+let existingPhotoEdit={propertyId:'',baseIndex:null,blobs:[null,null],objectUrls:[],existingUrls:['',''],nome:''};
 const PHOTO_DB='sisrural_media_v1', PHOTO_STORE='property_photos';
 function photoDb(){
   return new Promise((resolve,reject)=>{
@@ -333,6 +334,68 @@ window.openPropertyPhotos=async(propertyId)=>{
   }catch(e){ list.innerHTML='<div class="v7-card" style="color:#dc2626"><b>Não foi possível abrir as fotos.</b><br><span class="v7-small">'+String(e.message||e)+'</span></div>'; }
 };
 window.closePropertyPhotos=()=>{clearPhotoObjectUrls(viewerPhotoObjectUrls); $v('v7PhotoModal')?.classList.remove('open');};
+window.closeExistingPropertyPhotoEditor=()=>{ clearPhotoObjectUrls(existingPhotoEdit.objectUrls); existingPhotoEdit={propertyId:'',baseIndex:null,blobs:[null,null],objectUrls:[],existingUrls:['',''],nome:''}; $v('v7PhotoEditModal')?.classList.remove('open'); };
+function setExistingPhotoPreview(index,url){
+  const img=$v('eFotoPreview'+(index+1)), empty=$v('eFotoEmpty'+(index+1));
+  if(img){ if(url){img.src=url;img.style.display='block';}else{img.removeAttribute('src');img.style.display='none';} }
+  if(empty) empty.style.display=url?'none':'flex';
+}
+function existingPhotoCount(){ return [0,1].filter(i=>existingPhotoEdit.blobs[i]||existingPhotoEdit.existingUrls[i]).length; }
+function updateExistingPhotoStatus(extra=''){
+  const st=$v('eFotoStatus'); if(st) st.textContent=`${existingPhotoCount()}/2 fotos vinculadas.${extra?' '+extra:''}`;
+}
+async function openExistingPropertyPhotoEditor(propertyId,baseIndex=null){
+  if(!v7User) return alert('Faça login para adicionar fotos.');
+  let p=(v7CloudProps||[]).find(x=>String(x.id)===String(propertyId));
+  if(!p && propertyId){ try{const snap=await getDoc(doc(db,'propriedades_cadastradas',propertyId)); if(snap.exists()) p={id:snap.id,...snap.data()};}catch(e){} }
+  if(!p) return alert('Propriedade não localizada na nuvem.');
+  clearPhotoObjectUrls(existingPhotoEdit.objectUrls);
+  existingPhotoEdit={propertyId:p.id,baseIndex,blobs:[null,null],objectUrls:[],existingUrls:[p.foto1Url||'',p.foto2Url||''],nome:p.nome||p.nm||'Propriedade'};
+  if(!existingPhotoEdit.existingUrls.some(Boolean) && Array.isArray(p.fotosUrls)) existingPhotoEdit.existingUrls=[p.fotosUrls[0]||'',p.fotosUrls[1]||''];
+  for(let i=0;i<2;i++){ const inp=$v('eFoto'+(i+1)); if(inp) inp.value=''; setExistingPhotoPreview(i,existingPhotoEdit.existingUrls[i]); }
+  const t=$v('v7PhotoEditTitle'); if(t) t.textContent='📷 '+existingPhotoEdit.nome;
+  const sub=$v('v7PhotoEditSub'); if(sub) sub.textContent='Adicione ou substitua fotos de referência. As fotos ficam no cadastro da propriedade e podem ser atualizadas em qualquer visita.';
+  updateExistingPhotoStatus('Toque em uma foto para adicionar ou substituir.');
+  $v('v7PhotoEditModal')?.classList.add('open');
+}
+window.openPhotoEditorForCloud=(id)=>{ try{map.closePopup();}catch(e){} return openExistingPropertyPhotoEditor(id,null); };
+window.openPhotoEditorForBase=async(idx)=>{
+  if(!v7User) return alert('Faça login para adicionar fotos.');
+  try{map.closePopup();}catch(e){}
+  const b=(window.PROPS||[])[Number(idx)]; if(!b) return alert('Propriedade não localizada.');
+  const nome=normTxt(b.nm||b.nome||'');
+  let cp=(v7CloudProps||[]).find(x=>normTxt(x.nome||x.nm||'')===nome || (x.lat&&x.lng&&distMeters(+x.lat,+x.lng,+b.lat,+b.lng)<=60));
+  if(!cp){
+    if(!navigator.onLine) return alert('Para vincular fotos a este cadastro antigo pela primeira vez, conecte o aparelho à internet. Depois disso, futuras fotos poderão entrar na fila offline.');
+    const data={nome:b.nm||b.nome||'Propriedade',tipo:b.tp||b.tipo||'',endereco:b.end||'',telefone:b.ph||'',lat:b.lat,lng:b.lng,dirt:!!b.dirt,maps:b.gmaps||`https://www.google.com/maps/dir/?api=1&destination=${b.lat},${b.lng}&travelmode=driving`,municipio:'Casa Branca',quadrante:b.q||classQ(b.lat,b.lng),origem:'base_enriquecida',usuario:v7User?.email||'',createdAt:serverTimestamp(),updatedAt:serverTimestamp()};
+    const ref=await addDoc(collection(db,'propriedades_cadastradas'),data); cp={id:ref.id,...data};
+    await auditV7('propriedade_base_vinculada',data.nome);
+  }
+  return openExistingPropertyPhotoEditor(cp.id,Number(idx));
+};
+window.handleExistingPropertyPhotoInput=async(index,input)=>{
+  try{
+    const file=input?.files?.[0]; if(!file){existingPhotoEdit.blobs[index]=null;setExistingPhotoPreview(index,existingPhotoEdit.existingUrls[index]);return;}
+    updateExistingPhotoStatus('Otimizando foto...');
+    const blob=await compressPropertyPhoto(file); existingPhotoEdit.blobs[index]=blob;
+    if(existingPhotoEdit.objectUrls[index]) try{URL.revokeObjectURL(existingPhotoEdit.objectUrls[index])}catch(e){}
+    const url=URL.createObjectURL(blob); existingPhotoEdit.objectUrls[index]=url; setExistingPhotoPreview(index,url);
+    updateExistingPhotoStatus(`Foto ${index+1} pronta (${Math.round(blob.size/1024)} KB).`);
+  }catch(e){ input.value=''; existingPhotoEdit.blobs[index]=null; updateExistingPhotoStatus('⚠️ '+(e.message||e)); }
+};
+window.saveExistingPropertyPhotos=async()=>{
+  const id=existingPhotoEdit.propertyId; if(!id) return alert('Propriedade não localizada.');
+  const changed=existingPhotoEdit.blobs.some(Boolean); if(!changed){ window.closeExistingPropertyPhotoEditor(); return; }
+  const btn=$v('btnSalvarFotosExistentes'); if(btn){btn.disabled=true;btn.textContent='⏳ Salvando fotos...';}
+  const batchId='photo-edit-'+Date.now()+'-'+Math.random().toString(36).slice(2);
+  try{
+    await queuePropertyPhotos(batchId,existingPhotoEdit.blobs,id);
+    if(navigator.onLine){ await uploadQueuedPhotosForProperty(id,batchId); await auditV7('fotos_propriedade_atualizadas',existingPhotoEdit.nome); updateExistingPhotoStatus('✅ Fotos sincronizadas.'); }
+    else updateExistingPhotoStatus('🟡 Fotos salvas no aparelho e aguardando internet.');
+    setTimeout(()=>window.closeExistingPropertyPhotoEditor(),900);
+  }catch(e){ updateExistingPhotoStatus('🟡 Fotos na fila para sincronização. '+String(e?.message||e).slice(0,100)); }
+  finally{ if(btn){btn.disabled=false;btn.textContent='📷 Salvar fotos da propriedade';} refreshPendingPhotoBadge(); }
+};
 function propertyPhotoLink(propertyId){
   if(!propertyId) return '';
   const u=new URL(location.href); u.search=''; u.hash=''; u.searchParams.set('fotos',propertyId); return u.toString();
@@ -411,16 +474,17 @@ onAuthStateChanged(auth, async u=>{
 });
 function startRealtime(){
   onSnapshot(query(collection(db,'solicitacoes_acesso'),orderBy('createdAt','desc')),s=>{v7Requests=s.docs.map(d=>({id:d.id,...d.data()})); renderRequests();});
-  onSnapshot(query(collection(db,'visitas'),orderBy('createdAt','desc')),s=>{v7Visits=s.docs.map(d=>({id:d.id,...d.data()})); renderCommanderDashboard();});
+  onSnapshot(query(collection(db,'visitas'),orderBy('createdAt','desc')),s=>{v7Visits=s.docs.map(d=>({id:d.id,...d.data()})); renderCommanderDashboard(); renderCommanderStatisticalDashboard();});
   onSnapshot(query(collection(db,'auditoria'),orderBy('createdAt','desc')),s=>{v7Audits=s.docs.map(d=>({id:d.id,...d.data()})); renderAudit();});
   onSnapshot(collection(db,'usuarios'),s=>{v7Users=s.docs.map(d=>({docId:d.id,...d.data()})); renderUsersList();});
   onSnapshot(collection(db,'dispositivos_acesso'),s=>{v7Devices=s.docs.map(d=>({docId:d.id,...d.data()})); renderDevicesList();});
-  onSnapshot(collection(db,'propriedades_cadastradas'),s=>{v7CloudProps=s.docs.map(d=>({id:d.id,...d.data()})); window.v7CloudProps=v7CloudProps; renderCloudProperties(); renderCommanderDashboard(); maybeOpenPhotoDeepLink();});
+  onSnapshot(collection(db,'propriedades_cadastradas'),s=>{v7CloudProps=s.docs.map(d=>({id:d.id,...d.data()})); window.v7CloudProps=v7CloudProps; renderCloudProperties(); renderCommanderDashboard(); renderCommanderStatisticalDashboard(); maybeOpenPhotoDeepLink();});
   repairPendingPhotoQueue().then(()=>syncPendingProperties()).catch(()=>syncPendingProperties());
   syncPendingVisits();
   syncPendingPropertyPhotos();
   refreshPendingPhotoBadge();
   migrateLocalPointsToCloudOnce();
+  setTimeout(()=>autoSyncAll('login'),1200);
 }
 window.closeV7Modal=id=>$v(id).classList.remove('open');
 window.openRequestAccess=()=>{$v('v7RequestModal').classList.add('open'); $v('reqEmail').value=$v('v7Email').value||'';};
@@ -447,7 +511,7 @@ window.sendAccessRequest=async()=>{
     btnMsg.innerHTML='<span style="color:#ef4444">'+(e.code==='permission-denied'?'Permissão negada no Firebase. Atualize as regras do Firestore conforme orientação.':e.message)+'</span>';
   }
 };
-window.openAdminPanel=()=>{ if(!canOpenAdminPanel()) return alert('Acesso restrito.'); $v('admNome').value=v7Profile.nome||''; $v('admRe').value=v7Profile.re||''; $v('admGrad').value=v7Profile.graduacao||''; const pf=$v('admPerfilTxt'); if(pf) pf.value=v7Profile?.perfil||'Policial'; $v('v7AdminModal').classList.add('open'); renderUsersList(); renderDevicesList(); renderRequests(); renderAudit(); renderCommanderDashboard(); updateOfflineBadge(); const ss=$v('syncStatus'); if(ss) ss.innerHTML='Pendências no aparelho: '+(pendingProps().length+pendingVisits().length); };
+window.openAdminPanel=()=>{ if(!canOpenAdminPanel()) return alert('Acesso restrito.'); $v('admNome').value=v7Profile.nome||''; $v('admRe').value=v7Profile.re||''; $v('admGrad').value=v7Profile.graduacao||''; const pf=$v('admPerfilTxt'); if(pf) pf.value=v7Profile?.perfil||'Policial'; $v('v7AdminModal').classList.add('open'); renderUsersList(); renderDevicesList(); renderRequests(); renderAudit(); renderCommanderDashboard(); renderCommanderStatisticalDashboard(); updateOfflineBadge(); const ss=$v('syncStatus'); if(ss) ss.innerHTML='Pendências no aparelho: '+(pendingProps().length+pendingVisits().length); };
 window.saveMyBasicProfile=async()=>{
   if(!v7User) return; const data={nome:$v('admNome').value,re:$v('admRe').value,graduacao:$v('admGrad').value,email:v7User.email,companhia:APP_INFO.companhia,status:v7Profile?.status||'Ativo',updatedAt:serverTimestamp()}; await setDoc(doc(db,'usuarios',v7User.uid),data,{merge:true}); await setDoc(doc(db,'usuarios',emailKey(v7User.email)),{...data,uid:v7User.uid,perfil:v7Profile?.perfil||'Policial'},{merge:true}); v7Profile={...v7Profile,...data}; showLogged(); auditV7('perfil_atualizado','Usuário atualizou dados básicos'); alert('Dados salvos. O perfil funcional só pode ser alterado por Administrador Geral.'); };
 window.approveReq=async(id)=>{ 
@@ -536,7 +600,7 @@ window.refreshSisruralData=async()=>{
     await syncPendingVisits();
     await syncPendingPropertyPhotos();
     if(typeof renderCloudProperties==='function') renderCloudProperties();
-    if(typeof renderCommanderDashboard==='function') renderCommanderDashboard();
+    if(typeof renderCommanderDashboard==='function') renderCommanderDashboard(); if(typeof renderCommanderStatisticalDashboard==='function') renderCommanderStatisticalDashboard();
     updateOfflineBadge();
     const el=$v('syncStatus'); if(el) el.innerHTML='✅ Dados atualizados da nuvem. Pendências: '+(pendingProps().length+pendingVisits().length);
     try{toastV7('✅ Dados atualizados.');}catch(e){}
@@ -611,7 +675,7 @@ window.saveDeviceStatus=async(id,selId)=>{
 function renderAudit(){ const el=$v('v7Audit'); if(!el)return; el.innerHTML=v7Audits.slice(0,20).map(a=>`<div class="v7-card"><b>${a.acao||''}</b><div class="v7-small">${a.detalhe||''}<br>${a.usuario||''}</div></div>`).join('')||'<div class="v7-card v7-small">Sem auditoria.</div>'; }
 function allVisitProps(){
   const base=(window.PROPS||[]).map((p,i)=>({key:'base_'+i,id:'base_'+i,baseIndex:i,source:'base',nome:p.nm,municipio:'Casa Branca',quadrante:p.q,lat:p.lat,lng:p.lng,maps:p.gmaps||`https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}&travelmode=driving`}));
-  const cloud=(v7CloudProps||[]).map(p=>({key:'cloud_'+p.id,id:p.id,source:'cloud',nome:p.nome||p.nm||'Propriedade cadastrada',municipio:p.municipio||'Casa Branca',quadrante:p.quadrante||p.q||classQ(parseFloat(p.lat),parseFloat(p.lng)),lat:parseFloat(p.lat),lng:parseFloat(p.lng),maps:p.maps||`https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}&travelmode=driving`}));
+  const cloud=(v7CloudProps||[]).filter(p=>p.origem!=='base_enriquecida').map(p=>({key:'cloud_'+p.id,id:p.id,source:'cloud',nome:p.nome||p.nm||'Propriedade cadastrada',municipio:p.municipio||'Casa Branca',quadrante:p.quadrante||p.q||classQ(parseFloat(p.lat),parseFloat(p.lng)),lat:parseFloat(p.lat),lng:parseFloat(p.lng),maps:p.maps||`https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}&travelmode=driving`}));
   return base.concat(cloud);
 }
 function baseVisitProps(){
@@ -753,21 +817,31 @@ function updateOfflineBadge(){
   const el=document.getElementById('syncStatusBadge') || (()=>{ const d=document.createElement('div'); d.id='syncStatusBadge'; d.style.cssText='position:fixed;left:10px;bottom:88px;z-index:9999;background:#111827;color:#ffd700;border:1px solid #ffd700;border-radius:10px;padding:7px 10px;font:700 11px Rajdhani,Arial;box-shadow:0 0 12px rgba(0,0,0,.45);display:none'; document.body.appendChild(d); return d; })();
   if(n>0){ el.style.display='block'; el.textContent=`🟡 ${n} registro(s) pendente(s) de sincronização`; } else { el.style.display='none'; }
 }
+const MONTHS_SHORT=['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+function monthRangeLabel(a,b){ a=Number(a)||0;b=Number(b)||0; if(!a&&!b)return ''; if(a&&!b)return MONTHS_SHORT[a]; if(!a&&b)return MONTHS_SHORT[b]; return a===b?MONTHS_SHORT[a]:`${MONTHS_SHORT[a]}–${MONTHS_SHORT[b]}`; }
+function monthInRange(month,start,end){ month=Number(month);start=Number(start);end=Number(end); if(!month||!start||!end)return false; return start<=end?(month>=start&&month<=end):(month>=start||month<=end); }
 function formProp(){
   const nm=document.getElementById('aNome').value.trim(); let lat=parseFloat(document.getElementById('aLat').value); let lng=parseFloat(document.getElementById('aLng').value);
   if((isNaN(lat)||isNaN(lng)) && window.map){ const c=map.getCenter(); lat=c.lat; lng=c.lng; }
+  const plantioInicio=Number(document.getElementById('aPlantioIni')?.value)||0, plantioFim=Number(document.getElementById('aPlantioFim')?.value)||0;
+  const colheitaInicio=Number(document.getElementById('aColheitaIni')?.value)||0, colheitaFim=Number(document.getElementById('aColheitaFim')?.value)||0;
   return {nm, nome:nm, tp:document.getElementById('aTipo').value.trim(), tipo:document.getElementById('aTipo').value.trim(), lat, lng,
+    plantioInicio,plantioFim,colheitaInicio,colheitaFim,epocaPlantio:monthRangeLabel(plantioInicio,plantioFim),epocaColheita:monthRangeLabel(colheitaInicio,colheitaFim),
     end:document.getElementById('aEnd').value.trim(), endereco:document.getElementById('aEnd').value.trim(), ph:document.getElementById('aTel').value.trim(), telefone:document.getElementById('aTel').value.trim(),
     dirt:document.getElementById('aDirt').checked, dt:new Date().toLocaleString('pt-BR'), maps:`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`};
 }
 async function savePropCloud(pt){
   if(isDuplicateProp(pt)) return {duplicado:true};
-  const data={nome:pt.nm,tipo:pt.tp||'',endereco:pt.end||'',telefone:pt.ph||'',lat:pt.lat,lng:pt.lng,dirt:!!pt.dirt,maps:pt.maps,municipio:'Casa Branca',quadrante:(typeof classQ==='function'?classQ(pt.lat,pt.lng):''),origem:pt._offline?'offline_app':'app',usuario:v7User?.email||'',createdAt:serverTimestamp(),updatedAt:serverTimestamp()};
+  const data={nome:pt.nm,tipo:pt.tp||'',atividade:pt.tp||'',plantioInicio:Number(pt.plantioInicio)||0,plantioFim:Number(pt.plantioFim)||0,colheitaInicio:Number(pt.colheitaInicio)||0,colheitaFim:Number(pt.colheitaFim)||0,epocaPlantio:pt.epocaPlantio||'',epocaColheita:pt.epocaColheita||'',endereco:pt.end||'',telefone:pt.ph||'',lat:pt.lat,lng:pt.lng,dirt:!!pt.dirt,maps:pt.maps,municipio:'Casa Branca',quadrante:(typeof classQ==='function'?classQ(pt.lat,pt.lng):''),origem:pt._offline?'offline_app':'app',usuario:v7User?.email||'',createdAt:serverTimestamp(),updatedAt:serverTimestamp()};
   return await addDoc(collection(db,'propriedades_cadastradas'),data);
 }
 function renderCloudProperties(){
   if(window.clearCloudPts) window.clearCloudPts();
-  v7CloudProps.forEach(p=>window.renderCloudPt&&window.renderCloudPt(p,p.id));
+  v7CloudProps.forEach(p=>{
+    // Cadastros-base enriquecidos servem para fotos/dados no Firestore, mas não criam um segundo marcador sobre o ponto oficial já existente.
+    if(p.origem==='base_enriquecida') return;
+    window.renderCloudPt&&window.renderCloudPt(p,p.id);
+  });
   try{ if(document.getElementById('sheet')?.classList.contains('open')) selQ(activeQ||1); }catch(e){}
 }
 async function syncPendingProperties(){
@@ -801,7 +875,24 @@ async function migrateLocalPointsToCloudOnce(){
   window.userPts.length=0; pend.forEach(p=>window.userPts.push(p));
   try{ savePts(); userPtsG.clearLayers(); window.userPts.forEach((p,i)=>renderPt(p,i)); }catch(e){}
 }
-window.addEventListener('online',()=>{ syncPendingProperties(); syncPendingVisits(); syncPendingPropertyPhotos(); });
+let autoSyncBusy=false, autoSyncLast=0;
+async function hasSisruralPending(){
+  if(pendingProps().length||pendingVisits().length) return true;
+  try{return (await photoDbAll()).length>0;}catch(e){return false;}
+}
+async function autoSyncAll(reason='automatico'){
+  if(autoSyncBusy||!v7User||!navigator.onLine) return;
+  const now=Date.now(); if(now-autoSyncLast<8000) return;
+  if(!(await hasSisruralPending())) return;
+  autoSyncBusy=true; autoSyncLast=now;
+  try{ await syncPendingProperties(); await syncPendingVisits(); await syncPendingPropertyPhotos(); updateOfflineBadge(); }
+  catch(e){ console.warn('SISRURAL: sincronização automática pendente.',reason,e); }
+  finally{ autoSyncBusy=false; }
+}
+window.addEventListener('online',()=>setTimeout(()=>autoSyncAll('reconexao'),700));
+window.addEventListener('focus',()=>autoSyncAll('foco'));
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') autoSyncAll('retorno_app'); });
+setInterval(()=>autoSyncAll('periodica'),45000);
 
 window.salvar=async function(){
   const msg=document.getElementById('aMsg');
@@ -887,7 +978,8 @@ function v7AllPropsForReport(){
   const cloud=(v7CloudProps||[]).map(p=>({
     id:p.id,
     nome:p.nome||p.nm,
-    tipo:p.tipo||p.tp,
+    tipo:p.tipo||p.tp,atividade:p.atividade||p.tipo||p.tp||'',
+    plantioInicio:Number(p.plantioInicio)||0,plantioFim:Number(p.plantioFim)||0,colheitaInicio:Number(p.colheitaInicio)||0,colheitaFim:Number(p.colheitaFim)||0,epocaPlantio:p.epocaPlantio||'',epocaColheita:p.epocaColheita||'',
     lat:p.lat,lng:p.lng,
     quadrante:p.quadrante||classQ(p.lat,p.lng),
     municipio:p.municipio||'',
@@ -1011,7 +1103,64 @@ function renderCommanderDashboard(){
     <div class="v7-card" style="margin-top:8px"><b>Primeiras propriedades nunca visitadas</b>${neverList}</div>
     <div class="v7-card" style="margin-top:8px"><b>📷 Propriedades com fotos de referência</b><div class="v7-small" style="margin:4px 0 8px">Clique para abrir as imagens de referência da propriedade.</div>${photoList}</div>`;
 }
-['relDataIni','relDataFim','relQuadrante','relBusca'].forEach(id=>setTimeout(()=>{ const e=document.getElementById(id); if(e) e.oninput=renderCommanderDashboard; },500));
+['relDataIni','relDataFim','relQuadrante','relBusca'].forEach(id=>setTimeout(()=>{ const e=document.getElementById(id); if(e) e.oninput=()=>{renderCommanderDashboard();renderCommanderStatisticalDashboard();}; },500));
+window.showCommanderPanel=(mode='operacional')=>{
+  const op=$v('capDashboard'), st=$v('capStatsDashboard'), bo=$v('capTabOperacional'), bs=$v('capTabEstatistico');
+  const stats=mode==='estatistico'; if(op) op.style.display=stats?'none':'block'; if(st) st.style.display=stats?'block':'none';
+  if(bo){bo.className=stats?'btn-secondary':'btn-primary';bo.style.margin='0';} if(bs){bs.className=stats?'btn-primary':'btn-secondary';bs.style.margin='0';}
+  if(stats) renderCommanderStatisticalDashboard(); else renderCommanderDashboard();
+};
+function commanderStatisticalData(){
+  const st=v7ReportStats(), props=st.props, visits=st.filtered;
+  const visitedNames=new Set(visits.map(v=>normTxt(v._prop)).filter(Boolean));
+  const propsScope=(()=>{const q=v7GetReportFilters().q;return q?props.filter(p=>String(p.quadrante)===String(q)):props;})();
+  const visitedProps=propsScope.filter(p=>visitedNames.has(normTxt(p.nome)));
+  const coverage=propsScope.length?Math.round((visitedProps.length/propsScope.length)*100):0;
+  const photos=propsScope.filter(hasPropertyPhotos).length;
+  const activity={}; propsScope.forEach(p=>{const a=(p.atividade||p.tipo||'Não informado').trim()||'Não informado';activity[a]=(activity[a]||0)+1;});
+  const topActivities=Object.entries(activity).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const currentMonth=new Date().getMonth()+1;
+  const plantingNow=propsScope.filter(p=>monthInRange(currentMonth,p.plantioInicio,p.plantioFim));
+  const harvestNow=propsScope.filter(p=>monthInRange(currentMonth,p.colheitaInicio,p.colheitaFim));
+  const withSeason=propsScope.filter(p=>p.plantioInicio||p.colheitaInicio);
+  const monthly=[]; const now=new Date();
+  for(let i=11;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1),key=v7MonthKey(d);monthly.push({label:d.toLocaleDateString('pt-BR',{month:'short',year:'2-digit'}),count:st.visits.filter(v=>v7MonthKey(v._dt)===key).length});}
+  const seasonal=Array.from({length:12},(_,i)=>({m:i+1,label:MONTHS_SHORT[i+1],plantio:propsScope.filter(p=>monthInRange(i+1,p.plantioInicio,p.plantioFim)).length,colheita:propsScope.filter(p=>monthInRange(i+1,p.colheitaInicio,p.colheitaFim)).length}));
+  return {st,propsScope,visitedProps,coverage,photos,topActivities,currentMonth,plantingNow,harvestNow,withSeason,monthly,seasonal};
+}
+function renderCommanderStatisticalDashboard(){
+  const el=$v('capStatsDashboard'); if(!el) return; const d=commanderStatisticalData();
+  const maxM=Math.max(1,...d.monthly.map(x=>x.count));
+  const maxA=Math.max(1,...d.topActivities.map(x=>x[1]));
+  const qProp={1:0,2:0,3:0,4:0},qVisited={1:0,2:0,3:0,4:0}; d.propsScope.forEach(p=>{if(qProp[p.quadrante]!==undefined)qProp[p.quadrante]++;}); d.visitedProps.forEach(p=>{if(qVisited[p.quadrante]!==undefined)qVisited[p.quadrante]++;});
+  el.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:10px">
+    <div class="v7-card"><b style="font-size:20px;color:#2563eb">${d.coverage}%</b><br>Cobertura no filtro</div>
+    <div class="v7-card"><b style="font-size:20px;color:#22c55e">${d.visitedProps.length}</b><br>Propriedades visitadas</div>
+    <div class="v7-card"><b style="font-size:20px;color:#f59e0b">${d.st.filtered.length}</b><br>Visitas no período</div>
+    <div class="v7-card"><b style="font-size:20px;color:#8b5cf6">${d.photos}</b><br>Cadastros com fotos</div>
+    <div class="v7-card"><b style="font-size:20px;color:#0ea5e9">${d.withSeason.length}</b><br>Com sazonalidade</div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+    <div class="v7-card"><b>Cobertura por quadrante</b>${[1,2,3,4].map(q=>{const pct=qProp[q]?Math.round(qVisited[q]/qProp[q]*100):0;return v7BarLine(v7QLabel(q),pct,100).replace(`<b style="text-align:right">${pct}</b>`,`<b style="text-align:right">${pct}%</b>`)}).join('')}</div>
+    <div class="v7-card"><b>Atividades / culturas cadastradas</b>${d.topActivities.map(([a,n])=>v7BarLine(a,n,maxA)).join('')||'<div>Sem atividades informadas.</div>'}</div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+    <div class="v7-card"><b>Plantio e colheita no mês atual</b><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px"><div><b style="font-size:22px;color:#22c55e">${d.plantingNow.length}</b><br>Em época de plantio</div><div><b style="font-size:22px;color:#f59e0b">${d.harvestNow.length}</b><br>Em época de colheita</div></div><div class="v7-small" style="margin-top:8px">A sazonalidade ajuda a antecipar maior fluxo de pessoas, veículos, insumos e produção na área rural.</div></div>
+    <div class="v7-card"><b>Evolução das visitas · 12 meses</b>${d.monthly.map(x=>v7BarLine(x.label,x.count,maxM)).join('')}</div>
+  </div>
+  <div class="v7-card"><b>Calendário sazonal das propriedades</b><div style="overflow:auto;margin-top:8px"><table style="width:100%;border-collapse:collapse"><tr><th style="text-align:left">Mês</th><th>Plantio</th><th>Colheita</th></tr>${d.seasonal.map(x=>`<tr><td>${x.label}</td><td style="text-align:center">${x.plantio}</td><td style="text-align:center">${x.colheita}</td></tr>`).join('')}</table></div></div>`;
+}
+window.openCommanderStatisticalReport=()=>{
+  const d=commanderStatisticalData(), f=v7GetReportFilters(), now=new Date(), esc=x=>String(x||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const fmt=v=>{if(!v)return '';const [a,m,dd]=String(v).split('-');return a&&m&&dd?`${dd}/${m}/${a}`:v;};
+  const periodo=(f.ini||f.fim)?`${f.ini?fmt(f.ini):'início'} até ${f.fim?fmt(f.fim):'hoje'}`:'Todos os registros';
+  const reportBrasao=new URL('./icons/brasao-24bpmi.png',location.href).href;
+  const qRows=[1,2,3,4].map(q=>{const ps=d.propsScope.filter(p=>String(p.quadrante)===String(q)),vn=new Set(d.st.filtered.filter(v=>String(v._q)===String(q)).map(v=>normTxt(v._prop)));const vis=ps.filter(p=>vn.has(normTxt(p.nome))).length,pct=ps.length?Math.round(vis/ps.length*100):0;return `<tr><td>${v7QLabel(q)}</td><td>${ps.length}</td><td>${vis}</td><td>${pct}%</td><td>${d.st.filtQ[q]||0}</td></tr>`;}).join('');
+  const activityRows=d.topActivities.map(([a,n])=>`<tr><td>${esc(a)}</td><td>${n}</td></tr>`).join('')||'<tr><td colspan="2">Não informado</td></tr>';
+  const seasonalRows=d.seasonal.map(x=>`<tr><td>${x.label}</td><td>${x.plantio}</td><td>${x.colheita}</td></tr>`).join('');
+  const html=`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Relatório Estatístico do Capitão - SISRURAL</title><style>*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#111;margin:0;font-size:12px}.printbar{padding:10px 24px;background:#f8fafc;border-bottom:1px solid #ccc}.btn{padding:8px 12px;margin-right:6px;background:#0f172a;color:#fff;border:0;border-radius:5px;font-weight:700}.page{max-width:1120px;margin:auto;padding:22px 28px}.header{border:2px solid #111;padding:12px;display:grid;grid-template-columns:80px 1fr 190px;align-items:center}.header img{max-width:64px;max-height:72px}.org{text-align:center;text-transform:uppercase}.org h1{font-size:18px;margin:0}.org h2{font-size:14px;margin:3px}.meta{border-left:1px solid #111;padding-left:12px;font-size:11px}.title{text-align:center;background:#e5e7eb;border:1px solid #111;padding:8px;margin:12px 0;font-size:16px;font-weight:800}.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}.card{border:1px solid #111;padding:8px}.card b{font-size:18px;display:block}table{width:100%;border-collapse:collapse;margin:10px 0 18px}th,td{border:1px solid #333;padding:6px}th{background:#e5e7eb}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.note{border:1px solid #777;padding:9px;background:#f8fafc}.rodape{margin-top:24px;border-top:1px solid #aaa;padding-top:8px;text-align:center;font-size:10px}@media print{.printbar{display:none}.page{padding:10mm}.header,.cards{break-inside:avoid}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body><div class="printbar"><button class="btn" onclick="window.print()">Imprimir / Salvar PDF</button><button class="btn" onclick="window.close()">Fechar</button></div><div class="page"><div class="header"><div><img src="${esc(reportBrasao)}"></div><div class="org"><h1>Polícia Militar do Estado de São Paulo</h1><h2>24º BPM/I</h2><h2>2ª Companhia PM</h2><h2>Patrulha Rural de Casa Branca</h2></div><div class="meta"><b>Emitido em:</b><br>${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}<br><br><b>Sistema:</b><br>SISRURAL V11.7</div></div><div class="title">Relatório Estatístico do Capitão</div><p><b>Período:</b> ${esc(periodo)} &nbsp; <b>Quadrante:</b> ${esc(f.q?v7QLabel(f.q):'Todos')}</p><div class="cards"><div class="card"><b>${d.propsScope.length}</b>Propriedades</div><div class="card"><b>${d.visitedProps.length}</b>Visitadas</div><div class="card"><b>${d.coverage}%</b>Cobertura</div><div class="card"><b>${d.st.filtered.length}</b>Visitas no período</div><div class="card"><b>${d.photos}</b>Com fotos</div></div><h3>1. Cobertura territorial e atividade operacional</h3><table><tr><th>Quadrante</th><th>Propriedades</th><th>Visitadas</th><th>Cobertura</th><th>Visitas no período</th></tr>${qRows}</table><div class="grid2"><div><h3>2. Atividades / culturas</h3><table><tr><th>Atividade</th><th>Cadastros</th></tr>${activityRows}</table></div><div><h3>3. Sazonalidade no mês atual</h3><table><tr><th>Indicador</th><th>Quantidade</th></tr><tr><td>Propriedades em época de plantio</td><td>${d.plantingNow.length}</td></tr><tr><td>Propriedades em época de colheita</td><td>${d.harvestNow.length}</td></tr><tr><td>Cadastros com dados sazonais</td><td>${d.withSeason.length}</td></tr></table></div></div><h3>4. Calendário anual de plantio e colheita</h3><table><tr><th>Mês</th><th>Em plantio</th><th>Em colheita</th></tr>${seasonalRows}</table><h3>5. Indicadores de acompanhamento</h3><table><tr><th>Nunca visitadas</th><th>+30 dias</th><th>+60 dias</th><th>+90 dias</th><th>Cadastros com fotos</th></tr><tr><td>${d.st.never.length}</td><td>${d.st.older30.length}</td><td>${d.st.older60.length}</td><td>${d.st.older90.length}</td><td>${d.photos}</td></tr></table><div class="note"><b>Leitura gerencial:</b> os indicadores permitem acompanhar cobertura territorial, regularidade das visitas, produtividade, perfil das atividades rurais e sazonalidade de plantio/colheita, apoiando o planejamento do policiamento e a avaliação de resultados.</div><div class="rodape">Relatório estatístico gerado automaticamente pelo SISRURAL para apoio ao comando e planejamento operacional.</div></div></body></html>`;
+  const w=window.open('about:blank','_blank'); if(!w) return alert('Permita pop-ups para gerar o relatório.'); w.document.open(); w.document.write(html); w.document.close();
+};
 window.openCommanderReport=()=>{
   const st=v7ReportStats();
   const f=v7GetReportFilters();
