@@ -1,0 +1,9 @@
+SISRURAL V11.8 - SAFRA, PLANEJAMENTO SAZONAL E ALERTA DE QUADRANTE
+
+1. Propriedades antigas agora possuem botão 🌱 Atividade / plantio / colheita.
+2. O preenchimento é feito uma vez e salvo permanentemente no Firestore; pode ser corrigido futuramente.
+3. Relatório Operacional ganhou Planejamento Sazonal Recomendado com ranking mensal baseado nos cadastros.
+4. O índice sazonal usa plantio + 1,5 x colheita. É indicador de fluxo operacional, não previsão de crime.
+5. Painel do Capitão exibe alerta dos quadrantes menos visitados nos últimos 30 dias.
+6. Relatório Operacional também registra o alerta de cobertura territorial.
+7. Cache PWA atualizado para V11.8.
