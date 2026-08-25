@@ -116,6 +116,7 @@ const PROPERTY_PHOTO_MAX_EDGE=1280;
 const PROPERTY_PHOTO_QUALITY=.74;
 const CLOUDINARY_CLOUD_NAME='bgbxcibj';
 const CLOUDINARY_UPLOAD_PRESET='sisrural_propriedades';
+const CLOUDINARY_API_KEY='796842865729662'; // chave pública; nunca incluir API Secret no cliente
 const CLOUDINARY_UPLOAD_URL=`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
 let propertyPhotoBlobs=[null,null];
 let propertyPhotoObjectUrls=[];
@@ -169,12 +170,27 @@ async function bindPhotoBatchToProperty(batchId,propertyId){
   const all=await photoDbAll(); for(const r of all.filter(x=>x.batchId===batchId)){ r.propertyId=propertyId; await photoDbPut(r); }
 }
 async function uploadPhotoToCloudinary(blob){
-  const body=new FormData();
-  body.append('file',blob,'foto.jpg');
-  body.append('upload_preset',CLOUDINARY_UPLOAD_PRESET);
-  const resp=await fetch(CLOUDINARY_UPLOAD_URL,{method:'POST',body});
-  let data=null; try{data=await resp.json();}catch(e){}
-  if(!resp.ok || !data?.secure_url) throw Error(data?.error?.message || `Falha no envio da foto (${resp.status}).`);
+  const send=async(includeApiKey=false)=>{
+    const body=new FormData();
+    body.append('file',blob,'foto.jpg');
+    body.append('upload_preset',CLOUDINARY_UPLOAD_PRESET);
+    // Alguns ambientes Cloudinary retornam "Unknown API key" mesmo com preset unsigned.
+    // A API key é identificador público (não é o API Secret) e pode ser enviada no retry.
+    if(includeApiKey) body.append('api_key',CLOUDINARY_API_KEY);
+    const resp=await fetch(CLOUDINARY_UPLOAD_URL,{method:'POST',body});
+    let data=null; try{data=await resp.json();}catch(e){}
+    return {resp,data};
+  };
+
+  let {resp,data}=await send(false);
+  const firstError=String(data?.error?.message||'');
+  if(!resp.ok && /unknown api key/i.test(firstError)){
+    ({resp,data}=await send(true));
+  }
+  if(!resp.ok || !data?.secure_url){
+    const detail=String(data?.error?.message||`Falha no envio da foto (${resp.status}).`);
+    throw Error(`${detail} [Cloudinary: ${CLOUDINARY_CLOUD_NAME} / preset: ${CLOUDINARY_UPLOAD_PRESET}]`);
+  }
   return {url:data.secure_url,publicId:data.public_id||'',width:data.width||0,height:data.height||0,bytes:data.bytes||blob.size};
 }
 async function persistCloudinaryPhotoSlot(propertyId,index,uploaded){

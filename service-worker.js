@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sisrural-v11-4-photo-queue-repair';
+const CACHE_NAME = 'sisrural-v11-5-cloudinary-apikey-fix';
 const APP_SHELL=[
   './','./index.html','./offline.html','./manifest.webmanifest','./config.firebase.js',
   './css/app.css','./css/premium.css',

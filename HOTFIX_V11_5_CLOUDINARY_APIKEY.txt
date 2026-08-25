@@ -1,0 +1,18 @@
+SISRURAL V11.5 DEV - HOTFIX CLOUDINARY UNKNOWN API KEY
+
+Sintoma observado:
+- fotos permaneciam na fila;
+- Cloudinary retornava "Unknown API key";
+- nenhuma imagem chegava à Biblioteca de Mídia.
+
+Correção:
+1. mantém o primeiro envio unsigned padrão: file + upload_preset;
+2. somente se o Cloudinary responder "Unknown API key", repete uma vez incluindo a API key pública do ambiente;
+3. API Secret NÃO foi incluído nem deve ser incluído no frontend;
+4. erro de upload passa a informar cloud name e preset para diagnóstico;
+5. cache PWA atualizado para sisrural-v11-5-cloudinary-apikey-fix.
+
+Configuração:
+Cloud name: bgbxcibj
+Upload preset: sisrural_propriedades
+API key pública: 796842865729662
