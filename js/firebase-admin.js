@@ -3,7 +3,7 @@ import { firebaseConfig, ADMIN_EMAIL, APP_INFO, ADMIN_EMAILS_FIXOS } from '../co
 import { initializeApp, deleteApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
 import { getFirestore, doc, getDoc, setDoc, collection, addDoc, onSnapshot, serverTimestamp, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
-import { getStorage, ref as storageRef, uploadBytes, getBlob } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js';
+import { getStorage, ref as storageRef, getBlob } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js';
 
 const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
@@ -106,13 +106,17 @@ async function createAuthUserForPolice(email,nome){
 
 
 // ─────────────────────────────────────────────────────────────
-// SISRURAL V10.7 DEV – Fotos de referência da propriedade
-// Máximo 2 fotos. Arquivos ficam no Firebase Storage; Firestore
-// guarda apenas caminhos/metadados. Sem URLs públicas permanentes.
+// SISRURAL V11.1 DEV – Fotos de referência da propriedade via Cloudinary
+// Máximo 2 fotos. O navegador comprime a imagem, envia ao Cloudinary e
+// o Firestore guarda apenas URLs/metadados. A fila offline continua em IndexedDB.
+// Leitura de fotos antigas do Firebase Storage é mantida por compatibilidade.
 // ─────────────────────────────────────────────────────────────
 const PROPERTY_PHOTO_MAX=2;
 const PROPERTY_PHOTO_MAX_EDGE=1280;
 const PROPERTY_PHOTO_QUALITY=.74;
+const CLOUDINARY_CLOUD_NAME='bgbxcibj';
+const CLOUDINARY_UPLOAD_PRESET='sisrural_propriedades';
+const CLOUDINARY_UPLOAD_URL=`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
 let propertyPhotoBlobs=[null,null];
 let propertyPhotoObjectUrls=[];
 let viewerPhotoObjectUrls=[];
@@ -164,16 +168,42 @@ async function queuePropertyPhotos(batchId,blobs,propertyId=''){
 async function bindPhotoBatchToProperty(batchId,propertyId){
   const all=await photoDbAll(); for(const r of all.filter(x=>x.batchId===batchId)){ r.propertyId=propertyId; await photoDbPut(r); }
 }
+async function uploadPhotoToCloudinary(blob){
+  const body=new FormData();
+  body.append('file',blob,'foto.jpg');
+  body.append('upload_preset',CLOUDINARY_UPLOAD_PRESET);
+  const resp=await fetch(CLOUDINARY_UPLOAD_URL,{method:'POST',body});
+  let data=null; try{data=await resp.json();}catch(e){}
+  if(!resp.ok || !data?.secure_url) throw Error(data?.error?.message || `Falha no envio da foto (${resp.status}).`);
+  return {url:data.secure_url,publicId:data.public_id||'',width:data.width||0,height:data.height||0,bytes:data.bytes||blob.size};
+}
+async function persistCloudinaryPhotoSlot(propertyId,index,uploaded){
+  const ref=doc(db,'propriedades_cadastradas',propertyId);
+  const snap=await getDoc(ref); const old=snap.exists()?snap.data():{};
+  const urls=[old.foto1Url||'',old.foto2Url||''];
+  const ids=[old.foto1PublicId||'',old.foto2PublicId||''];
+  urls[index]=uploaded.url; ids[index]=uploaded.publicId||'';
+  const patch={
+    [`foto${index+1}Url`]:uploaded.url,
+    [`foto${index+1}PublicId`]:uploaded.publicId||'',
+    fotosUrls:urls.filter(Boolean),
+    fotosPublicIds:ids.filter(Boolean),
+    fotosQuantidade:urls.filter(Boolean).length,
+    fotosProvider:'cloudinary',
+    fotosAtualizadasEm:serverTimestamp()
+  };
+  await setDoc(ref,patch,{merge:true});
+}
 async function uploadQueuedPhotosForProperty(propertyId,batchId=''){
   const all=await photoDbAll(); const rows=all.filter(r=>r.propertyId===propertyId || (batchId && r.batchId===batchId)); if(!rows.length) return [];
-  const paths=[];
+  const urls=[];
   for(const r of rows.sort((a,b)=>a.index-b.index)){
-    const path=`propriedades/${propertyId}/foto_${r.index+1}.jpg`;
-    await uploadBytes(storageRef(storage,path),r.blob,{contentType:'image/jpeg',customMetadata:{sisrural:'propriedade-referencia'}});
-    paths.push(path); await photoDbDelete(r.id);
+    const uploaded=await uploadPhotoToCloudinary(r.blob);
+    await persistCloudinaryPhotoSlot(propertyId,r.index,uploaded);
+    urls.push(uploaded.url);
+    await photoDbDelete(r.id);
   }
-  if(paths.length) await setDoc(doc(db,'propriedades_cadastradas',propertyId),{fotosPaths:paths,fotosQuantidade:paths.length,fotosAtualizadasEm:serverTimestamp()},{merge:true});
-  await refreshPendingPhotoBadge(); return paths;
+  await refreshPendingPhotoBadge(); return urls;
 }
 async function savePhotosForCloudProperty(propertyId,blobs){
   const clean=blobs.filter(Boolean).slice(0,PROPERTY_PHOTO_MAX); if(!clean.length) return [];
@@ -196,18 +226,26 @@ async function refreshPendingPhotoBadge(){
 window.openPropertyPhotos=async(propertyId)=>{
   if(!v7User){ alert('Faça login no SISRURAL para visualizar as fotos.'); return; }
   const modal=$v('v7PhotoModal'), list=$v('v7PhotoList'), title=$v('v7PhotoTitle'); if(!modal||!list) return;
-  modal.classList.add('open'); list.innerHTML='<div class="v7-small">⏳ Carregando fotos protegidas...</div>'; clearPhotoObjectUrls(viewerPhotoObjectUrls);
+  modal.classList.add('open'); list.innerHTML='<div class="v7-small">⏳ Carregando fotos de referência...</div>'; clearPhotoObjectUrls(viewerPhotoObjectUrls);
   try{
     let p=(v7CloudProps||[]).find(x=>String(x.id)===String(propertyId));
     if(!p){const snap=await getDoc(doc(db,'propriedades_cadastradas',propertyId)); if(snap.exists()) p={id:snap.id,...snap.data()};}
     if(!p) throw Error('Propriedade não localizada.'); title.textContent='📷 '+(p.nome||'Fotos da propriedade');
-    const paths=Array.isArray(p.fotosPaths)?p.fotosPaths.slice(0,2):[];
-    if(!paths.length){list.innerHTML='<div class="v7-card"><b>Nenhuma foto cadastrada.</b><br><span class="v7-small">As fotos são opcionais e servem apenas como referência visual da propriedade.</span></div>';return;}
+    const urls=[p.foto1Url||'',p.foto2Url||''].filter(Boolean).length
+      ? [p.foto1Url||'',p.foto2Url||''].filter(Boolean)
+      : (Array.isArray(p.fotosUrls)?p.fotosUrls.filter(Boolean).slice(0,2):[]);
     const cards=[];
-    for(let i=0;i<paths.length;i++){
-      const blob=await getBlob(storageRef(storage,paths[i])); const url=URL.createObjectURL(blob); viewerPhotoObjectUrls.push(url);
-      cards.push(`<div class="property-photo-view-card"><img src="${url}" alt="Foto ${i+1} da propriedade"><div>Foto ${i+1}</div></div>`);
+    if(urls.length){
+      for(let i=0;i<urls.length;i++) cards.push(`<div class="property-photo-view-card"><img src="${urls[i]}" alt="Foto ${i+1} da propriedade" loading="lazy"><div>Foto ${i+1}</div></div>`);
+    }else{
+      // Compatibilidade com eventuais fotos antigas gravadas no Firebase Storage.
+      const paths=Array.isArray(p.fotosPaths)?p.fotosPaths.slice(0,2):[];
+      for(let i=0;i<paths.length;i++){
+        const blob=await getBlob(storageRef(storage,paths[i])); const url=URL.createObjectURL(blob); viewerPhotoObjectUrls.push(url);
+        cards.push(`<div class="property-photo-view-card"><img src="${url}" alt="Foto ${i+1} da propriedade"><div>Foto ${i+1}</div></div>`);
+      }
     }
+    if(!cards.length){list.innerHTML='<div class="v7-card"><b>Nenhuma foto cadastrada.</b><br><span class="v7-small">As fotos são opcionais e servem apenas como referência visual da propriedade.</span></div>';return;}
     list.innerHTML=`<div class="property-photo-view-grid">${cards.join('')}</div>`;
   }catch(e){ list.innerHTML='<div class="v7-card" style="color:#dc2626"><b>Não foi possível abrir as fotos.</b><br><span class="v7-small">'+String(e.message||e)+'</span></div>'; }
 };
@@ -216,6 +254,14 @@ function propertyPhotoLink(propertyId){
   if(!propertyId) return '';
   const u=new URL(location.href); u.search=''; u.hash=''; u.searchParams.set('fotos',propertyId); return u.toString();
 }
+function propertyPhotoCount(p){
+  if(!p) return 0;
+  const slots=[p.foto1Url||'',p.foto2Url||''].filter(Boolean); if(slots.length) return slots.length;
+  if(Array.isArray(p.fotosUrls)&&p.fotosUrls.length) return Math.min(2,p.fotosUrls.filter(Boolean).length);
+  if(Array.isArray(p.fotosPaths)&&p.fotosPaths.length) return Math.min(2,p.fotosPaths.length);
+  return Number(p.fotosQuantidade)||0;
+}
+function hasPropertyPhotos(p){ return propertyPhotoCount(p)>0; }
 function v7PropertyForVisit(v){
   if(v?.propriedadeId){const byId=(v7CloudProps||[]).find(p=>String(p.id)===String(v.propriedadeId));if(byId)return byId;}
   const nome=normTxt(v?._prop||v?.propriedade||''); return (v7CloudProps||[]).find(p=>normTxt(p.nome||p.nm)===nome)||null;
@@ -807,8 +853,8 @@ function renderCommanderDashboard(){
   const maxQ=Math.max(1,...Object.values(st.filtQ));
   const qBars=[1,2,3,4].map(q=>v7BarLine(v7QLabel(q),st.filtQ[q]||0,maxQ)).join('');
   const neverList=st.never.slice(0,5).map(p=>`<div style="border-bottom:1px solid rgba(255,255,255,.06);padding:3px 0">${p.nome||''} <span style="color:#60a5fa">${v7QLabel(p.quadrante)}</span></div>`).join('')||'<div>Nenhuma pendência.</div>';
-  const propsWithPhotos=st.props.filter(p=>Array.isArray(p.fotosPaths)&&p.fotosPaths.length);
-  const photoList=propsWithPhotos.slice(0,12).map(p=>`<div class="v7-card" style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0"><div><b>${p.nome||'Propriedade'}</b><br><span class="v7-small">${v7QLabel(p.quadrante)} · ${Math.min(2,p.fotosPaths.length)} foto(s)</span></div><button class="btn-secondary" style="width:auto;min-width:110px;margin:0" onclick="openPropertyPhotos('${p.id}')">📷 Ver fotos</button></div>`).join('')||'<div class="v7-card">Nenhuma propriedade com foto cadastrada.</div>';
+  const propsWithPhotos=st.props.filter(hasPropertyPhotos);
+  const photoList=propsWithPhotos.slice(0,12).map(p=>`<div class="v7-card" style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0"><div><b>${p.nome||'Propriedade'}</b><br><span class="v7-small">${v7QLabel(p.quadrante)} · ${propertyPhotoCount(p)} foto(s)</span></div><button class="btn-secondary" style="width:auto;min-width:110px;margin:0" onclick="openPropertyPhotos('${p.id}')">📷 Ver fotos</button></div>`).join('')||'<div class="v7-card">Nenhuma propriedade com foto cadastrada.</div>';
   el.innerHTML=`
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:10px">
       <div class="v7-card"><b style="color:var(--ac);font-size:20px">${st.props.length}</b><br>Propriedades</div>
@@ -832,7 +878,7 @@ function renderCommanderDashboard(){
       <div class="v7-card"><b style="color:#dc2626">${st.older90.length}</b><br>+90 dias</div>
     </div>
     <div class="v7-card" style="margin-top:8px"><b>Primeiras propriedades nunca visitadas</b>${neverList}</div>
-    <div class="v7-card" style="margin-top:8px"><b>📷 Propriedades com fotos de referência</b><div class="v7-small" style="margin:4px 0 8px">Clique para abrir as imagens protegidas da propriedade.</div>${photoList}</div>`;
+    <div class="v7-card" style="margin-top:8px"><b>📷 Propriedades com fotos de referência</b><div class="v7-small" style="margin:4px 0 8px">Clique para abrir as imagens de referência da propriedade.</div>${photoList}</div>`;
 }
 ['relDataIni','relDataFim','relQuadrante','relBusca'].forEach(id=>setTimeout(()=>{ const e=document.getElementById(id); if(e) e.oninput=renderCommanderDashboard; },500));
 window.openCommanderReport=()=>{
@@ -843,7 +889,7 @@ window.openCommanderReport=()=>{
   const horaBR=hoje.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   const esc=(x)=>String(x||'').replace(/[&<>"']/g,(m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const visits=st.filtered.slice().sort((a,b)=>(a._dt||0)-(b._dt||0));
-  const linhas=visits.map((v,i)=>{const pp=v7PropertyForVisit(v);const fotoLink=(pp&&Array.isArray(pp.fotosPaths)&&pp.fotosPaths.length)?propertyPhotoLink(pp.id):'';return `<tr><td>${i+1}</td><td>${esc(v.dataLocal||v7FmtDate(v._dt))}</td><td>${esc(v.horaLocal||v7FmtHour(v._dt))}</td><td>${esc(v._prop)}</td><td>${esc(v7QLabel(v._q))}</td><td>${esc(v.usuarioNome||v.usuario)}</td><td>${esc(v._obs)}</td><td>${v.maps?`<a target="_blank" href="${esc(v.maps)}">Abrir</a>`:''}</td><td>${fotoLink?`<a target="_blank" href="${esc(fotoLink)}">📷 Ver fotos</a>`:'-'}</td></tr>`;}).join('');
+  const linhas=visits.map((v,i)=>{const pp=v7PropertyForVisit(v);const fotoLink=(pp&&hasPropertyPhotos(pp))?propertyPhotoLink(pp.id):'';return `<tr><td>${i+1}</td><td>${esc(v.dataLocal||v7FmtDate(v._dt))}</td><td>${esc(v.horaLocal||v7FmtHour(v._dt))}</td><td>${esc(v._prop)}</td><td>${esc(v7QLabel(v._q))}</td><td>${esc(v.usuarioNome||v.usuario)}</td><td>${esc(v._obs)}</td><td>${v.maps?`<a target="_blank" href="${esc(v.maps)}">Abrir</a>`:''}</td><td>${fotoLink?`<a target="_blank" href="${esc(fotoLink)}">📷 Ver fotos</a>`:'-'}</td></tr>`;}).join('');
   const periodo=(f.ini||f.fim)?`${f.ini||'início'} até ${f.fim||'hoje'}`:'Todos os registros';
   const quadrante=f.q?v7QLabel(f.q):'Todos';
   const busca=f.busca||'Todos';
@@ -857,7 +903,7 @@ window.openCommanderReport=()=>{
     <div class="header"><div class="brasao"><img src="${esc(reportBrasao)}" alt="Brasão do 24º BPM/I"></div><div class="org"><h1>Polícia Militar do Estado de São Paulo</h1><h2>24º BPM/I</h2><h2>2ª Companhia PM</h2><h2>Patrulha Rural de Casa Branca</h2></div><div class="meta"><b>Emitido em:</b><br>${hojeBR} às ${horaBR}<br><br><b>Sistema:</b><br>SISRURAL V11.0 RC</div></div>
     <div class="title">Relatório Operacional de Visitas</div>
     <div class="info"><div><b>Período:</b> ${esc(periodo)}<br><b>Quadrante:</b> ${esc(quadrante)}<br><b>Filtro:</b> ${esc(busca)}</div><div><b>Finalidade:</b> acompanhamento da Patrulha Rural, produtividade operacional e controle de visitas às propriedades cadastradas.</div></div>
-    <div class="grid" style="grid-template-columns:repeat(5,1fr)"><div class="card"><b>${st.props.length}</b>Propriedades cadastradas</div><div class="card"><b>${st.props.filter(p=>Array.isArray(p.fotosPaths)&&p.fotosPaths.length).length}</b>Com fotos</div><div class="card"><b>${st.filtered.length}</b>Visitas no filtro</div><div class="card"><b>${st.today.length}</b>Visitas hoje</div><div class="card"><b>${st.month.length}</b>Visitas no mês</div></div>
+    <div class="grid" style="grid-template-columns:repeat(5,1fr)"><div class="card"><b>${st.props.length}</b>Propriedades cadastradas</div><div class="card"><b>${st.props.filter(hasPropertyPhotos).length}</b>Com fotos</div><div class="card"><b>${st.filtered.length}</b>Visitas no filtro</div><div class="card"><b>${st.today.length}</b>Visitas hoje</div><div class="card"><b>${st.month.length}</b>Visitas no mês</div></div>
     <h3>1. Visitas realizadas</h3>
     <table><thead><tr><th>Nº</th><th>Data</th><th>Hora</th><th>Propriedade</th><th>Quadrante</th><th>Policial</th><th>Observação</th><th>Mapa</th><th>Fotos</th></tr></thead><tbody>${linhas||'<tr><td colspan="9">Nenhuma visita localizada para os filtros selecionados.</td></tr>'}</tbody></table>
     <h3>2. Resumo estatístico</h3>

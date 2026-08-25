@@ -1,21 +1,37 @@
-SISRURAL V10.7 DEV – FOTOS DE REFERÊNCIA DA PROPRIEDADE
+SISRURAL V11.1 DEV – FOTOS DE REFERÊNCIA DA PROPRIEDADE / CLOUDINARY
 
 ALTERAÇÕES
 - Até 2 fotos opcionais no cadastro da propriedade.
-- Compressão automática (máx. 1280 px; JPEG otimizado).
-- Fotos armazenadas no Firebase Storage; Firestore guarda apenas caminhos/metadados.
-- Se estiver offline ou falhar o upload, fotos ficam em IndexedDB aguardando sincronização.
-- Relatório do Painel do Comandante inclui link “Ver fotos” quando a propriedade possui imagens.
-- O link abre o próprio SISRURAL e exige autenticação; não é criada URL pública permanente de imagem.
+- Compressão automática no aparelho (máx. 1280 px; JPEG otimizado).
+- Upload das fotos para Cloudinary usando o preset sem assinatura "sisrural_propriedades".
+- Cloud name utilizado: bgbxcibj.
+- Pasta configurada no Cloudinary: SISRURAL/PROPRIEDADES.
+- Firestore guarda apenas URLs/metadados das fotos; as imagens não são gravadas dentro do Firestore.
+- Se estiver offline ou falhar o upload, as fotos ficam em IndexedDB aguardando sincronização automática.
+- Painel do Comandante identifica propriedades com fotos e permite abrir as imagens pelo SISRURAL.
+- Relatório de visitas mantém o link "Ver fotos" quando a propriedade possui imagens.
 - Visitas permanecem sem fotos.
+- Compatibilidade mantida para leitura de eventuais registros antigos com fotosPaths no Firebase Storage.
+
+SEGURANÇA / OBSERVAÇÃO
+- Nenhuma API Secret da Cloudinary foi adicionada ao código.
+- O upload usa somente Cloud Name + Upload Preset unsigned, adequados ao frontend estático.
+- As URLs secure_url do Cloudinary são URLs de entrega; quem obtiver a URL direta poderá acessar a imagem. O SISRURAL não exibe essas URLs diretamente no relatório e mantém a abertura pelo fluxo autenticado do aplicativo, mas isso não equivale a armazenamento privado.
+- Para armazenamento estritamente privado seria necessário backend com assinatura/autenticação de entrega.
 
 ARQUIVOS ALTERADOS
-index.html
 js/firebase-admin.js
-js/mapa-ui.js
-css/premium.css
 service-worker.js
+OS002C_FOTOS_PROPRIEDADE_RELATORIO.txt
 
-ATENÇÃO
-Para upload/visualização funcionar, Firebase Storage precisa estar habilitado e com regras de acesso configuradas.
+HOMOLOGAÇÃO
+1. Testar cadastro online com 1 foto.
+2. Testar cadastro online com 2 fotos.
+3. Confirmar foto1Url/foto2Url e fotosUrls no Firestore.
+4. Confirmar imagens no Cloudinary em SISRURAL/PROPRIEDADES.
+5. Testar abertura no Painel do Comandante.
+6. Testar link de fotos no relatório.
+7. Testar cadastro offline com fotos, reconexão e envio automático.
+8. Confirmar que visitas, login, perfis, mapa e sincronização continuam funcionando.
+
 Não publicar em main antes de homologação na dev-seguranca.

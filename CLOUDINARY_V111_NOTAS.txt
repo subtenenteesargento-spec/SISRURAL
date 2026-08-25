@@ -1,0 +1,23 @@
+SISRURAL V11.1 DEV - CLOUDINARY
+
+Configuração já criada no Cloudinary:
+Cloud name: bgbxcibj
+Upload preset: sisrural_propriedades
+Modo: sem assinatura
+Asset folder: SISRURAL/PROPRIEDADES
+
+Fluxo implementado:
+foto -> compressão local -> IndexedDB/fila -> Cloudinary -> URL -> Firestore.
+
+Campos novos/atualizados no documento da propriedade:
+foto1Url
+foto2Url
+foto1PublicId
+foto2PublicId
+fotosUrls
+fotosPublicIds
+fotosQuantidade
+fotosProvider = cloudinary
+fotosAtualizadasEm
+
+Nenhuma API Secret é necessária ou deve ser publicada.
