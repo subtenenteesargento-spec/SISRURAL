@@ -1,0 +1,12 @@
+SISRURAL V13.1 — INTELIGÊNCIA CLARA + OCORRÊNCIAS
+
+Base: V13.0 homologada, sem remoção das funções existentes.
+
+1. Inteligência Operacional Rural em tema claro e alto contraste.
+2. Novo botão 🚨 Registrar ocorrência no popup das propriedades base e sincronizadas.
+3. Registro mínimo: natureza, data, hora, BOPM opcional e observação operacional curta.
+4. Aviso fixo: o registro é exclusivo para inteligência territorial e não substitui o BOPM.
+5. Não existem campos de vítima, autor, CPF ou RG.
+6. Ocorrências recentes (90 dias) passam a compor 15% do IPPR.
+7. IPPR V13.1: cobertura 35% + atraso 25% + sazonalidade 20% + situação observada 5% + ocorrências 15%.
+8. Inteligência continua exclusiva dos Administradores Gerais.

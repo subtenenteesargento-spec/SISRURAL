@@ -753,3 +753,22 @@ body{
   #v7PropertySearchModal .v7-box{background:#f8fafc!important;padding:14px!important}
   #v7PropertySearchModal #propSearchResults .v7-card{padding:11px!important}
 }
+
+
+/* =========================================================
+   SISRURAL V13.1 - Inteligência Operacional em tema claro
+   ========================================================= */
+#v7IntelModal .v7-box,#v7OccurrenceModal .v7-box{background:#f8fafc!important;color:#0f172a!important;border:1px solid #cbd5e1!important;box-shadow:0 24px 70px rgba(0,0,0,.35)!important}
+#v7IntelModal .v7-box h2,#v7IntelModal .v7-box h3,#v7OccurrenceModal .v7-box h2{color:#0f172a!important;text-shadow:none!important}
+#v7IntelModal .v7-close,#v7OccurrenceModal .v7-close{color:#475569!important}
+#v7IntelModal .v7-small,#v7OccurrenceModal .v7-small{color:#475569!important}
+#v7IntelModal .v7-card{background:#fff!important;color:#0f172a!important;border:1px solid #d8e0ea!important;box-shadow:0 1px 3px rgba(15,23,42,.06)!important}
+#v7IntelModal .v7-card b{color:#0f172a}
+#v7IntelModal table{background:#fff!important;color:#0f172a!important;border-collapse:collapse!important}
+#v7IntelModal th{background:#e2e8f0!important;color:#0f172a!important;font-weight:800!important}
+#v7IntelModal td,#v7IntelModal th{border:1px solid #cbd5e1!important;padding:7px!important}
+#v7IntelModal hr{border:0!important;border-top:1px solid #d8e0ea!important}
+#v7OccurrenceModal .field-lbl{color:#475569!important}
+#v7OccurrenceModal .field-inp{background:#fff!important;color:#0f172a!important;border:1px solid #94a3b8!important;box-shadow:none!important}
+#v7OccurrenceModal .field-inp:focus{border-color:#dc2626!important;box-shadow:0 0 0 3px rgba(220,38,38,.10)!important}
+@media(max-width:640px){#v7IntelModal .v7-box,#v7OccurrenceModal .v7-box{padding:14px!important;background:#f8fafc!important}}
