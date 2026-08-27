@@ -564,7 +564,7 @@ window.sendAccessRequest=async()=>{
     btnMsg.innerHTML='<span style="color:#ef4444">'+(e.code==='permission-denied'?'Permissão negada no Firebase. Atualize as regras do Firestore conforme orientação.':e.message)+'</span>';
   }
 };
-window.openAdminPanel=()=>{ if(!canOpenAdminPanel()) return alert('Acesso restrito.'); const apt=$v('adminPropertyTools'); if(apt) apt.style.display=isAdminGeral()?'block':'none'; $v('admNome').value=v7Profile.nome||''; $v('admRe').value=v7Profile.re||''; $v('admGrad').value=v7Profile.graduacao||''; const pf=$v('admPerfilTxt'); if(pf) pf.value=v7Profile?.perfil||'Policial'; $v('v7AdminModal').classList.add('open'); renderUsersList(); renderDevicesList(); renderRequests(); renderAudit(); renderCommanderDashboard(); renderCommanderStatisticalDashboard(); updateOfflineBadge(); const ss=$v('syncStatus'); if(ss) ss.innerHTML='Pendências no aparelho: '+(pendingProps().length+pendingVisits().length); };
+window.openAdminPanel=()=>{ if(!canOpenAdminPanel()) return alert('Acesso restrito.'); const apt=$v('adminPropertyTools'); if(apt) apt.style.display=isAdminGeral()?'block':'none'; const ait=$v('adminIntelligenceTools'); if(ait) ait.style.display=isAdminGeral()?'block':'none'; $v('admNome').value=v7Profile.nome||''; $v('admRe').value=v7Profile.re||''; $v('admGrad').value=v7Profile.graduacao||''; const pf=$v('admPerfilTxt'); if(pf) pf.value=v7Profile?.perfil||'Policial'; $v('v7AdminModal').classList.add('open'); renderUsersList(); renderDevicesList(); renderRequests(); renderAudit(); renderCommanderDashboard(); renderCommanderStatisticalDashboard(); updateOfflineBadge(); const ss=$v('syncStatus'); if(ss) ss.innerHTML='Pendências no aparelho: '+(pendingProps().length+pendingVisits().length); };
 window.saveMyBasicProfile=async()=>{
   if(!v7User) return; const data={nome:$v('admNome').value,re:$v('admRe').value,graduacao:$v('admGrad').value,email:v7User.email,companhia:APP_INFO.companhia,status:v7Profile?.status||'Ativo',updatedAt:serverTimestamp()}; await setDoc(doc(db,'usuarios',v7User.uid),data,{merge:true}); await setDoc(doc(db,'usuarios',emailKey(v7User.email)),{...data,uid:v7User.uid,perfil:v7Profile?.perfil||'Policial'},{merge:true}); v7Profile={...v7Profile,...data}; showLogged(); auditV7('perfil_atualizado','Usuário atualizou dados básicos'); alert('Dados salvos. O perfil funcional só pode ser alterado por Administrador Geral.'); };
 window.approveReq=async(id)=>{ 
@@ -909,13 +909,14 @@ window.saveV7Visit=async()=>{
     const p=allVisitProps().find(x=>x.key===key);
     if(!p) throw Error('Selecione a propriedade.');
     const observacao=$v('v7VisitTexto').value.trim();
+    const situacao=$v('v7VisitSituacao')?.value||'Normal';
     msg.innerHTML='<span style="color:#facc15">Salvando visita...</span>';
     const gps=await getGpsOnce();
     const now=new Date();
     const data={
       clientVisitId:visitClientId(),
       propriedadeId:p.id, propriedade:p.nome, origem:p.source, municipio:p.municipio||'Casa Branca', quadrante:p.quadrante||'',
-      lat:p.lat, lng:p.lng, gpsVisita:gps, observacao, texto:observacao, usuario:v7User.email,
+      lat:p.lat, lng:p.lng, gpsVisita:gps, situacaoObservada:situacao, observacao, texto:observacao, usuario:v7User.email,
       usuarioNome:v7Profile?.nome||v7User.email, re:v7Profile?.re||'', graduacao:v7Profile?.graduacao||'',
       dataLocal:now.toLocaleDateString('pt-BR'), horaLocal:now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
       createdAtLocal:now.toISOString(), maps:p.maps
@@ -1375,6 +1376,58 @@ window.openCommanderStatisticalReport=()=>{
   const html=`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Relatório Estatístico do Capitão - SISRURAL</title><style>*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#111;margin:0;font-size:12px}.printbar{padding:10px 24px;background:#f8fafc;border-bottom:1px solid #ccc}.btn{padding:8px 12px;margin-right:6px;background:#0f172a;color:#fff;border:0;border-radius:5px;font-weight:700}.page{max-width:1120px;margin:auto;padding:22px 28px}.header{border:2px solid #111;padding:12px;display:grid;grid-template-columns:80px 1fr 190px;align-items:center}.header img{max-width:64px;max-height:72px}.org{text-align:center;text-transform:uppercase}.org h1{font-size:18px;margin:0}.org h2{font-size:14px;margin:3px}.meta{border-left:1px solid #111;padding-left:12px;font-size:11px}.title{text-align:center;background:#e5e7eb;border:1px solid #111;padding:8px;margin:12px 0;font-size:16px;font-weight:800}.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}.card{border:1px solid #111;padding:8px}.card b{font-size:18px;display:block}table{width:100%;border-collapse:collapse;margin:10px 0 18px}th,td{border:1px solid #333;padding:6px}th{background:#e5e7eb}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.note{border:1px solid #777;padding:9px;background:#f8fafc}.rodape{margin-top:24px;border-top:1px solid #aaa;padding-top:8px;text-align:center;font-size:10px}@media print{.printbar{display:none}.page{padding:10mm}.header,.cards{break-inside:avoid}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body><div class="printbar"><button class="btn" onclick="window.print()">Imprimir / Salvar PDF</button><button class="btn" onclick="window.close()">Fechar</button></div><div class="page"><div class="header"><div><img src="${esc(reportBrasao)}"></div><div class="org"><h1>Polícia Militar do Estado de São Paulo</h1><h2>24º BPM/I</h2><h2>2ª Companhia PM</h2><h2>Patrulha Rural de Casa Branca</h2></div><div class="meta"><b>Emitido em:</b><br>${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}<br><br><b>Sistema:</b><br>SISRURAL V12.0</div></div><div class="title">Relatório Estatístico do Capitão</div><p><b>Período:</b> ${esc(periodo)} &nbsp; <b>Quadrante:</b> ${esc(f.q?v7QLabel(f.q):'Todos')}</p><div class="cards"><div class="card"><b>${d.propsScope.length}</b>Propriedades</div><div class="card"><b>${d.visitedProps.length}</b>Visitadas</div><div class="card"><b>${d.coverage}%</b>Cobertura</div><div class="card"><b>${d.st.filtered.length}</b>Visitas no período</div><div class="card"><b>${d.photos}</b>Com fotos</div></div><h3>1. Cobertura territorial e atividade operacional</h3><table><tr><th>Quadrante</th><th>Propriedades</th><th>Visitadas</th><th>Cobertura</th><th>Visitas no período</th></tr>${qRows}</table><div class="grid2"><div><h3>2. Atividades / culturas</h3><table><tr><th>Atividade</th><th>Cadastros</th></tr>${activityRows}</table></div><div><h3>3. Sazonalidade no mês atual</h3><table><tr><th>Indicador</th><th>Quantidade</th></tr><tr><td>Propriedades em época de plantio</td><td>${d.plantingNow.length}</td></tr><tr><td>Propriedades em época de colheita</td><td>${d.harvestNow.length}</td></tr><tr><td>Cadastros com dados sazonais</td><td>${d.withSeason.length}</td></tr></table></div></div><h3>4. Calendário anual de plantio e colheita</h3><table><tr><th>Mês</th><th>Em plantio</th><th>Em colheita</th></tr>${seasonalRows}</table><h3>5. Indicadores de acompanhamento</h3><table><tr><th>Nunca visitadas</th><th>+30 dias</th><th>+60 dias</th><th>+90 dias</th><th>Cadastros com fotos</th></tr><tr><td>${d.st.never.length}</td><td>${d.st.older30.length}</td><td>${d.st.older60.length}</td><td>${d.st.older90.length}</td><td>${d.photos}</td></tr></table><div class="note"><b>Leitura gerencial:</b> os indicadores permitem acompanhar cobertura territorial, regularidade das visitas, produtividade, perfil das atividades rurais e sazonalidade de plantio/colheita, apoiando o planejamento do policiamento e a avaliação de resultados.</div><div class="rodape">Relatório estatístico gerado automaticamente pelo SISRURAL para apoio ao comando e planejamento operacional.</div></div></body></html>`;
   const w=window.open('about:blank','_blank'); if(!w) return alert('Permita pop-ups para gerar o relatório.'); w.document.open(); w.document.write(html); w.document.close();
 };
+
+// V13.0 — Inteligência Operacional Rural (acesso exclusivo Administrador Geral)
+function v13DaysSince(date, now=new Date()){
+  if(!date) return 9999; return Math.max(0,Math.floor((now-date)/(86400000)));
+}
+function v13PriorityLabel(score){ return score>=75?'CRÍTICA':score>=55?'ALTA':score>=30?'MODERADA':'BAIXA'; }
+function v13PriorityColor(score){ return score>=75?'#dc2626':score>=55?'#f97316':score>=30?'#eab308':'#22c55e'; }
+function v13IntelligenceData(){
+  const st=v7ReportStats(), now=new Date(), month=now.getMonth()+1;
+  const props=st.props||[], visits=st.visits||[];
+  const qData=[1,2,3,4].map(q=>{
+    const qp=props.filter(p=>String(p.quadrante)===String(q));
+    const qv=visits.filter(v=>String(v._q)===String(q));
+    const recent=qv.filter(v=>v._dt && (now-v._dt)<=30*86400000);
+    const visited30=new Set(recent.map(v=>normTxt(v._prop)));
+    const coverage30=qp.length?Math.round(qp.filter(p=>visited30.has(normTxt(p.nome))).length/qp.length*100):0;
+    const never=qp.filter(p=>!st.latestByProp.has(normTxt(p.nome))).length;
+    const overdue=qp.filter(p=>{const v=st.latestByProp.get(normTxt(p.nome));return !v||v13DaysSince(v._dt,now)>30}).length;
+    const planting=qp.filter(p=>monthInRange(month,p.plantioInicio,p.plantioFim)).length;
+    const harvest=qp.filter(p=>monthInRange(month,p.colheitaInicio,p.colheitaFim)).length;
+    const situAttention=recent.filter(v=>['movimentacao elevada','propriedade desocupada','atencao recomendada'].includes(normTxt(v.situacaoObservada).toLowerCase())).length;
+    // IPPR transparente: baixa cobertura 40%, atraso 30%, sazonalidade 25%, observação de campo 5%.
+    const covRisk=100-coverage30;
+    const overdueRisk=qp.length?Math.round(overdue/qp.length*100):0;
+    const seasonalRisk=qp.length?Math.min(100,Math.round(((planting+harvest*1.5)/(qp.length*1.5))*100)):0;
+    const fieldRisk=Math.min(100,situAttention*25);
+    const score=Math.round(covRisk*.40+overdueRisk*.30+seasonalRisk*.25+fieldRisk*.05);
+    return {q,qp,qv,recent,coverage30,never,overdue,planting,harvest,situAttention,covRisk,overdueRisk,seasonalRisk,fieldRisk,score,label:v13PriorityLabel(score)};
+  }).sort((a,b)=>b.score-a.score);
+  const propRows=props.map(p=>{
+    const last=st.latestByProp.get(normTxt(p.nome)), days=last?v13DaysSince(last._dt,now):9999;
+    const planting=monthInRange(month,p.plantioInicio,p.plantioFim), harvest=monthInRange(month,p.colheitaInicio,p.colheitaFim);
+    let score=days===9999?60:Math.min(60,Math.round(days/90*60)); if(planting)score+=12;if(harvest)score+=20;
+    return {p,last,days,planting,harvest,score:Math.min(100,score)};
+  }).sort((a,b)=>b.score-a.score);
+  return {st,qData,propRows,now,month};
+}
+function v13FiveW2H(top,d){
+  const names=top.qp.filter(p=>{const v=d.st.latestByProp.get(normTxt(p.nome));return !v||v13DaysSince(v._dt,d.now)>30}).slice(0,8).map(p=>p.nome);
+  const why=[`${top.coverage30}% de cobertura de propriedades nos últimos 30 dias`,`${top.overdue} propriedade(s) sem visita há mais de 30 dias`];
+  if(top.harvest) why.push(`${top.harvest} em período de colheita`); if(top.planting) why.push(`${top.planting} em período de plantio`);
+  return {what:'Avaliar intensificação de visitas preventivas e pontos de observação',why:why.join('; '),where:`${v7QLabel(top.q)}${names.length?' — priorizar: '+names.join(', '):''}`,when:'Próximos 7 dias, conforme disponibilidade operacional',who:'Equipe definida pelo comando',how:'Roteiro direcionado às propriedades com maior intervalo sem visita, associado a pontos de observação no quadrante',howmuch:`Meta sugerida: ${Math.min(8,Math.max(3,top.overdue))} visitas prioritárias e até 2 pontos de observação`};
+}
+window.openRuralIntelligence=()=>{
+  if(!isAdminGeral()) return alert('Inteligência Operacional Rural: acesso exclusivo dos Administradores.');
+  const d=v13IntelligenceData(), top=d.qData[0], w=v13FiveW2H(top,d), el=$v('v7IntelContent');
+  const qcards=d.qData.map(x=>`<div class="v7-card" style="border-left:5px solid ${v13PriorityColor(x.score)}"><div style="display:flex;justify-content:space-between;gap:8px"><b>${v7QLabel(x.q)}</b><b style="color:${v13PriorityColor(x.score)}">IPPR ${x.score} · ${x.label}</b></div><div class="v7-small">Cobertura 30d: ${x.coverage30}% · +30d sem visita: ${x.overdue}/${x.qp.length} · Plantio: ${x.planting} · Colheita: ${x.harvest}</div></div>`).join('');
+  const priority=d.propRows.slice(0,10).map((x,i)=>`<tr><td>${i+1}</td><td>${x.p.nome}</td><td>${v7QLabel(x.p.quadrante)}</td><td>${x.days===9999?'Nunca':x.days+' dias'}</td><td>${x.harvest?'Colheita ':''}${x.planting?'Plantio':''}</td><td><b>${x.score}</b></td></tr>`).join('');
+  el.innerHTML=`<div class="v7-card" style="background:#f8fafc;color:#0f172a;border:1px solid #cbd5e1"><b>Como o IPPR é calculado</b><div class="v7-small" style="color:#334155">Baixa cobertura nos últimos 30 dias (40%) + propriedades atrasadas (30%) + sazonalidade de plantio/colheita (25%) + situações de atenção registradas nas visitas (5%). O índice é apoio à decisão e não determina emprego automático de efetivo.</div></div><h3>Prioridade por quadrante</h3>${qcards}<h3>5W2H sugerido · ${v7QLabel(top.q)}</h3><div class="v7-card" style="background:#fff;color:#111"><b>WHAT — O quê?</b><br>${w.what}<hr><b>WHY — Por quê?</b><br>${w.why}<hr><b>WHERE — Onde?</b><br>${w.where}<hr><b>WHEN — Quando?</b><br>${w.when}<hr><b>WHO — Quem?</b><br>${w.who}<hr><b>HOW — Como?</b><br>${w.how}<hr><b>HOW MUCH — Quanto?</b><br>${w.howmuch}</div><h3>Propriedades recomendadas para visita</h3><div style="overflow:auto"><table style="width:100%;border-collapse:collapse"><tr><th>#</th><th>Propriedade</th><th>Quadrante</th><th>Última visita</th><th>Sazonalidade</th><th>Prioridade</th></tr>${priority}</table></div><div class="v7-card"><b>Ciclo de gestão</b><div class="v7-small">Diagnosticar → Planejar (5W2H) → Executar → Medir cobertura/visitas → Reavaliar IPPR. A decisão operacional permanece com o comando.</div></div>`;
+  $v('v7IntelModal').classList.add('open');
+};
+
 window.openCommanderReport=()=>{
   const st=v7ReportStats();
   const f=v7GetReportFilters();

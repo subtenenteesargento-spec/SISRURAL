@@ -1,0 +1,15 @@
+SISRURAL V13.0 — INTELIGÊNCIA OPERACIONAL RURAL
+
+Base: V12.2 homologada.
+Preservados: fotos/Cloudinary, offline/sincronização, lupa, retificação/duplicidades, safra, painéis e relatórios existentes.
+
+NOVO:
+- Inteligência exclusiva para Administrador Geral.
+- IPPR por quadrante, com fórmula transparente.
+- 5W2H automático para o quadrante prioritário.
+- Ranking de propriedades recomendadas para visita.
+- Campo Situação Observada na visita.
+- Ciclo Diagnosticar > Planejar > Executar > Medir > Reavaliar.
+
+IPPR: baixa cobertura 30d (40%) + atraso de visitas (30%) + sazonalidade (25%) + situação observada (5%).
+Não substitui decisão do comando.

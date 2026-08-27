@@ -1,4 +1,4 @@
-const CACHE_NAME='sisrural-v12-0-admin-search';
+const CACHE_NAME='sisrural-v13-0-inteligencia';
 const APP_SHELL=[
   './','./index.html','./offline.html','./manifest.webmanifest','./config.firebase.js',
   './css/app.css','./css/premium.css',
