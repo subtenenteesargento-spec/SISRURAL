@@ -27,3 +27,5 @@ Base consolidada para último teste antes da versão operacional estável.
 
 ### Regra de promoção
 Somente promover para V11.0 Operacional Estável após aprovação integral do CHECKLIST_HOMOLOGACAO_V11.md.
+
+- V12.0: lupa de pesquisa; gestão administrativa de propriedades; retificação de nomes; tratamento de duplicidades com preservação do histórico.

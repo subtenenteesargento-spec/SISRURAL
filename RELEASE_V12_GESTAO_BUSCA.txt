@@ -1,0 +1,7 @@
+SISRURAL V12.0 — GESTÃO DE PROPRIEDADES E BUSCA
+
+1. Nova lupa de pesquisa no mapa para localizar propriedades por nome, atividade, endereço ou quadrante.
+2. Administrador Geral: ferramenta de retificação de nomes/dados básicos.
+3. Administrador Geral: tratamento de duplicidades com migração do histórico de visitas para o cadastro mantido.
+4. Cadastros-base podem receber correção persistente via registro de enriquecimento no Firestore.
+5. Mantidos fotos Cloudinary, safra, alertas, relatórios e sincronização automática/offline.
