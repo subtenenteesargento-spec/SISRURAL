@@ -706,3 +706,50 @@ body{
 }
 #v7PropertyAdminModal .v7-close,
 #v7PropertyCorrectionModal .v7-close{color:#475569!important}
+
+/* =========================================================
+   SISRURAL V12.2 - Lupa / Localizar propriedade em tema claro
+   Escopo isolado: somente #v7PropertySearchModal
+   ========================================================= */
+#v7PropertySearchModal .v7-box{
+  background:#f8fafc!important;
+  color:#0f172a!important;
+  border:1px solid #cbd5e1!important;
+  box-shadow:0 24px 70px rgba(0,0,0,.35)!important;
+}
+#v7PropertySearchModal .v7-box h2{
+  color:#0f172a!important;
+  text-shadow:none!important;
+}
+#v7PropertySearchModal .v7-close{color:#475569!important}
+#v7PropertySearchModal .v7-small{color:#64748b!important}
+#v7PropertySearchModal .field-lbl{color:#475569!important}
+#v7PropertySearchModal .field-inp{
+  background:#fff!important;
+  color:#0f172a!important;
+  border:1px solid #94a3b8!important;
+  box-shadow:none!important;
+}
+#v7PropertySearchModal .field-inp::placeholder{color:#94a3b8!important}
+#v7PropertySearchModal .field-inp:focus{
+  border-color:#06b6d4!important;
+  box-shadow:0 0 0 3px rgba(6,182,212,.13)!important;
+}
+#v7PropertySearchModal #propSearchResults .v7-card{
+  background:#fff!important;
+  color:#0f172a!important;
+  border:1px solid #d8e0ea!important;
+  box-shadow:0 1px 2px rgba(15,23,42,.04)!important;
+}
+#v7PropertySearchModal #propSearchResults .v7-card b{
+  color:#0f172a!important;
+  font-weight:800!important;
+}
+#v7PropertySearchModal #propSearchResults .v7-card .v7-small{
+  color:#475569!important;
+}
+#v7PropertySearchModal #propSearchCount{color:#475569!important}
+@media(max-width:640px){
+  #v7PropertySearchModal .v7-box{background:#f8fafc!important;padding:14px!important}
+  #v7PropertySearchModal #propSearchResults .v7-card{padding:11px!important}
+}

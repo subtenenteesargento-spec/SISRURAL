@@ -1,0 +1,13 @@
+SISRURAL V12.2 - HOTFIX VISUAL DA LUPA
+27/08/2026
+
+Alteração isolada no modal "Localizar propriedade":
+- fundo branco/cinza muito claro;
+- cartões brancos;
+- nomes em preto e negrito;
+- quadrante, atividade e endereço em cinza escuro;
+- campo de pesquisa branco com foco destacado;
+- botão Localizar preservado em verde;
+- responsividade para celular preservada.
+
+Não foram alterados: Cloudinary/fotos, sincronização, visitas, Firestore, relatórios, mapa, gestão de duplicidades ou permissões.
