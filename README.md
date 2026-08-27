@@ -20,7 +20,7 @@ Teste: ?v=103campofix
 Base consolidada da V10.7 para teste final. Nenhuma nova funcionalidade foi acrescentada nesta consolidação.
 
 
-## V12.0 — Gestão e Busca
+## V12.1 — Gestão e Busca
 - Pesquisa de propriedades por lupa para todos os usuários autenticados.
 - Administrador Geral pode retificar nomes e dados básicos pelo SISRURAL.
 - Tratamento seguro de duplicidades com migração das visitas para o cadastro mantido.

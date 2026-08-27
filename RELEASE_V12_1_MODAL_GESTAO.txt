@@ -1,0 +1,6 @@
+SISRURAL V12.1 - HOTFIX GESTAO DE PROPRIEDADES
+1. Corrige o clique em Retificar / tratar duplicidades quando o painel Administração está aberto.
+2. Modal Gerenciar propriedades passa a abrir acima do painel administrativo.
+3. Modal Retificar propriedade passa a abrir acima do gerenciador.
+4. Gerenciador e formulário de retificação usam fundo claro, textos escuros e campos brancos.
+5. Não altera fotos, Cloudinary, sincronização, visitas, relatórios ou mapa.

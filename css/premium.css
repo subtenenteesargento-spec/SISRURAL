@@ -659,3 +659,50 @@ body{
 .topbar .tb-shield{border:0!important;background:transparent!important;box-shadow:none!important;border-radius:0!important}
 .topbar .tb-shield img{padding:0!important;background:transparent!important}
 .auth-brand img{background:transparent!important}
+
+/* SISRURAL V12.1 - Gestão administrativa clara e modais administrativos em primeiro plano */
+#v7PropertyAdminModal{z-index:8200!important}
+#v7PropertyCorrectionModal{z-index:8300!important}
+#v7PropertyAdminModal .v7-box,
+#v7PropertyCorrectionModal .v7-box{
+  background:#f8fafc!important;
+  color:#172033!important;
+  border:1px solid #d7dee8!important;
+  box-shadow:0 28px 80px rgba(2,8,23,.42)!important;
+}
+#v7PropertyAdminModal .v7-box h2,
+#v7PropertyCorrectionModal .v7-box h2{
+  color:#111827!important;
+  text-shadow:none!important;
+}
+#v7PropertyAdminModal .v7-small,
+#v7PropertyCorrectionModal .v7-small{color:#64748b!important}
+#v7PropertyAdminModal .v7-card{
+  background:#fff!important;
+  color:#172033!important;
+  border:1px solid #dce3ec!important;
+  box-shadow:0 4px 14px rgba(15,23,42,.055)!important;
+}
+#v7PropertyAdminModal .field-lbl,
+#v7PropertyCorrectionModal .field-lbl{color:#475569!important}
+#v7PropertyAdminModal .field-inp,
+#v7PropertyCorrectionModal .field-inp{
+  background:#fff!important;
+  color:#172033!important;
+  border:1px solid #cbd5e1!important;
+  box-shadow:none!important;
+}
+#v7PropertyAdminModal .field-inp:focus,
+#v7PropertyCorrectionModal .field-inp:focus{
+  border-color:#16a34a!important;
+  box-shadow:0 0 0 3px rgba(22,163,74,.12)!important;
+}
+#v7PropertyAdminModal .btn-secondary,
+#v7PropertyCorrectionModal .btn-secondary{
+  background:#fff!important;
+  color:#334155!important;
+  border:1px solid #cbd5e1!important;
+  box-shadow:none!important;
+}
+#v7PropertyAdminModal .v7-close,
+#v7PropertyCorrectionModal .v7-close{color:#475569!important}
