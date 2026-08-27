@@ -1,0 +1,6 @@
+SISRURAL V13.2 — AJUSTE VISUAL DO AVISO DE OCORRÊNCIA
+
+1. Alterado exclusivamente o quadro “Finalidade do registro” no modal de ocorrência.
+2. Fundo amarelo muito claro, borda âmbar e textos escuros para máxima legibilidade.
+3. Mantida integralmente a mensagem de que o registro serve à análise territorial e não substitui o BOPM.
+4. Nenhuma lógica de cadastro, sincronização, fotos, inteligência, relatórios, Firebase ou demais funções foi alterada.

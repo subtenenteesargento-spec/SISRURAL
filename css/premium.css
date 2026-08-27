@@ -772,3 +772,16 @@ body{
 #v7OccurrenceModal .field-inp{background:#fff!important;color:#0f172a!important;border:1px solid #94a3b8!important;box-shadow:none!important}
 #v7OccurrenceModal .field-inp:focus{border-color:#dc2626!important;box-shadow:0 0 0 3px rgba(220,38,38,.10)!important}
 @media(max-width:640px){#v7IntelModal .v7-box,#v7OccurrenceModal .v7-box{padding:14px!important;background:#f8fafc!important}}
+
+
+/* =========================================================
+   SISRURAL V13.2 - Aviso de finalidade da ocorrência legível
+   ========================================================= */
+#v7OccurrenceModal #v7OccurrencePurposeNotice{
+  background:#fffbeb!important;
+  color:#78350f!important;
+  border:1px solid #f59e0b!important;
+  box-shadow:0 1px 3px rgba(120,53,15,.08)!important;
+}
+#v7OccurrenceModal #v7OccurrencePurposeNotice b{color:#92400e!important;font-weight:800!important}
+#v7OccurrenceModal #v7OccurrencePurposeNotice .v7-small{color:#451a03!important;font-weight:500!important}
