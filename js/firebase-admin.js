@@ -2,14 +2,14 @@
 import { firebaseConfig, ADMIN_EMAIL, APP_INFO, ADMIN_EMAILS_FIXOS } from '../config.firebase.js';
 import { initializeApp, deleteApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
-import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, addDoc, onSnapshot, serverTimestamp, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
+import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, addDoc, onSnapshot, serverTimestamp, query, orderBy, where } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
 import { getStorage, ref as storageRef, getBlob } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js';
 
 const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
 const storage = getStorage(firebaseApp);
-let v7User=null, v7Profile=null, v7Requests=[], v7Visits=[], v7Occurrences=[], v7Audits=[], v7CloudProps=[], v7Users=[], v7Devices=[]; window.v7CloudProps=v7CloudProps;
+let v7User=null, v7Profile=null, v7Requests=[], v7Visits=[], v7Occurrences=[], v7Audits=[], v7CloudProps=[], v7Users=[], v7Devices=[], v7SecurityConfig={bloqueioDispositivosAtivo:false}; window.v7CloudProps=v7CloudProps;
 const PENDING_PROPS_KEY='sisrural_pending_props_v1';
 const MIGRATED_LOCAL_KEY='sisrural_local_props_migrated_v1';
 const ADMIN = ADMIN_EMAIL || 'ferpozzer@gmail.com';
@@ -35,33 +35,73 @@ function devicePlatformInfo(){
   else if(/iPhone|iPad|iPod/i.test(ua)) plataforma='iPhone/iPad / PWA';
   else if(/Windows/i.test(ua)) plataforma='Windows';
   else if(/Macintosh|Mac OS/i.test(ua)) plataforma='macOS';
-  return {plataforma,userAgent:ua.slice(0,240),idioma:navigator.language||'',tela:`${screen?.width||0}x${screen?.height||0}`};
+  const standalone=!!(window.matchMedia?.('(display-mode: standalone)')?.matches || navigator.standalone);
+  let timezone=''; try{timezone=Intl.DateTimeFormat().resolvedOptions().timeZone||'';}catch(e){}
+  return {
+    plataforma,userAgent:ua.slice(0,320),idioma:navigator.language||'',
+    idiomas:Array.isArray(navigator.languages)?navigator.languages.slice(0,6):[],
+    tela:`${screen?.width||0}x${screen?.height||0}`,
+    viewport:`${window.innerWidth||0}x${window.innerHeight||0}`,
+    timezone,
+    cpuCores:Number(navigator.hardwareConcurrency)||null,
+    memoriaGB:Number(navigator.deviceMemory)||null,
+    touchPoints:Number(navigator.maxTouchPoints)||0,
+    modo:standalone?'PWA instalado':'Navegador',
+    online:navigator.onLine!==false
+  };
+}
+function currentDeviceDocId(){
+  const raw=getSisruralDeviceId().replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,120);
+  return `${String(v7User?.uid||'anon').replace(/[^a-zA-Z0-9_-]/g,'_')}__${raw}`;
+}
+async function loadSecurityConfig(){
+  try{
+    const snap=await getDoc(doc(db,'configuracao','seguranca'));
+    v7SecurityConfig=snap.exists()?{bloqueioDispositivosAtivo:false,...snap.data()}:{bloqueioDispositivosAtivo:false};
+  }catch(e){ v7SecurityConfig={bloqueioDispositivosAtivo:false}; console.warn('SISRURAL: configuração de segurança indisponível.',e); }
+  renderSecurityConfig();
+  return v7SecurityConfig;
 }
 async function registerCurrentDevice(){
-  if(!v7User) return;
+  if(!v7User) return {status:'Pendente'};
   try{
-    const deviceId=getSisruralDeviceId();
+    const deviceId=getSisruralDeviceId(), docId=currentDeviceDocId();
     const info=devicePlatformInfo();
-    const ref=doc(db,'dispositivos_acesso',deviceId);
-    const snap=await getDoc(ref);
-    const old=snap.exists()?snap.data():{};
+    const ref=doc(db,'dispositivos_acesso',docId);
+    let snap=await getDoc(ref), old=snap.exists()?snap.data():{};
+    // Compatibilidade com a Fase A: reaproveita eventual autorização do ID antigo.
+    if(!snap.exists()){
+      try{const legacy=await getDoc(doc(db,'dispositivos_acesso',deviceId)); if(legacy.exists()) old={...legacy.data(),...old};}catch(e){}
+    }
+    const status=old.status||'Pendente';
     await setDoc(ref,{
-      deviceId,
+      deviceId,deviceDocId:docId,
       usuarioUid:v7User.uid,
       email:String(v7User.email||'').toLowerCase(),
-      nome:v7Profile?.nome||v7User.email||'',
-      re:v7Profile?.re||'',
-      perfil:v7Profile?.perfil||'Policial',
-      plataforma:info.plataforma,
-      userAgent:info.userAgent,
-      idioma:info.idioma,
-      tela:info.tela,
-      status:old.status||'Pendente',
-      primeiroAcesso:old.primeiroAcesso||serverTimestamp(),
-      ultimoAcesso:serverTimestamp(),
-      observacao:'Fase A - registro de dispositivo sem bloqueio'
+      nome:v7Profile?.nome||v7User.email||'',re:v7Profile?.re||'',perfil:v7Profile?.perfil||'Policial',
+      municipioReferencia:v15Municipio(v7Profile?.municipioReferencia),
+      plataforma:info.plataforma,userAgent:info.userAgent,idioma:info.idioma,idiomas:info.idiomas,
+      tela:info.tela,viewport:info.viewport,timezone:info.timezone,cpuCores:info.cpuCores,memoriaGB:info.memoriaGB,
+      touchPoints:info.touchPoints,modo:info.modo,online:info.online,
+      appVersao:'15.5 EXP',status,
+      primeiroAcesso:old.primeiroAcesso||serverTimestamp(),ultimoAcesso:serverTimestamp(),
+      observacao:'Fase B - inventário de dispositivo e preparação para acesso confiável'
     },{merge:true});
-  }catch(e){ console.warn('SISRURAL: falha ao registrar dispositivo (não bloqueante).',e); }
+    return {status,docId,deviceId};
+  }catch(e){ console.warn('SISRURAL: falha ao registrar dispositivo.',e); return {status:'Pendente',erro:e}; }
+}
+function isPlainPolice(){ return perfilNorm(v7Profile?.perfil)==='policial'; }
+async function enforceDeviceSecurity(device){
+  if(!isPlainPolice()) return true;
+  if(!v7SecurityConfig?.bloqueioDispositivosAtivo){
+    if(device?.status==='Revogado'){ alert('Acesso negado: este dispositivo foi revogado pelo Administrador.'); await signOut(auth); return false; }
+    return true;
+  }
+  if(device?.status!=='Autorizado'){
+    alert(device?.status==='Revogado'?'Acesso negado: dispositivo revogado.':'Este aparelho está PENDENTE de autorização. Solicite ao Administrador Geral a liberação deste dispositivo.');
+    await signOut(auth); return false;
+  }
+  return true;
 }
 function perfilNorm(p){ return String(p||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
 function isAdminGeral(){ const email=String(v7User?.email||'').toLowerCase(); const p=perfilNorm(v7Profile?.perfil); return !!v7User && (ADMIN_EMAILS.includes(email) || ['administrador','administrador geral','comandante'].includes(p)); }
@@ -74,13 +114,13 @@ function v15AreaOptions(sel){ return V15_MUNICIPIOS.map(m=>`<option value="${m}"
 function v15CanChangeArea(){ return isAdminGeral() || isSupervisor(); }
 window.changeOperationalArea=function(value){
   const minha=v15Municipio(v7Profile?.municipioReferencia);
-  // Policial permanece vinculado ao município definido pelo Administrador Geral.
-  // O mapa continua livre para navegação manual (arrastar/zoom), mas o seletor territorial fica bloqueado.
-  if(!v15CanChangeArea()) value='minha';
-  const area=value==='minha'?minha:value;
+  // Policial: área fixa no município do cadastro. Pode navegar/zoom no mapa, mas não muda a área operacional.
+  if(!v15CanChangeArea()) value=minha;
+  const area=value==='2cia'?'2cia':v15Municipio(value);
   const st=$v('v15AreaStatus'); if(st) st.textContent=area==='2cia'?'Toda a 2ª Companhia':area;
   try{window.setSisruralOperationalArea?.(area);}catch(e){console.warn(e);}
-  if(v15CanChangeArea()) localStorage.setItem('sisrural_v15_area',value); setTimeout(v152SyncPropertyMunicipio,120);
+  if(v15CanChangeArea()) localStorage.setItem('sisrural_v15_area',area);
+  setTimeout(v152SyncPropertyMunicipio,120);
 };
 
 function v152SyncPropertyMunicipio(){
@@ -96,27 +136,19 @@ function v152SyncPropertyMunicipio(){
 }
 function v15ApplyInitialArea(){
   const sel=$v('v15AreaSelect'); if(!sel)return;
-  const minha=v15Municipio(v7Profile?.municipioReferencia);
-  const podeTrocar=v15CanChangeArea();
-  let pref='minha';
+  const minha=v15Municipio(v7Profile?.municipioReferencia), podeTrocar=v15CanChangeArea();
+  let pref=minha;
   if(isAdminGeral()) pref=localStorage.getItem('sisrural_v15_area')||'2cia';
-  else if(isSupervisor()) pref=localStorage.getItem('sisrural_v15_area')||'minha';
+  else if(isSupervisor()) pref=localStorage.getItem('sisrural_v15_area')||minha;
+  if(!['2cia',...V15_MUNICIPIOS].includes(pref)) pref=isAdminGeral()?'2cia':minha;
   sel.disabled=!podeTrocar;
-  sel.title=podeTrocar?'Supervisão/Gerência: selecione a área operacional.':`Área vinculada ao cadastro: ${minha}`;
-  sel.style.opacity=podeTrocar?'1':'.82';
-  sel.style.cursor=podeTrocar?'pointer':'not-allowed';
-  // Para o policial, mostra apenas a sua cidade, sem oferecer troca de área.
-  if(!podeTrocar){
-    sel.innerHTML=`<option value="minha">${minha}</option>`;
-  }
+  sel.title=podeTrocar?'Supervisão/Gerência: selecione município ou Toda a 2ª Companhia.':`Área fixa do policial: ${minha}`;
+  sel.style.opacity=podeTrocar?'1':'.9'; sel.style.cursor=podeTrocar?'pointer':'not-allowed';
+  if(!podeTrocar) sel.innerHTML=`<option value="${minha}">${minha}</option>`;
+  else sel.innerHTML=V15_MUNICIPIOS.map(m=>`<option value="${m}">${m}</option>`).join('')+'<option value="2cia">Toda a 2ª Companhia</option>';
   sel.value=pref; window.changeOperationalArea(pref);
   const am=$v('aMunicipio');
-  if(am){
-    am.value=minha;
-    // Cadastro de nova propriedade pelo policial também nasce no município de referência.
-    am.disabled=!podeTrocar;
-    am.title=podeTrocar?'Selecione o município da propriedade.':`Município vinculado ao seu perfil: ${minha}`;
-  }
+  if(am){am.value=minha;am.disabled=!podeTrocar;am.title=podeTrocar?'Selecione o município da propriedade.':`Município fixo do seu perfil: ${minha}`;}
 }
 
 async function auditV7(acao,detalhe){ try{ await addDoc(collection(db,'auditoria'),{acao,detalhe,usuario:v7User?.email||'',createdAt:serverTimestamp(),app:'SISRURAL V10.3 CAMPO FIX'}); }catch(e){} }
@@ -574,21 +606,33 @@ window.v7ForgotPassword=async()=>{
 window.v7Logout=async()=>{ await signOut(auth); location.reload(); };
 onAuthStateChanged(auth, async u=>{
   if(!u){ showLogin(); return; }
-  v7User=u; v7Profile=await loadProfile(u); showLogged(); await registerCurrentDevice(); auditV7('login','Usuário entrou no sistema'); startRealtime();
+  v7User=u; v7Profile=await loadProfile(u);
+  if(String(v7Profile?.status||'Ativo')==='Bloqueado'){ alert('Seu acesso ao SISRURAL está bloqueado. Procure o Administrador Geral.'); await signOut(auth); return; }
+  await loadSecurityConfig();
+  const device=await registerCurrentDevice();
+  if(!(await enforceDeviceSecurity(device))) return;
+  showLogged(); auditV7('login',`Usuário entrou no sistema · dispositivo ${device?.status||'Pendente'}`); startRealtime();
 });
 function startRealtime(){
-  onSnapshot(query(collection(db,'solicitacoes_acesso'),orderBy('createdAt','desc')),s=>{v7Requests=s.docs.map(d=>({id:d.id,...d.data()})); renderRequests();});
-  onSnapshot(query(collection(db,'visitas'),orderBy('createdAt','desc')),s=>{v7Visits=s.docs.map(d=>({id:d.id,...d.data()})); renderCommanderDashboard(); renderCommanderStatisticalDashboard();});
-  onSnapshot(query(collection(db,'ocorrencias_rurais'),orderBy('createdAt','desc')),s=>{v7Occurrences=s.docs.map(d=>({id:d.id,...d.data()}));});
-  onSnapshot(query(collection(db,'auditoria'),orderBy('createdAt','desc')),s=>{v7Audits=s.docs.map(d=>({id:d.id,...d.data()})); renderAudit();});
-  onSnapshot(collection(db,'usuarios'),s=>{v7Users=s.docs.map(d=>({docId:d.id,...d.data()})); renderUsersList();});
-  onSnapshot(collection(db,'dispositivos_acesso'),s=>{v7Devices=s.docs.map(d=>({docId:d.id,...d.data()})); renderDevicesList();});
-  onSnapshot(collection(db,'propriedades_cadastradas'),s=>{v7CloudProps=s.docs.map(d=>({id:d.id,...d.data()})); window.v7CloudProps=v7CloudProps; applyBaseEnrichmentOverrides(); renderCloudProperties(); renderCommanderDashboard(); renderCommanderStatisticalDashboard(); maybeOpenPhotoDeepLink();});
+  const minha=v15Municipio(v7Profile?.municipioReferencia);
+  const restrito=isPlainPolice();
+  // Segurança: policial recebe da nuvem somente documentos do município do seu cadastro.
+  // Supervisão/Gerência mantém a visão da Companhia para relatórios e apoio operacional.
+  const visitasQ=restrito?query(collection(db,'visitas'),where('municipio','==',minha)):query(collection(db,'visitas'),orderBy('createdAt','desc'));
+  const ocorrQ=restrito?query(collection(db,'ocorrencias_rurais'),where('municipio','==',minha)):query(collection(db,'ocorrencias_rurais'),orderBy('createdAt','desc'));
+  const propsQ=restrito?query(collection(db,'propriedades_cadastradas'),where('municipio','==',minha)):collection(db,'propriedades_cadastradas');
+  onSnapshot(visitasQ,s=>{v7Visits=s.docs.map(d=>({id:d.id,...d.data()})); renderCommanderDashboard(); renderCommanderStatisticalDashboard();},e=>console.warn('SISRURAL visitas:',e));
+  onSnapshot(ocorrQ,s=>{v7Occurrences=s.docs.map(d=>({id:d.id,...d.data()}));},e=>console.warn('SISRURAL ocorrências:',e));
+  onSnapshot(propsQ,s=>{v7CloudProps=s.docs.map(d=>({id:d.id,...d.data()})); window.v7CloudProps=v7CloudProps; applyBaseEnrichmentOverrides(); renderCloudProperties(); renderCommanderDashboard(); renderCommanderStatisticalDashboard(); maybeOpenPhotoDeepLink();},e=>console.warn('SISRURAL propriedades:',e));
+  // Dados administrativos não são sequer assinados no cliente de um Policial.
+  if(isAdminGeral()){
+    onSnapshot(query(collection(db,'solicitacoes_acesso'),orderBy('createdAt','desc')),s=>{v7Requests=s.docs.map(d=>({id:d.id,...d.data()})); renderRequests();});
+    onSnapshot(query(collection(db,'auditoria'),orderBy('createdAt','desc')),s=>{v7Audits=s.docs.map(d=>({id:d.id,...d.data()})); renderAudit();});
+    onSnapshot(collection(db,'usuarios'),s=>{v7Users=s.docs.map(d=>({docId:d.id,...d.data()})); renderUsersList();});
+    onSnapshot(collection(db,'dispositivos_acesso'),s=>{v7Devices=s.docs.map(d=>({docId:d.id,...d.data()})); renderDevicesList();});
+  }
   repairPendingPhotoQueue().then(()=>syncPendingProperties()).catch(()=>syncPendingProperties());
-  syncPendingVisits();
-  syncPendingPropertyPhotos();
-  refreshPendingPhotoBadge();
-  migrateLocalPointsToCloudOnce();
+  syncPendingVisits(); syncPendingPropertyPhotos(); refreshPendingPhotoBadge(); migrateLocalPointsToCloudOnce();
   setTimeout(()=>autoSyncAll('login'),1200);
 }
 window.closeV7Modal=id=>$v(id).classList.remove('open');
@@ -616,7 +660,7 @@ window.sendAccessRequest=async()=>{
     btnMsg.innerHTML='<span style="color:#ef4444">'+(e.code==='permission-denied'?'Permissão negada no Firebase. Atualize as regras do Firestore conforme orientação.':e.message)+'</span>';
   }
 };
-window.openAdminPanel=()=>{ if(!canOpenAdminPanel()) return alert('Acesso restrito.'); const apt=$v('adminPropertyTools'); if(apt) apt.style.display=isAdminGeral()?'block':'none'; const ait=$v('adminIntelligenceTools'); if(ait) ait.style.display=isAdminGeral()?'block':'none'; $v('admNome').value=v7Profile.nome||''; $v('admRe').value=v7Profile.re||''; $v('admGrad').value=v7Profile.graduacao||''; const pf=$v('admPerfilTxt'); if(pf) pf.value=v7Profile?.perfil||'Policial'; $v('v7AdminModal').classList.add('open'); renderUsersList(); renderDevicesList(); renderRequests(); renderAudit(); renderCommanderDashboard(); renderCommanderStatisticalDashboard(); updateOfflineBadge(); const ss=$v('syncStatus'); if(ss) ss.innerHTML='Pendências no aparelho: '+(pendingProps().length+pendingVisits().length); };
+window.openAdminPanel=()=>{ if(!canOpenAdminPanel()) return alert('Acesso restrito.'); const apt=$v('adminPropertyTools'); if(apt) apt.style.display=isAdminGeral()?'block':'none'; const ait=$v('adminIntelligenceTools'); if(ait) ait.style.display=isAdminGeral()?'block':'none'; $v('admNome').value=v7Profile.nome||''; $v('admRe').value=v7Profile.re||''; $v('admGrad').value=v7Profile.graduacao||''; const pf=$v('admPerfilTxt'); if(pf) pf.value=v7Profile?.perfil||'Policial'; $v('v7AdminModal').classList.add('open'); renderUsersList(); renderDevicesList(); renderSecurityConfig(); renderRequests(); renderAudit(); renderCommanderDashboard(); renderCommanderStatisticalDashboard(); updateOfflineBadge(); const ss=$v('syncStatus'); if(ss) ss.innerHTML='Pendências no aparelho: '+(pendingProps().length+pendingVisits().length); };
 window.saveMyBasicProfile=async()=>{
   if(!v7User) return; const data={nome:$v('admNome').value,re:$v('admRe').value,graduacao:$v('admGrad').value,email:v7User.email,companhia:APP_INFO.companhia,status:v7Profile?.status||'Ativo',updatedAt:serverTimestamp()}; await setDoc(doc(db,'usuarios',v7User.uid),data,{merge:true}); await setDoc(doc(db,'usuarios',emailKey(v7User.email)),{...data,uid:v7User.uid,perfil:v7Profile?.perfil||'Policial'},{merge:true}); v7Profile={...v7Profile,...data}; showLogged(); auditV7('perfil_atualizado','Usuário atualizou dados básicos'); alert('Dados salvos. O perfil funcional só pode ser alterado por Administrador Geral.'); };
 window.approveReq=async(id)=>{ 
@@ -770,7 +814,7 @@ function renderDevicesList(){
   el.innerHTML=arr.map((d,i)=>{
     const sid='deviceStatus_'+i;
     const short=String(d.deviceId||d.docId||'').slice(-12);
-    return `<div class="v7-card device-card"><div class="device-head"><div><b>${d.nome||d.email||'Usuário'}</b><div class="v7-small">${d.email||''}${d.re?` · RE ${d.re}`:''}<br>${d.plataforma||'Dispositivo'} · Tela ${d.tela||'-'}<br>ID: ...${short}<br>Último acesso: ${deviceDate(d.ultimoAcesso)}</div></div><span class="device-badge device-${String(d.status||'Pendente').toLowerCase()}">${d.status||'Pendente'}</span></div><div class="device-actions"><select class="field-inp" id="${sid}">${deviceStatusOptions(d.status)}</select><button class="btn-primary" onclick="saveDeviceStatus('${d.docId||d.deviceId}','${sid}')">Salvar dispositivo</button></div></div>`;
+    return `<div class="v7-card device-card"><div class="device-head"><div><b>${d.nome||d.email||'Usuário'}</b><div class="v7-small">${d.email||''}${d.re?` · RE ${d.re}`:''} · ${d.perfil||''}<br>Município: <b>${d.municipioReferencia||'-'}</b><br>${d.plataforma||'Dispositivo'} · ${d.modo||''} · Tela ${d.tela||'-'} · Viewport ${d.viewport||'-'}<br>Fuso: ${d.timezone||'-'} · Idioma: ${d.idioma||'-'} · CPU: ${d.cpuCores||'-'} · RAM: ${d.memoriaGB?d.memoriaGB+' GB':'-'} · Toque: ${d.touchPoints??'-'}<br>ID: ...${short}<br>Primeiro acesso: ${deviceDate(d.primeiroAcesso)}<br>Último acesso: ${deviceDate(d.ultimoAcesso)}</div></div><span class="device-badge device-${String(d.status||'Pendente').toLowerCase()}">${d.status||'Pendente'}</span></div><div class="device-actions"><select class="field-inp" id="${sid}">${deviceStatusOptions(d.status)}</select><button class="btn-primary" onclick="saveDeviceStatus('${d.docId||d.deviceId}','${sid}')">Salvar dispositivo</button></div></div>`;
   }).join('');
 }
 window.saveDeviceStatus=async(id,selId)=>{
@@ -778,7 +822,26 @@ window.saveDeviceStatus=async(id,selId)=>{
   const status=$v(selId)?.value||'Pendente';
   await setDoc(doc(db,'dispositivos_acesso',id),{status,updatedBy:v7User.email,updatedAt:serverTimestamp(),...(status==='Autorizado'?{aprovadoPor:v7User.email,aprovadoEm:serverTimestamp()}:{})},{merge:true});
   await auditV7('dispositivo_status_alterado',`${id}: ${status}`);
-  alert(`Dispositivo marcado como ${status}. Nesta Fase A o status ainda não bloqueia o acesso.`);
+  alert(`Dispositivo marcado como ${status}. ${v7SecurityConfig?.bloqueioDispositivosAtivo?'Modo estrito ativo: a regra será aplicada ao próximo login do policial.':'Modo observação: ainda não bloqueia policiais pendentes.'}`);
+};
+
+
+function renderSecurityConfig(){
+  const el=$v('v15SecurityMode'); if(!el) return;
+  const ativo=!!v7SecurityConfig?.bloqueioDispositivosAtivo;
+  el.innerHTML=ativo?'<b style="color:#15803d">🔒 MODO ESTRITO ATIVO</b> — Policial só acessa por dispositivo Autorizado.':'<b style="color:#b45309">👁️ MODO OBSERVAÇÃO</b> — dispositivos são registrados, mas policiais Pendentes ainda entram.';
+  const a=$v('btnSecurityStrict'),o=$v('btnSecurityObserve'); if(a)a.disabled=ativo; if(o)o.disabled=!ativo;
+}
+window.setDeviceSecurityMode=async ativo=>{
+  if(!isAdminGeral()) return alert('Somente Administrador Geral pode alterar a política de segurança.');
+  if(ativo){
+    const pend=(v7Devices||[]).filter(d=>perfilNorm(d.perfil)==='policial' && (d.status||'Pendente')!=='Autorizado');
+    const msg=`Ativar modo estrito?\n\nPoliciais só conseguirão entrar por dispositivos AUTORIZADOS.\nHá ${pend.length} dispositivo(s) de policial ainda não autorizado(s).\n\nRecomendação: autorize primeiro os aparelhos legítimos.`;
+    if(!confirm(msg)) return;
+  }else if(!confirm('Voltar ao modo observação? Dispositivos revogados continuarão bloqueados, mas policiais com dispositivo Pendente poderão entrar.')) return;
+  await setDoc(doc(db,'configuracao','seguranca'),{bloqueioDispositivosAtivo:!!ativo,updatedBy:v7User.email,updatedAt:serverTimestamp(),versao:'15.5 EXP'},{merge:true});
+  v7SecurityConfig={...v7SecurityConfig,bloqueioDispositivosAtivo:!!ativo}; renderSecurityConfig();
+  await auditV7('politica_dispositivo_alterada',ativo?'MODO ESTRITO ATIVADO':'MODO OBSERVAÇÃO ATIVADO');
 };
 
 function adminPropertyRows(){
@@ -1461,7 +1524,7 @@ window.openCommanderStatisticalReport=()=>{
   const territorialHeader=companyWide?'Município':'Quadrante';
   const activityRows=d.topActivities.map(([a,n])=>`<tr><td>${esc(a)}</td><td>${n}</td></tr>`).join('')||'<tr><td colspan="2">Não informado</td></tr>';
   const seasonalRows=d.seasonal.map(x=>`<tr><td>${x.label}</td><td>${x.plantio}</td><td>${x.colheita}</td></tr>`).join('');
-  const html=`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Relatório Estatístico do Capitão - SISRURAL</title><style>*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#111;margin:0;font-size:12px}.printbar{padding:10px 24px;background:#f8fafc;border-bottom:1px solid #ccc}.btn{padding:8px 12px;margin-right:6px;background:#0f172a;color:#fff;border:0;border-radius:5px;font-weight:700}.page{max-width:1120px;margin:auto;padding:22px 28px}.header{border:2px solid #111;padding:12px;display:grid;grid-template-columns:80px 1fr 190px;align-items:center}.header img{max-width:64px;max-height:72px}.org{text-align:center;text-transform:uppercase}.org h1{font-size:18px;margin:0}.org h2{font-size:14px;margin:3px}.meta{border-left:1px solid #111;padding-left:12px;font-size:11px}.title{text-align:center;background:#e5e7eb;border:1px solid #111;padding:8px;margin:12px 0;font-size:16px;font-weight:800}.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}.card{border:1px solid #111;padding:8px}.card b{font-size:18px;display:block}table{width:100%;border-collapse:collapse;margin:10px 0 18px}th,td{border:1px solid #333;padding:6px}th{background:#e5e7eb}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.note{border:1px solid #777;padding:9px;background:#f8fafc}.rodape{margin-top:24px;border-top:1px solid #aaa;padding-top:8px;text-align:center;font-size:10px}@media print{.printbar{display:none}.page{padding:10mm}.header,.cards{break-inside:avoid}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body><div class="printbar"><button class="btn" onclick="window.print()">Imprimir / Salvar PDF</button><button class="btn" onclick="window.close()">Fechar</button></div><div class="page"><div class="header"><div><img src="${esc(reportBrasao)}"></div><div class="org"><h1>Polícia Militar do Estado de São Paulo</h1><h2>24º BPM/I</h2><h2>2ª Companhia PM</h2><h2>${esc(v15ReportHeaderLabel())}</h2></div><div class="meta"><b>Emitido em:</b><br>${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}<br><br><b>Sistema:</b><br>SISRURAL V15.4.2 EXP</div></div><div class="title">Relatório Estatístico do Capitão</div><p><b>Período:</b> ${esc(periodo)} &nbsp; <b>Município / Área:</b> ${esc(v15ReportAreaLabel())} &nbsp; <b>Quadrante:</b> ${esc(f.q?v7QLabel(f.q):'Todos')}</p><div class="cards"><div class="card"><b>${d.propsScope.length}</b>Propriedades</div><div class="card"><b>${d.visitedProps.length}</b>Visitadas</div><div class="card"><b>${d.coverage}%</b>Cobertura</div><div class="card"><b>${d.st.filtered.length}</b>Visitas no período</div><div class="card"><b>${d.photos}</b>Com fotos</div></div><h3>1. Cobertura territorial e atividade operacional</h3><table><tr><th>${territorialHeader}</th><th>Propriedades</th><th>Visitadas</th><th>Cobertura</th><th>Visitas no período</th></tr>${qRows}</table><div class="grid2"><div><h3>2. Atividades / culturas</h3><table><tr><th>Atividade</th><th>Cadastros</th></tr>${activityRows}</table></div><div><h3>3. Sazonalidade no mês atual</h3><table><tr><th>Indicador</th><th>Quantidade</th></tr><tr><td>Propriedades em época de plantio</td><td>${d.plantingNow.length}</td></tr><tr><td>Propriedades em época de colheita</td><td>${d.harvestNow.length}</td></tr><tr><td>Cadastros com dados sazonais</td><td>${d.withSeason.length}</td></tr></table></div></div><h3>4. Calendário anual de plantio e colheita</h3><table><tr><th>Mês</th><th>Em plantio</th><th>Em colheita</th></tr>${seasonalRows}</table><h3>5. Indicadores de acompanhamento</h3><table><tr><th>Nunca visitadas</th><th>+30 dias</th><th>+60 dias</th><th>+90 dias</th><th>Cadastros com fotos</th></tr><tr><td>${d.st.never.length}</td><td>${d.st.older30.length}</td><td>${d.st.older60.length}</td><td>${d.st.older90.length}</td><td>${d.photos}</td></tr></table><div class="note"><b>Leitura gerencial:</b> os indicadores permitem acompanhar cobertura territorial, regularidade das visitas, produtividade, perfil das atividades rurais e sazonalidade de plantio/colheita, apoiando o planejamento do policiamento e a avaliação de resultados.</div><div class="rodape">Relatório estatístico gerado automaticamente pelo SISRURAL para apoio ao comando e planejamento operacional.</div></div></body></html>`;
+  const html=`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Relatório Estatístico do Capitão - SISRURAL</title><style>*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#111;margin:0;font-size:12px}.printbar{padding:10px 24px;background:#f8fafc;border-bottom:1px solid #ccc}.btn{padding:8px 12px;margin-right:6px;background:#0f172a;color:#fff;border:0;border-radius:5px;font-weight:700}.page{max-width:1120px;margin:auto;padding:22px 28px}.header{border:2px solid #111;padding:12px;display:grid;grid-template-columns:80px 1fr 190px;align-items:center}.header img{max-width:64px;max-height:72px}.org{text-align:center;text-transform:uppercase}.org h1{font-size:18px;margin:0}.org h2{font-size:14px;margin:3px}.meta{border-left:1px solid #111;padding-left:12px;font-size:11px}.title{text-align:center;background:#e5e7eb;border:1px solid #111;padding:8px;margin:12px 0;font-size:16px;font-weight:800}.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}.card{border:1px solid #111;padding:8px}.card b{font-size:18px;display:block}table{width:100%;border-collapse:collapse;margin:10px 0 18px}th,td{border:1px solid #333;padding:6px}th{background:#e5e7eb}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.note{border:1px solid #777;padding:9px;background:#f8fafc}.rodape{margin-top:24px;border-top:1px solid #aaa;padding-top:8px;text-align:center;font-size:10px}@media print{.printbar{display:none}.page{padding:10mm}.header,.cards{break-inside:avoid}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body><div class="printbar"><button class="btn" onclick="window.print()">Imprimir / Salvar PDF</button><button class="btn" onclick="window.close()">Fechar</button></div><div class="page"><div class="header"><div><img src="${esc(reportBrasao)}"></div><div class="org"><h1>Polícia Militar do Estado de São Paulo</h1><h2>24º BPM/I</h2><h2>2ª Companhia PM</h2><h2>${esc(v15ReportHeaderLabel())}</h2></div><div class="meta"><b>Emitido em:</b><br>${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}<br><br><b>Sistema:</b><br>SISRURAL V15.5 EXP</div></div><div class="title">Relatório Estatístico do Capitão</div><p><b>Período:</b> ${esc(periodo)} &nbsp; <b>Município / Área:</b> ${esc(v15ReportAreaLabel())} &nbsp; <b>Quadrante:</b> ${esc(f.q?v7QLabel(f.q):'Todos')}</p><div class="cards"><div class="card"><b>${d.propsScope.length}</b>Propriedades</div><div class="card"><b>${d.visitedProps.length}</b>Visitadas</div><div class="card"><b>${d.coverage}%</b>Cobertura</div><div class="card"><b>${d.st.filtered.length}</b>Visitas no período</div><div class="card"><b>${d.photos}</b>Com fotos</div></div><h3>1. Cobertura territorial e atividade operacional</h3><table><tr><th>${territorialHeader}</th><th>Propriedades</th><th>Visitadas</th><th>Cobertura</th><th>Visitas no período</th></tr>${qRows}</table><div class="grid2"><div><h3>2. Atividades / culturas</h3><table><tr><th>Atividade</th><th>Cadastros</th></tr>${activityRows}</table></div><div><h3>3. Sazonalidade no mês atual</h3><table><tr><th>Indicador</th><th>Quantidade</th></tr><tr><td>Propriedades em época de plantio</td><td>${d.plantingNow.length}</td></tr><tr><td>Propriedades em época de colheita</td><td>${d.harvestNow.length}</td></tr><tr><td>Cadastros com dados sazonais</td><td>${d.withSeason.length}</td></tr></table></div></div><h3>4. Calendário anual de plantio e colheita</h3><table><tr><th>Mês</th><th>Em plantio</th><th>Em colheita</th></tr>${seasonalRows}</table><h3>5. Indicadores de acompanhamento</h3><table><tr><th>Nunca visitadas</th><th>+30 dias</th><th>+60 dias</th><th>+90 dias</th><th>Cadastros com fotos</th></tr><tr><td>${d.st.never.length}</td><td>${d.st.older30.length}</td><td>${d.st.older60.length}</td><td>${d.st.older90.length}</td><td>${d.photos}</td></tr></table><div class="note"><b>Leitura gerencial:</b> os indicadores permitem acompanhar cobertura territorial, regularidade das visitas, produtividade, perfil das atividades rurais e sazonalidade de plantio/colheita, apoiando o planejamento do policiamento e a avaliação de resultados.</div><div class="rodape">Relatório estatístico gerado automaticamente pelo SISRURAL para apoio ao comando e planejamento operacional.</div></div></body></html>`;
   const w=window.open('about:blank','_blank'); if(!w) return alert('Permita pop-ups para gerar o relatório.'); w.document.open(); w.document.write(html); w.document.close();
 };
 
@@ -1590,7 +1653,7 @@ window.openCommanderReport=()=>{
   </style></head><body>
   <div class="printbar"><button class="btn" onclick="window.print()">Imprimir / Salvar PDF</button><button class="btn btn2" onclick="window.close()">Fechar</button></div>
   <div class="page">
-    <div class="header"><div class="brasao"><img src="${esc(reportBrasao)}" alt="Brasão do 24º BPM/I"></div><div class="org"><h1>Polícia Militar do Estado de São Paulo</h1><h2>24º BPM/I</h2><h2>2ª Companhia PM</h2><h2>${esc(v15ReportHeaderLabel())}</h2></div><div class="meta"><b>Emitido em:</b><br>${hojeBR} às ${horaBR}<br><br><b>Sistema:</b><br>SISRURAL V15.4.2 EXP</div></div>
+    <div class="header"><div class="brasao"><img src="${esc(reportBrasao)}" alt="Brasão do 24º BPM/I"></div><div class="org"><h1>Polícia Militar do Estado de São Paulo</h1><h2>24º BPM/I</h2><h2>2ª Companhia PM</h2><h2>${esc(v15ReportHeaderLabel())}</h2></div><div class="meta"><b>Emitido em:</b><br>${hojeBR} às ${horaBR}<br><br><b>Sistema:</b><br>SISRURAL V15.5 EXP</div></div>
     <div class="title">Relatório Operacional de Visitas</div>
     <div class="info"><div><b>Período:</b> ${esc(periodo)}<br><b>Município / Área:</b> ${esc(v15ReportAreaLabel())}<br><b>Quadrante:</b> ${esc(quadrante)}<br><b>Filtro:</b> ${esc(busca)}</div><div><b>Finalidade:</b> acompanhamento da Patrulha Rural, produtividade operacional e controle de visitas às propriedades cadastradas.</div></div>
     <div class="grid" style="grid-template-columns:repeat(5,1fr)"><div class="card"><b>${st.props.length}</b>Propriedades cadastradas</div><div class="card"><b>${st.props.filter(hasPropertyPhotos).length}</b>Com fotos</div><div class="card"><b>${st.filtered.length}</b>Visitas no filtro</div><div class="card"><b>${st.today.length}</b>Visitas hoje</div><div class="card"><b>${st.month.length}</b>Visitas no mês</div></div>

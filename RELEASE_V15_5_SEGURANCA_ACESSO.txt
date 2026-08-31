@@ -1,0 +1,40 @@
+SISRURAL V15.5 EXP — SEGURANÇA DE ACESSO E CONTROLE TERRITORIAL
+Data: 31/08/2026
+
+ALTERAÇÕES
+1. Removida a opção “Minha área”.
+   - Administrador/Supervisor: Casa Branca, Santa Cruz das Palmeiras, Tambaú, Itobi e Toda a 2ª Companhia.
+   - Policial: seletor fica fixo apenas no município de referência cadastrado.
+   - O policial pode navegar/zoom livremente no mapa, mas não troca a área operacional.
+
+2. Dispositivos de acesso — Fase B.
+   - Registro por usuário + dispositivo.
+   - Dados registrados: UID, e-mail, nome, RE, perfil, município, plataforma, user-agent, idioma(s), tela,
+     viewport, fuso horário, CPU lógica, memória informada pelo navegador quando disponível, pontos de toque,
+     modo PWA/navegador, primeiro acesso, último acesso e versão do app.
+   - Status: Pendente, Autorizado ou Revogado.
+   - Dispositivo Revogado bloqueia o perfil Policial.
+
+3. Modo de segurança de dispositivo.
+   - “Observação”: registra os aparelhos; Pendente ainda entra; Revogado não entra.
+   - “Estrito”: Policial só entra em dispositivo Autorizado.
+   - Administrador Geral ativa/desativa no painel.
+   - Supervisão/Administração não são bloqueadas por essa regra para preservar a capacidade de gestão.
+
+4. Redução de exposição no cliente.
+   - Perfil Policial não assina coleções administrativas (usuários, dispositivos, auditoria, solicitações).
+   - Visitas, ocorrências e propriedades em nuvem são consultadas somente pelo município do Policial.
+   - Supervisão/Gerência mantém visão ampla da Companhia.
+
+IMPORTANTE — SEGURANÇA REAL
+O bloqueio de interface e dispositivo no JavaScript é uma camada de proteção, mas NÃO substitui regras do Firestore.
+Além disso, a base antiga de propriedades de Casa Branca ainda existe de forma estática em js/mapa-ui.js por compatibilidade histórica.
+Enquanto esses dados permanecerem em arquivos JavaScript hospedados publicamente, eles podem ser baixados diretamente sem passar pelo login.
+
+PRÓXIMA ETAPA OBRIGATÓRIA PARA ENDURECIMENTO
+A) Migrar a base estática de propriedades para Firestore.
+B) Remover nomes/telefones/coordenadas de propriedades dos arquivos públicos do site.
+C) Implantar regras Firestore por perfil e município no servidor.
+D) Revisar entrega das fotos (Cloudinary URLs são públicas se a URL for conhecida).
+
+Não publicar regras restritivas no Firestore sem antes migrar os documentos antigos e validar os perfis/UIDs, para evitar bloqueio do sistema.
