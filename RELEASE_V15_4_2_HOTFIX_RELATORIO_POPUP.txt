@@ -1,0 +1,6 @@
+SISRURAL V15.4.2 EXP — HOTFIX RELATÓRIO OPERACIONAL
+
+- Abre a aba do relatório imediatamente no clique do botão verde, evitando bloqueio silencioso de popup.
+- Adiciona tratamento de erro visível: se houver falha na montagem do relatório, o sistema informa a causa em vez de não responder.
+- Mantidos filtros por município/área, quadrante, período e policial/propriedade.
+- Nenhuma migração ou exclusão de dados.
