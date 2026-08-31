@@ -65,23 +65,46 @@ async function registerCurrentDevice(){
 }
 function perfilNorm(p){ return String(p||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
 function isAdminGeral(){ const email=String(v7User?.email||'').toLowerCase(); const p=perfilNorm(v7Profile?.perfil); return !!v7User && (ADMIN_EMAILS.includes(email) || ['administrador','administrador geral','comandante'].includes(p)); }
-function isSupervisor(){ const p=perfilNorm(v7Profile?.perfil); return ['supervisor','capitao','capitao pm','tenente'].includes(p); }
+function isSupervisor(){ const p=perfilNorm(v7Profile?.perfil); return ['supervisor','sargento','sargento pm','1 sargento','1º sargento','2 sargento','2º sargento','3 sargento','3º sargento','subtenente','subtenente pm','tenente','tenente pm','1 tenente','1º tenente','2 tenente','2º tenente','capitao','capitao pm'].includes(p); }
 function canOpenAdminPanel(){ return isAdminGeral() || isSupervisor(); }
 function isAdmin(){ return isAdminGeral(); }
 const V15_MUNICIPIOS=['Casa Branca','Santa Cruz das Palmeiras','Tambaú','Itobi'];
 function v15Municipio(v){ return V15_MUNICIPIOS.includes(String(v||''))?String(v):'Casa Branca'; }
 function v15AreaOptions(sel){ return V15_MUNICIPIOS.map(m=>`<option value="${m}" ${v15Municipio(sel)===m?'selected':''}>${m}</option>`).join(''); }
+function v15CanChangeArea(){ return isAdminGeral() || isSupervisor(); }
 window.changeOperationalArea=function(value){
-  const area=value==='minha'?v15Municipio(v7Profile?.municipioReferencia):value;
+  const minha=v15Municipio(v7Profile?.municipioReferencia);
+  // Policial permanece vinculado ao município definido pelo Administrador Geral.
+  // O mapa continua livre para navegação manual (arrastar/zoom), mas o seletor territorial fica bloqueado.
+  if(!v15CanChangeArea()) value='minha';
+  const area=value==='minha'?minha:value;
   const st=$v('v15AreaStatus'); if(st) st.textContent=area==='2cia'?'Toda a 2ª Companhia':area;
   try{window.setSisruralOperationalArea?.(area);}catch(e){console.warn(e);}
-  localStorage.setItem('sisrural_v15_area',value);
+  if(v15CanChangeArea()) localStorage.setItem('sisrural_v15_area',value);
 };
 function v15ApplyInitialArea(){
   const sel=$v('v15AreaSelect'); if(!sel)return;
-  const pref=isAdminGeral()?(localStorage.getItem('sisrural_v15_area')||'2cia'):'minha';
+  const minha=v15Municipio(v7Profile?.municipioReferencia);
+  const podeTrocar=v15CanChangeArea();
+  let pref='minha';
+  if(isAdminGeral()) pref=localStorage.getItem('sisrural_v15_area')||'2cia';
+  else if(isSupervisor()) pref=localStorage.getItem('sisrural_v15_area')||'minha';
+  sel.disabled=!podeTrocar;
+  sel.title=podeTrocar?'Supervisão/Gerência: selecione a área operacional.':`Área vinculada ao cadastro: ${minha}`;
+  sel.style.opacity=podeTrocar?'1':'.82';
+  sel.style.cursor=podeTrocar?'pointer':'not-allowed';
+  // Para o policial, mostra apenas a sua cidade, sem oferecer troca de área.
+  if(!podeTrocar){
+    sel.innerHTML=`<option value="minha">${minha}</option>`;
+  }
   sel.value=pref; window.changeOperationalArea(pref);
-  const am=$v('aMunicipio'); if(am) am.value=v15Municipio(v7Profile?.municipioReferencia);
+  const am=$v('aMunicipio');
+  if(am){
+    am.value=minha;
+    // Cadastro de nova propriedade pelo policial também nasce no município de referência.
+    am.disabled=!podeTrocar;
+    am.title=podeTrocar?'Selecione o município da propriedade.':`Município vinculado ao seu perfil: ${minha}`;
+  }
 }
 
 async function auditV7(acao,detalhe){ try{ await addDoc(collection(db,'auditoria'),{acao,detalhe,usuario:v7User?.email||'',createdAt:serverTimestamp(),app:'SISRURAL V10.3 CAMPO FIX'}); }catch(e){} }

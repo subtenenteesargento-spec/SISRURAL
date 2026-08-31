@@ -1,0 +1,11 @@
+SISRURAL V15.1 EXP — CONTROLE TERRITORIAL POR PERFIL
+
+- Policial: inicia exclusivamente no município de referência cadastrado pelo Administrador Geral.
+- Policial: seletor de Área Operacional bloqueado; pode navegar livremente pelo mapa com arrastar/zoom.
+- Policial: município do cadastro de nova propriedade fica vinculado ao seu município de referência.
+- Supervisão/Gerência: Sargento, Subtenente, Tenente, Capitão e perfil Supervisor podem alternar entre os quatro municípios e Toda a 2ª Companhia.
+- Administradores Gerais: mantêm acesso integral e, por padrão, visão de Toda a 2ª Companhia.
+- Os três Administradores Gerais fixos existentes permanecem preservados pela configuração atual.
+- Firebase, visitas, fotos, Cloudinary, offline/sincronização, ocorrências e inteligência não foram removidos.
+
+OBS.: Esta versão implementa a camada de permissão territorial. A geometria definitiva dos quatro quadrantes próprios de Palmeiras, Tambaú e Itobi será tratada na etapa territorial, sem inventar limites municipais.
