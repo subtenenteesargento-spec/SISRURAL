@@ -1,0 +1,9 @@
+SISRURAL V15.4 EXP — RELATÓRIOS POR MUNICÍPIO / 2ª COMPANHIA
+
+- Novo filtro MUNICÍPIO / ÁREA nos relatórios: Toda a 2ª Companhia, Casa Branca, Santa Cruz das Palmeiras, Tambaú e Itobi.
+- Relatório operacional e estatístico podem ser gerados independentemente do município que está aberto no mapa.
+- Na visão de toda a 2ª Companhia, o resumo territorial é consolidado por município, evitando somar Q1/Q2/Q3/Q4 de cidades diferentes como se fossem um único quadrante.
+- Relatório operacional ganhou coluna Município.
+- Cabeçalho dos relatórios agora identifica a área selecionada e a versão V15.4 EXP.
+- Exportação CSV do relatório respeita o município/área selecionado e inclui a coluna Município.
+- Sem migração destrutiva de Firestore e sem alteração em fotos, Cloudinary ou histórico.

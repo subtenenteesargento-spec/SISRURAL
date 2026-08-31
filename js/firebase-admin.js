@@ -1264,11 +1264,24 @@ function v7QLabel(q){ return ({1:'Q1 - Alfa',2:'Q2 - Bravo',3:'Q3 - Charlie',4:'
 function v7GetReportFilters(){
   const ini=document.getElementById('relDataIni')?.value||'';
   const fim=document.getElementById('relDataFim')?.value||'';
+  const municipio=document.getElementById('relMunicipio')?.value||((window.V15_ACTIVE_AREA||'Casa Branca')==='2cia'?'2cia':v15Municipio(window.V15_ACTIVE_AREA||'Casa Branca'));
   const q=document.getElementById('relQuadrante')?.value||'';
   const busca=normTxt(document.getElementById('relBusca')?.value||'');
   const di=ini?new Date(ini+'T00:00:00'):null;
   const df=fim?new Date(fim+'T23:59:59'):null;
-  return {ini,fim,q,busca,di,df};
+  return {ini,fim,municipio,q,busca,di,df};
+}
+function v15ReportSelectedMunicipio(){
+  const v=v7GetReportFilters().municipio;
+  return v==='2cia'?'':v15Municipio(v);
+}
+function v15ReportAreaLabel(){
+  const v=v7GetReportFilters().municipio;
+  return v==='2cia'?'Toda a 2ª Companhia':v15Municipio(v);
+}
+function v15ReportHeaderLabel(){
+  const v=v7GetReportFilters().municipio;
+  return v==='2cia'?'Patrulha Rural · 2ª Companhia':`Patrulha Rural de ${v15Municipio(v)}`;
 }
 function v7UniqueVisits(list=v7Visits||[]){
   // V11.9: também neutraliza duplicidades históricas já existentes no Firestore.
@@ -1283,9 +1296,9 @@ function v7UniqueVisits(list=v7Visits||[]){
 function v7PrepareVisits(){
   return v7UniqueVisits(v7Visits||[]).map(v=>({...v,_dt:v7ToDate(v),_municipio:v7VisitMunicipio(v),_q:String(v7VisitQuadrante(v)||''),_prop:v7VisitPropName(v),_obs:v7VisitObs(v)}));
 }
-function v7FilteredVisits(){
+function v7FilteredVisits(scopeOverride){
   const f=v7GetReportFilters();
-  const scopeMun=v15ReportScopeMunicipio();
+  const scopeMun=(scopeOverride!==undefined)?scopeOverride:v15ReportScopeMunicipio();
   return v7PrepareVisits().filter(v=>{
     if(scopeMun && v._municipio!==scopeMun) return false;
     if(f.di && (!v._dt || v._dt<f.di)) return false;
@@ -1298,12 +1311,12 @@ function v7FilteredVisits(){
     return true;
   });
 }
-function v7ReportStats(){
+function v7ReportStats(scopeOverride){
   const now=new Date();
-  const scopeMun=v15ReportScopeMunicipio();
+  const scopeMun=(scopeOverride!==undefined)?scopeOverride:v15ReportScopeMunicipio();
   const props=v7AllPropsForReport().filter(p=>!scopeMun||(p.municipio||'Casa Branca')===scopeMun);
   const visits=v7PrepareVisits().filter(v=>!scopeMun||v._municipio===scopeMun);
-  const filtered=v7FilteredVisits();
+  const filtered=v7FilteredVisits(scopeMun);
   const today=visits.filter(v=>v7SameDay(v._dt,now));
   const month=visits.filter(v=>v7MonthKey(v._dt)===v7MonthKey(now));
   const byQ={1:0,2:0,3:0,4:0}; month.forEach(v=>{ if(byQ[v._q]!==undefined) byQ[v._q]++; });
@@ -1389,15 +1402,15 @@ function renderCommanderDashboard(){
     <div class="v7-card" style="margin-top:8px"><b>Primeiras propriedades nunca visitadas</b>${neverList}</div>
     <div class="v7-card" style="margin-top:8px"><b>📷 Propriedades com fotos de referência</b><div class="v7-small" style="margin:4px 0 8px">Clique para abrir as imagens de referência da propriedade.</div>${photoList}</div>`;
 }
-['relDataIni','relDataFim','relQuadrante','relBusca'].forEach(id=>setTimeout(()=>{ const e=document.getElementById(id); if(e) e.oninput=()=>{renderCommanderDashboard();renderCommanderStatisticalDashboard();}; },500));
+['relDataIni','relDataFim','relMunicipio','relQuadrante','relBusca'].forEach(id=>setTimeout(()=>{ const e=document.getElementById(id); if(e) e.oninput=()=>{renderCommanderDashboard();renderCommanderStatisticalDashboard();}; },500));
 window.showCommanderPanel=(mode='operacional')=>{
   const op=$v('capDashboard'), st=$v('capStatsDashboard'), bo=$v('capTabOperacional'), bs=$v('capTabEstatistico');
   const stats=mode==='estatistico'; if(op) op.style.display=stats?'none':'block'; if(st) st.style.display=stats?'block':'none';
   if(bo){bo.className=stats?'btn-secondary':'btn-primary';bo.style.margin='0';} if(bs){bs.className=stats?'btn-primary':'btn-secondary';bs.style.margin='0';}
   if(stats) renderCommanderStatisticalDashboard(); else renderCommanderDashboard();
 };
-function commanderStatisticalData(){
-  const st=v7ReportStats(), props=st.props, visits=st.filtered;
+function commanderStatisticalData(scopeOverride){
+  const st=v7ReportStats(scopeOverride), props=st.props, visits=st.filtered;
   const visitedNames=new Set(visits.map(v=>normTxt(v._prop)).filter(Boolean));
   const propsScope=(()=>{const q=v7GetReportFilters().q;return q?props.filter(p=>String(p.quadrante)===String(q)):props;})();
   const visitedProps=propsScope.filter(p=>visitedNames.has(normTxt(p.nome)));
@@ -1437,14 +1450,18 @@ function renderCommanderStatisticalDashboard(){
   <div class="v7-card"><b>Calendário sazonal das propriedades</b><div style="overflow:auto;margin-top:8px"><table style="width:100%;border-collapse:collapse"><tr><th style="text-align:left">Mês</th><th>Plantio</th><th>Colheita</th></tr>${d.seasonal.map(x=>`<tr><td>${x.label}</td><td style="text-align:center">${x.plantio}</td><td style="text-align:center">${x.colheita}</td></tr>`).join('')}</table></div></div>`;
 }
 window.openCommanderStatisticalReport=()=>{
-  const d=commanderStatisticalData(), f=v7GetReportFilters(), now=new Date(), esc=x=>String(x||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const reportMun=v15ReportSelectedMunicipio();
+  const d=commanderStatisticalData(reportMun), f=v7GetReportFilters(), now=new Date(), esc=x=>String(x||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const fmt=v=>{if(!v)return '';const [a,m,dd]=String(v).split('-');return a&&m&&dd?`${dd}/${m}/${a}`:v;};
   const periodo=(f.ini||f.fim)?`${f.ini?fmt(f.ini):'início'} até ${f.fim?fmt(f.fim):'hoje'}`:'Todos os registros';
   const reportBrasao=new URL('./icons/brasao-24bpmi.png',location.href).href;
-  const qRows=[1,2,3,4].map(q=>{const ps=d.propsScope.filter(p=>String(p.quadrante)===String(q)),vn=new Set(d.st.filtered.filter(v=>String(v._q)===String(q)).map(v=>normTxt(v._prop)));const vis=ps.filter(p=>vn.has(normTxt(p.nome))).length,pct=ps.length?Math.round(vis/ps.length*100):0;return `<tr><td>${v7QLabel(q)}</td><td>${ps.length}</td><td>${vis}</td><td>${pct}%</td><td>${d.st.filtQ[q]||0}</td></tr>`;}).join('');
+  const companyWide=f.municipio==='2cia';
+  const companyMunicipios=['Casa Branca','Santa Cruz das Palmeiras','Tambaú','Itobi'];
+  const qRows=companyWide?companyMunicipios.map(m=>{const ps=d.propsScope.filter(p=>(p.municipio||'Casa Branca')===m);const fv=d.st.filtered.filter(v=>(v._municipio||'Casa Branca')===m);const vn=new Set(fv.map(v=>normTxt(v._prop)));const vis=ps.filter(p=>vn.has(normTxt(p.nome))).length,pct=ps.length?Math.round(vis/ps.length*100):0;return `<tr><td>${esc(m)}</td><td>${ps.length}</td><td>${vis}</td><td>${pct}%</td><td>${fv.length}</td></tr>`;}).join(''):[1,2,3,4].map(q=>{const ps=d.propsScope.filter(p=>String(p.quadrante)===String(q)),vn=new Set(d.st.filtered.filter(v=>String(v._q)===String(q)).map(v=>normTxt(v._prop)));const vis=ps.filter(p=>vn.has(normTxt(p.nome))).length,pct=ps.length?Math.round(vis/ps.length*100):0;return `<tr><td>${v7QLabel(q)}</td><td>${ps.length}</td><td>${vis}</td><td>${pct}%</td><td>${d.st.filtQ[q]||0}</td></tr>`;}).join('');
+  const territorialHeader=companyWide?'Município':'Quadrante';
   const activityRows=d.topActivities.map(([a,n])=>`<tr><td>${esc(a)}</td><td>${n}</td></tr>`).join('')||'<tr><td colspan="2">Não informado</td></tr>';
   const seasonalRows=d.seasonal.map(x=>`<tr><td>${x.label}</td><td>${x.plantio}</td><td>${x.colheita}</td></tr>`).join('');
-  const html=`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Relatório Estatístico do Capitão - SISRURAL</title><style>*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#111;margin:0;font-size:12px}.printbar{padding:10px 24px;background:#f8fafc;border-bottom:1px solid #ccc}.btn{padding:8px 12px;margin-right:6px;background:#0f172a;color:#fff;border:0;border-radius:5px;font-weight:700}.page{max-width:1120px;margin:auto;padding:22px 28px}.header{border:2px solid #111;padding:12px;display:grid;grid-template-columns:80px 1fr 190px;align-items:center}.header img{max-width:64px;max-height:72px}.org{text-align:center;text-transform:uppercase}.org h1{font-size:18px;margin:0}.org h2{font-size:14px;margin:3px}.meta{border-left:1px solid #111;padding-left:12px;font-size:11px}.title{text-align:center;background:#e5e7eb;border:1px solid #111;padding:8px;margin:12px 0;font-size:16px;font-weight:800}.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}.card{border:1px solid #111;padding:8px}.card b{font-size:18px;display:block}table{width:100%;border-collapse:collapse;margin:10px 0 18px}th,td{border:1px solid #333;padding:6px}th{background:#e5e7eb}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.note{border:1px solid #777;padding:9px;background:#f8fafc}.rodape{margin-top:24px;border-top:1px solid #aaa;padding-top:8px;text-align:center;font-size:10px}@media print{.printbar{display:none}.page{padding:10mm}.header,.cards{break-inside:avoid}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body><div class="printbar"><button class="btn" onclick="window.print()">Imprimir / Salvar PDF</button><button class="btn" onclick="window.close()">Fechar</button></div><div class="page"><div class="header"><div><img src="${esc(reportBrasao)}"></div><div class="org"><h1>Polícia Militar do Estado de São Paulo</h1><h2>24º BPM/I</h2><h2>2ª Companhia PM</h2><h2>Patrulha Rural de Casa Branca</h2></div><div class="meta"><b>Emitido em:</b><br>${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}<br><br><b>Sistema:</b><br>SISRURAL V12.0</div></div><div class="title">Relatório Estatístico do Capitão</div><p><b>Período:</b> ${esc(periodo)} &nbsp; <b>Quadrante:</b> ${esc(f.q?v7QLabel(f.q):'Todos')}</p><div class="cards"><div class="card"><b>${d.propsScope.length}</b>Propriedades</div><div class="card"><b>${d.visitedProps.length}</b>Visitadas</div><div class="card"><b>${d.coverage}%</b>Cobertura</div><div class="card"><b>${d.st.filtered.length}</b>Visitas no período</div><div class="card"><b>${d.photos}</b>Com fotos</div></div><h3>1. Cobertura territorial e atividade operacional</h3><table><tr><th>Quadrante</th><th>Propriedades</th><th>Visitadas</th><th>Cobertura</th><th>Visitas no período</th></tr>${qRows}</table><div class="grid2"><div><h3>2. Atividades / culturas</h3><table><tr><th>Atividade</th><th>Cadastros</th></tr>${activityRows}</table></div><div><h3>3. Sazonalidade no mês atual</h3><table><tr><th>Indicador</th><th>Quantidade</th></tr><tr><td>Propriedades em época de plantio</td><td>${d.plantingNow.length}</td></tr><tr><td>Propriedades em época de colheita</td><td>${d.harvestNow.length}</td></tr><tr><td>Cadastros com dados sazonais</td><td>${d.withSeason.length}</td></tr></table></div></div><h3>4. Calendário anual de plantio e colheita</h3><table><tr><th>Mês</th><th>Em plantio</th><th>Em colheita</th></tr>${seasonalRows}</table><h3>5. Indicadores de acompanhamento</h3><table><tr><th>Nunca visitadas</th><th>+30 dias</th><th>+60 dias</th><th>+90 dias</th><th>Cadastros com fotos</th></tr><tr><td>${d.st.never.length}</td><td>${d.st.older30.length}</td><td>${d.st.older60.length}</td><td>${d.st.older90.length}</td><td>${d.photos}</td></tr></table><div class="note"><b>Leitura gerencial:</b> os indicadores permitem acompanhar cobertura territorial, regularidade das visitas, produtividade, perfil das atividades rurais e sazonalidade de plantio/colheita, apoiando o planejamento do policiamento e a avaliação de resultados.</div><div class="rodape">Relatório estatístico gerado automaticamente pelo SISRURAL para apoio ao comando e planejamento operacional.</div></div></body></html>`;
+  const html=`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Relatório Estatístico do Capitão - SISRURAL</title><style>*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#111;margin:0;font-size:12px}.printbar{padding:10px 24px;background:#f8fafc;border-bottom:1px solid #ccc}.btn{padding:8px 12px;margin-right:6px;background:#0f172a;color:#fff;border:0;border-radius:5px;font-weight:700}.page{max-width:1120px;margin:auto;padding:22px 28px}.header{border:2px solid #111;padding:12px;display:grid;grid-template-columns:80px 1fr 190px;align-items:center}.header img{max-width:64px;max-height:72px}.org{text-align:center;text-transform:uppercase}.org h1{font-size:18px;margin:0}.org h2{font-size:14px;margin:3px}.meta{border-left:1px solid #111;padding-left:12px;font-size:11px}.title{text-align:center;background:#e5e7eb;border:1px solid #111;padding:8px;margin:12px 0;font-size:16px;font-weight:800}.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}.card{border:1px solid #111;padding:8px}.card b{font-size:18px;display:block}table{width:100%;border-collapse:collapse;margin:10px 0 18px}th,td{border:1px solid #333;padding:6px}th{background:#e5e7eb}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.note{border:1px solid #777;padding:9px;background:#f8fafc}.rodape{margin-top:24px;border-top:1px solid #aaa;padding-top:8px;text-align:center;font-size:10px}@media print{.printbar{display:none}.page{padding:10mm}.header,.cards{break-inside:avoid}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body><div class="printbar"><button class="btn" onclick="window.print()">Imprimir / Salvar PDF</button><button class="btn" onclick="window.close()">Fechar</button></div><div class="page"><div class="header"><div><img src="${esc(reportBrasao)}"></div><div class="org"><h1>Polícia Militar do Estado de São Paulo</h1><h2>24º BPM/I</h2><h2>2ª Companhia PM</h2><h2>${esc(v15ReportHeaderLabel())}</h2></div><div class="meta"><b>Emitido em:</b><br>${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}<br><br><b>Sistema:</b><br>SISRURAL V15.4 EXP</div></div><div class="title">Relatório Estatístico do Capitão</div><p><b>Período:</b> ${esc(periodo)} &nbsp; <b>Município / Área:</b> ${esc(v15ReportAreaLabel())} &nbsp; <b>Quadrante:</b> ${esc(f.q?v7QLabel(f.q):'Todos')}</p><div class="cards"><div class="card"><b>${d.propsScope.length}</b>Propriedades</div><div class="card"><b>${d.visitedProps.length}</b>Visitadas</div><div class="card"><b>${d.coverage}%</b>Cobertura</div><div class="card"><b>${d.st.filtered.length}</b>Visitas no período</div><div class="card"><b>${d.photos}</b>Com fotos</div></div><h3>1. Cobertura territorial e atividade operacional</h3><table><tr><th>${territorialHeader}</th><th>Propriedades</th><th>Visitadas</th><th>Cobertura</th><th>Visitas no período</th></tr>${qRows}</table><div class="grid2"><div><h3>2. Atividades / culturas</h3><table><tr><th>Atividade</th><th>Cadastros</th></tr>${activityRows}</table></div><div><h3>3. Sazonalidade no mês atual</h3><table><tr><th>Indicador</th><th>Quantidade</th></tr><tr><td>Propriedades em época de plantio</td><td>${d.plantingNow.length}</td></tr><tr><td>Propriedades em época de colheita</td><td>${d.harvestNow.length}</td></tr><tr><td>Cadastros com dados sazonais</td><td>${d.withSeason.length}</td></tr></table></div></div><h3>4. Calendário anual de plantio e colheita</h3><table><tr><th>Mês</th><th>Em plantio</th><th>Em colheita</th></tr>${seasonalRows}</table><h3>5. Indicadores de acompanhamento</h3><table><tr><th>Nunca visitadas</th><th>+30 dias</th><th>+60 dias</th><th>+90 dias</th><th>Cadastros com fotos</th></tr><tr><td>${d.st.never.length}</td><td>${d.st.older30.length}</td><td>${d.st.older60.length}</td><td>${d.st.older90.length}</td><td>${d.photos}</td></tr></table><div class="note"><b>Leitura gerencial:</b> os indicadores permitem acompanhar cobertura territorial, regularidade das visitas, produtividade, perfil das atividades rurais e sazonalidade de plantio/colheita, apoiando o planejamento do policiamento e a avaliação de resultados.</div><div class="rodape">Relatório estatístico gerado automaticamente pelo SISRURAL para apoio ao comando e planejamento operacional.</div></div></body></html>`;
   const w=window.open('about:blank','_blank'); if(!w) return alert('Permita pop-ups para gerar o relatório.'); w.document.open(); w.document.write(html); w.document.close();
 };
 
@@ -1533,14 +1550,15 @@ window.openRuralIntelligence=()=>{
 };
 
 window.openCommanderReport=()=>{
-  const st=v7ReportStats();
+  const reportMun=v15ReportSelectedMunicipio();
+  const st=v7ReportStats(reportMun);
   const f=v7GetReportFilters();
   const hoje=new Date();
   const hojeBR=hoje.toLocaleDateString('pt-BR');
   const horaBR=hoje.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   const esc=(x)=>String(x||'').replace(/[&<>"']/g,(m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const visits=st.filtered.slice().sort((a,b)=>(a._dt||0)-(b._dt||0));
-  const linhas=visits.map((v,i)=>{const pp=v7PropertyForVisit(v);const fotoLink=(pp&&hasPropertyPhotos(pp))?propertyPhotoLink(pp.id):'';return `<tr><td>${i+1}</td><td>${esc(v.dataLocal||v7FmtDate(v._dt))}</td><td>${esc(v.horaLocal||v7FmtHour(v._dt))}</td><td>${esc(v._prop)}</td><td>${esc(v7QLabel(v._q))}</td><td>${esc(v.usuarioNome||v.usuario)}</td><td>${esc(v._obs)}</td><td>${v.maps?`<a target="_blank" href="${esc(v.maps)}">Abrir</a>`:''}</td><td>${fotoLink?`<a target="_blank" href="${esc(fotoLink)}">📷 Ver fotos</a>`:'-'}</td></tr>`;}).join('');
+  const linhas=visits.map((v,i)=>{const pp=v7PropertyForVisit(v);const fotoLink=(pp&&hasPropertyPhotos(pp))?propertyPhotoLink(pp.id):'';return `<tr><td>${i+1}</td><td>${esc(v.dataLocal||v7FmtDate(v._dt))}</td><td>${esc(v.horaLocal||v7FmtHour(v._dt))}</td><td>${esc(v._prop)}</td><td>${esc(v._municipio||'Casa Branca')}</td><td>${esc(v7QLabel(v._q))}</td><td>${esc(v.usuarioNome||v.usuario)}</td><td>${esc(v._obs)}</td><td>${v.maps?`<a target="_blank" href="${esc(v.maps)}">Abrir</a>`:''}</td><td>${fotoLink?`<a target="_blank" href="${esc(fotoLink)}">📷 Ver fotos</a>`:'-'}</td></tr>`;}).join('');
   const fmtFiltroData=(v)=>{ if(!v) return ''; const [a,m,d]=String(v).split('-'); return (a&&m&&d)?`${d}/${m}/${a}`:String(v); };
   const periodo=(f.ini||f.fim)?`${f.ini?fmtFiltroData(f.ini):'início'} até ${f.fim?fmtFiltroData(f.fim):'hoje'}`:'Todos os registros';
   const quadrante=f.q?v7QLabel(f.q):'Todos';
@@ -1550,35 +1568,41 @@ window.openCommanderReport=()=>{
   const qAlert=commanderLast30Quadrants(st);
   const qAlertNames=qAlert.least.map(x=>v7QLabel(x.q)).join(' e ');
   const qAlertDetails=qAlert.rows.map(x=>`${v7QLabel(x.q)}: ${x.count} visita(s)`).join(' · ');
+  const coverageAlertHtml=companyWide?`<b>Visão Companhia:</b> relatório consolidado dos quatro municípios. Para análise de cobertura por Alfa/Bravo/Charlie/Delta, gere o relatório do município desejado.`:`<b>Quadrante(s) menos visitado(s) nos últimos 30 dias:</b> ${esc(qAlertNames)}.<br>${esc(qAlertDetails)}.<br><b>Orientação:</b> avaliar reforço de visitas nos quadrantes com menor cobertura, conciliando a demanda operacional, número de propriedades cadastradas e a sazonalidade agrícola.`;
   const topSeasonRows=seasonRec.top.length?seasonRec.top.map((x,i)=>`<tr><td>${i+1}ª</td><td>${x.label}</td><td>${x.plantio}</td><td>${x.colheita}</td><td>${x.score.toFixed(1)}</td></tr>`).join(''):`<tr><td colspan="5">Aguardando preenchimento dos dados de plantio e colheita das propriedades.</td></tr>`;
+  const companyWide=f.municipio==='2cia';
+  const companyMunicipios=['Casa Branca','Santa Cruz das Palmeiras','Tambaú','Itobi'];
+  const municipalSummaryRows=companyMunicipios.map(m=>{const vv=st.filtered.filter(v=>(v._municipio||'Casa Branca')===m).length;const pp=st.props.filter(p=>(p.municipio||'Casa Branca')===m).length;return `<tr><th>${esc(m)}</th><td>${pp}</td><td>${vv}</td></tr>`;}).join('');
+  const resumoTerritorialHtml=companyWide?`<table><thead><tr><th>Município</th><th>Propriedades</th><th>Visitas no filtro</th></tr></thead><tbody>${municipalSummaryRows}</tbody></table>`:`<table><tbody><tr><th>Q1 - Alfa</th><td>${st.filtQ[1]||0}</td><th>Q2 - Bravo</th><td>${st.filtQ[2]||0}</td><th>Q3 - Charlie</th><td>${st.filtQ[3]||0}</td><th>Q4 - Delta</th><td>${st.filtQ[4]||0}</td></tr><tr><th>Nunca visitadas</th><td>${st.never.length}</td><th>+30 dias</th><td>${st.older30.length}</td><th>+60 dias</th><td>${st.older60.length}</td><th>+90 dias</th><td>${st.older90.length}</td></tr></tbody></table>`;
   const html=`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Relatório Operacional de Visitas - SISRURAL</title>
   <style>
     *{box-sizing:border-box} body{margin:0;background:#fff;color:#111;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.35} .page{max-width:1120px;margin:0 auto;padding:22px 28px 36px}.printbar{position:sticky;top:0;background:#f8fafc;border-bottom:1px solid #cbd5e1;padding:10px 28px;display:flex;gap:8px;z-index:5}.btn{border:1px solid #0f172a;background:#0f172a;color:#fff;border-radius:6px;padding:9px 14px;font-weight:700;cursor:pointer}.btn2{background:#fff;color:#0f172a}.header{border:2px solid #111;padding:12px 14px;margin-bottom:12px;display:grid;grid-template-columns:80px 1fr 190px;gap:12px;align-items:center}.brasao{width:64px;height:72px;display:flex;align-items:center;justify-content:center;background:transparent}.brasao img{max-width:100%;max-height:100%;object-fit:contain;background:transparent}.org{text-align:center;text-transform:uppercase}.org h1{font-size:18px;margin:0 0 4px;font-weight:800}.org h2{font-size:15px;margin:2px 0}.meta{font-size:11px;border-left:1px solid #111;padding-left:12px}.title{text-align:center;border:1px solid #111;background:#e5e7eb;padding:8px;margin:12px 0;font-size:16px;font-weight:800;text-transform:uppercase}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.card{border:1px solid #111;padding:9px;background:#fff}.card b{font-size:18px;display:block}.info{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}.info div{border:1px solid #111;padding:8px}table{border-collapse:collapse;width:100%;margin-top:10px;font-size:11px}th,td{border:1px solid #333;padding:5px 6px;vertical-align:top}th{background:#e5e7eb;text-align:left;text-transform:uppercase;font-size:10px}.obs{max-width:260px}.assinaturas{display:grid;grid-template-columns:1fr 1fr;gap:70px;margin-top:44px;text-align:center}.linha{border-top:1px solid #111;padding-top:6px}.planejamento{border:1px solid #b45309;background:#fffbeb;padding:10px;margin:10px 0}.alerta{border:1px solid #dc2626;background:#fef2f2;padding:10px;margin:10px 0}.rodape{margin-top:26px;border-top:1px solid #999;padding-top:8px;font-size:10px;color:#333;text-align:center}@media print{.printbar{display:none}.page{padding:12mm;max-width:none}.header{break-inside:avoid}.grid,.info{break-inside:avoid} a{color:#111;text-decoration:none} body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
   </style></head><body>
   <div class="printbar"><button class="btn" onclick="window.print()">Imprimir / Salvar PDF</button><button class="btn btn2" onclick="window.close()">Fechar</button></div>
   <div class="page">
-    <div class="header"><div class="brasao"><img src="${esc(reportBrasao)}" alt="Brasão do 24º BPM/I"></div><div class="org"><h1>Polícia Militar do Estado de São Paulo</h1><h2>24º BPM/I</h2><h2>2ª Companhia PM</h2><h2>Patrulha Rural de Casa Branca</h2></div><div class="meta"><b>Emitido em:</b><br>${hojeBR} às ${horaBR}<br><br><b>Sistema:</b><br>SISRURAL V12.0</div></div>
+    <div class="header"><div class="brasao"><img src="${esc(reportBrasao)}" alt="Brasão do 24º BPM/I"></div><div class="org"><h1>Polícia Militar do Estado de São Paulo</h1><h2>24º BPM/I</h2><h2>2ª Companhia PM</h2><h2>${esc(v15ReportHeaderLabel())}</h2></div><div class="meta"><b>Emitido em:</b><br>${hojeBR} às ${horaBR}<br><br><b>Sistema:</b><br>SISRURAL V15.4 EXP</div></div>
     <div class="title">Relatório Operacional de Visitas</div>
-    <div class="info"><div><b>Período:</b> ${esc(periodo)}<br><b>Quadrante:</b> ${esc(quadrante)}<br><b>Filtro:</b> ${esc(busca)}</div><div><b>Finalidade:</b> acompanhamento da Patrulha Rural, produtividade operacional e controle de visitas às propriedades cadastradas.</div></div>
+    <div class="info"><div><b>Período:</b> ${esc(periodo)}<br><b>Município / Área:</b> ${esc(v15ReportAreaLabel())}<br><b>Quadrante:</b> ${esc(quadrante)}<br><b>Filtro:</b> ${esc(busca)}</div><div><b>Finalidade:</b> acompanhamento da Patrulha Rural, produtividade operacional e controle de visitas às propriedades cadastradas.</div></div>
     <div class="grid" style="grid-template-columns:repeat(5,1fr)"><div class="card"><b>${st.props.length}</b>Propriedades cadastradas</div><div class="card"><b>${st.props.filter(hasPropertyPhotos).length}</b>Com fotos</div><div class="card"><b>${st.filtered.length}</b>Visitas no filtro</div><div class="card"><b>${st.today.length}</b>Visitas hoje</div><div class="card"><b>${st.month.length}</b>Visitas no mês</div></div>
     <h3>1. Visitas realizadas</h3>
-    <table><thead><tr><th>Nº</th><th>Data</th><th>Hora</th><th>Propriedade</th><th>Quadrante</th><th>Policial</th><th>Observação</th><th>Mapa</th><th>Fotos</th></tr></thead><tbody>${linhas||'<tr><td colspan="9">Nenhuma visita localizada para os filtros selecionados.</td></tr>'}</tbody></table>
+    <table><thead><tr><th>Nº</th><th>Data</th><th>Hora</th><th>Propriedade</th><th>Município</th><th>Quadrante</th><th>Policial</th><th>Observação</th><th>Mapa</th><th>Fotos</th></tr></thead><tbody>${linhas||'<tr><td colspan="10">Nenhuma visita localizada para os filtros selecionados.</td></tr>'}</tbody></table>
     <h3>2. Resumo estatístico</h3>
-    <table><tbody><tr><th>Q1 - Alfa</th><td>${st.filtQ[1]||0}</td><th>Q2 - Bravo</th><td>${st.filtQ[2]||0}</td><th>Q3 - Charlie</th><td>${st.filtQ[3]||0}</td><th>Q4 - Delta</th><td>${st.filtQ[4]||0}</td></tr><tr><th>Nunca visitadas</th><td>${st.never.length}</td><th>+30 dias</th><td>${st.older30.length}</td><th>+60 dias</th><td>${st.older60.length}</td><th>+90 dias</th><td>${st.older90.length}</td></tr></tbody></table>
+    ${resumoTerritorialHtml}
     <h3>3. Planejamento sazonal recomendado</h3>
     <div class="planejamento"><b>Leitura automática do SISRURAL:</b> ${esc(seasonRec.text)}<br><br><b>Mês atual:</b> ${esc(seasonRec.current.label)} — ${seasonRec.current.plantio} propriedade(s) em plantio e ${seasonRec.current.colheita} em colheita. <b>Cadastros sazonais completos:</b> ${seasonRec.configured}/${st.props.length}.</div>
     <table><thead><tr><th>Prioridade</th><th>Mês</th><th>Plantio</th><th>Colheita</th><th>Índice sazonal</th></tr></thead><tbody>${topSeasonRows}</tbody></table>
     <h3>4. Alerta de cobertura territorial</h3>
-    <div class="alerta"><b>Quadrante(s) menos visitado(s) nos últimos 30 dias:</b> ${esc(qAlertNames)}.<br>${esc(qAlertDetails)}.<br><b>Orientação:</b> avaliar reforço de visitas nos quadrantes com menor cobertura, conciliando a demanda operacional, número de propriedades cadastradas e a sazonalidade agrícola.</div>
+    <div class="alerta">${coverageAlertHtml}</div>
     <div class="assinaturas"><div class="linha">Comandante da Companhia</div><div class="linha">Responsável pela Patrulha Rural</div></div>
     <div class="rodape">Relatório gerado automaticamente pelo SISRURAL. Dados dependem da sincronização dos dispositivos em campo.</div>
   </div></body></html>`;
   const w=window.open('','_blank'); w.document.open(); w.document.write(html); w.document.close();
 };
 window.exportCommanderReportCSV=()=>{
-  const st=v7ReportStats();
-  const rows=[['data','hora','propriedade','quadrante','policial','observacao','maps']].concat(st.filtered.map(v=>[v.dataLocal||v7FmtDate(v._dt),v.horaLocal||v7FmtHour(v._dt),v._prop||'',v7QLabel(v._q),v.usuarioNome||v.usuario||'',v._obs||'',v.maps||'']));
-  downloadCSV('sisrural-relatorio-visitas-capitao.csv',rows);
+  const reportMun=v15ReportSelectedMunicipio();
+  const st=v7ReportStats(reportMun);
+  const rows=[['data','hora','propriedade','municipio','quadrante','policial','observacao','maps']].concat(st.filtered.map(v=>[v.dataLocal||v7FmtDate(v._dt),v.horaLocal||v7FmtHour(v._dt),v._prop||'',v._municipio||'Casa Branca',v7QLabel(v._q),v.usuarioNome||v.usuario||'',v._obs||'',v.maps||'']));
+  downloadCSV(`sisrural-relatorio-${normTxt(v15ReportAreaLabel()).replace(/\s+/g,'-')||'2cia'}.csv`,rows);
 };
 
 window.exportV7FarmsCSV=()=>{ const arr=[...(window.PROPS||[]),...(v7CloudProps.map(p=>({nm:p.nome,tp:p.tipo,lat:p.lat,lng:p.lng,end:p.endereco,ph:p.telefone,q:''}))),...((window.userPts||[]).map(p=>({nm:p.nm,tp:p.tp,lat:p.lat,lng:p.lng,end:p.end,ph:p.ph,q:''})))]; const rows=[['nome','tipo','telefone','endereco','lat','lng','quadrante','maps']].concat(arr.map(p=>[p.nm,p.tp,p.ph,p.end,p.lat,p.lng,p.q,`https://www.google.com/maps?q=${p.lat},${p.lng}`])); downloadCSV('sisrural-fazendas.csv',rows); };
