@@ -68,6 +68,22 @@ function isAdminGeral(){ const email=String(v7User?.email||'').toLowerCase(); co
 function isSupervisor(){ const p=perfilNorm(v7Profile?.perfil); return ['supervisor','capitao','capitao pm','tenente'].includes(p); }
 function canOpenAdminPanel(){ return isAdminGeral() || isSupervisor(); }
 function isAdmin(){ return isAdminGeral(); }
+const V15_MUNICIPIOS=['Casa Branca','Santa Cruz das Palmeiras','Tambaú','Itobi'];
+function v15Municipio(v){ return V15_MUNICIPIOS.includes(String(v||''))?String(v):'Casa Branca'; }
+function v15AreaOptions(sel){ return V15_MUNICIPIOS.map(m=>`<option value="${m}" ${v15Municipio(sel)===m?'selected':''}>${m}</option>`).join(''); }
+window.changeOperationalArea=function(value){
+  const area=value==='minha'?v15Municipio(v7Profile?.municipioReferencia):value;
+  const st=$v('v15AreaStatus'); if(st) st.textContent=area==='2cia'?'Toda a 2ª Companhia':area;
+  try{window.setSisruralOperationalArea?.(area);}catch(e){console.warn(e);}
+  localStorage.setItem('sisrural_v15_area',value);
+};
+function v15ApplyInitialArea(){
+  const sel=$v('v15AreaSelect'); if(!sel)return;
+  const pref=isAdminGeral()?(localStorage.getItem('sisrural_v15_area')||'2cia'):'minha';
+  sel.value=pref; window.changeOperationalArea(pref);
+  const am=$v('aMunicipio'); if(am) am.value=v15Municipio(v7Profile?.municipioReferencia);
+}
+
 async function auditV7(acao,detalhe){ try{ await addDoc(collection(db,'auditoria'),{acao,detalhe,usuario:v7User?.email||'',createdAt:serverTimestamp(),app:'SISRURAL V10.3 CAMPO FIX'}); }catch(e){} }
 function generateTemporarySecret(){
   try{
@@ -479,7 +495,7 @@ async function loadProfile(u){
   let data=snap.exists()?snap.data():null;
   if(!data){ const s2=await getDoc(refEmail); if(s2.exists()) data=s2.data(); }
   if(!data){
-    data={nome:u.email,email:u.email,re:'',graduacao:'',companhia:APP_INFO.companhia,perfil:String(u.email).toLowerCase()===String(ADMIN).toLowerCase()?'Administrador':'Policial',status:'Ativo',createdAt:serverTimestamp()};
+    data={nome:u.email,email:u.email,re:'',graduacao:'',companhia:APP_INFO.companhia,perfil:String(u.email).toLowerCase()===String(ADMIN).toLowerCase()?'Administrador':'Policial',municipioReferencia:'Casa Branca',status:'Ativo',createdAt:serverTimestamp()};
   }
   if(String(u.email).toLowerCase()===String(ADMIN).toLowerCase()) data.perfil='Administrador';
   data.email=u.email;
@@ -491,8 +507,8 @@ function showLogged(){
   $v('authGate').classList.add('hidden');
   $v('userPill').style.display='block';
   $v('v7UserEmail').textContent=v7User.email;
-  $v('v7UserPerfil').textContent=v7Profile?.perfil||'Policial';
-  const b=$v('bAdmin'); if(b) b.style.display=canOpenAdminPanel()?'flex':'none';
+  $v('v7UserPerfil').textContent=(v7Profile?.perfil||'Policial')+' · '+v15Municipio(v7Profile?.municipioReferencia);
+  const b=$v('bAdmin'); if(b) b.style.display=canOpenAdminPanel()?'flex':'none'; setTimeout(v15ApplyInitialArea,250);
 }
 function showLogin(){ $v('authGate').classList.remove('hidden'); $v('userPill').style.display='none'; const b=$v('bAdmin'); if(b) b.style.display='none'; }
 window.v7Login=async()=>{
@@ -611,9 +627,10 @@ window.adminCreatePoliceProfile=async()=>{
     const email=($v('polEmail')?.value||'').trim().toLowerCase();
     const telefone=($v('polTel')?.value||'').trim();
     const perfil=$v('polPerfil')?.value||'Policial';
+    const municipioReferencia=v15Municipio($v('polMunicipio')?.value);
     const msg=$v('polMsg');
     if(!nome||!email){ if(msg) msg.innerHTML='<span style="color:#f87171">Preencha nome e e-mail.</span>'; return; }
-    const data={nome,re,graduacao,email,telefone,perfil,status:'Ativo',updatedBy:v7User.email,updatedAt:serverTimestamp(),origem:'admin_sisrural'};
+    const data={nome,re,graduacao,email,telefone,perfil,municipioReferencia,status:'Ativo',updatedBy:v7User.email,updatedAt:serverTimestamp(),origem:'admin_sisrural'};
     await setDoc(doc(db,'usuarios',emailKey(email)),data,{merge:true});
     let authText='';
     try{
@@ -684,16 +701,18 @@ function renderUsersList(){
   el.innerHTML=arr.map((u,i)=>{
     const selId='userPerfil_'+i;
     const stId='userStatus_'+i;
+    const munId='userMunicipio_'+i;
     const locked=!canEdit?'disabled':'';
-    return `<div class="v7-card" style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap"><div><b>${u.nome||u.email}</b><div class="v7-small">${u.graduacao||''} · RE ${u.re||''}<br>${u.email||''}<br>Status: <b>${u.status||'Ativo'}</b></div></div><div style="min-width:210px"><label class="field-lbl">PERFIL</label><select class="field-inp" id="${selId}" ${locked}>${roleOptions(u.perfil||'Policial')}</select><label class="field-lbl">SITUAÇÃO</label><select class="field-inp" id="${stId}" ${locked}><option ${String(u.status||'Ativo')==='Ativo'?'selected':''}>Ativo</option><option ${String(u.status||'Ativo')==='Bloqueado'?'selected':''}>Bloqueado</option></select>${canEdit?`<button class="btn-primary" onclick="saveUserProfile('${u.email}','${selId}','${stId}')">Salvar perfil</button>`:`<div class="v7-small" style="color:#facc15;margin-top:6px">Somente Administrador Geral altera perfil.</div>`}</div></div></div>`;
+    return `<div class="v7-card" style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap"><div><b>${u.nome||u.email}</b><div class="v7-small">${u.graduacao||''} · RE ${u.re||''}<br>${u.email||''}<br>Status: <b>${u.status||'Ativo'}</b></div></div><div style="min-width:210px"><label class="field-lbl">PERFIL</label><select class="field-inp" id="${selId}" ${locked}>${roleOptions(u.perfil||'Policial')}</select><label class="field-lbl">MUNICÍPIO DE REFERÊNCIA</label><select class="field-inp" id="${munId}" ${locked}>${v15AreaOptions(u.municipioReferencia)}</select><label class="field-lbl">SITUAÇÃO</label><select class="field-inp" id="${stId}" ${locked}><option ${String(u.status||'Ativo')==='Ativo'?'selected':''}>Ativo</option><option ${String(u.status||'Ativo')==='Bloqueado'?'selected':''}>Bloqueado</option></select>${canEdit?`<button class="btn-primary" onclick="saveUserProfile('${u.email}','${selId}','${stId}','${munId}')">Salvar perfil</button>`:`<div class="v7-small" style="color:#facc15;margin-top:6px">Somente Administrador Geral altera perfil.</div>`}</div></div></div>`;
   }).join('');
 }
-window.saveUserProfile=async(email,selId,stId)=>{
+window.saveUserProfile=async(email,selId,stId,munId)=>{
   if(!isAdminGeral()) return alert('Somente Administrador Geral pode alterar usuários.');
   const perfil=$v(selId).value;
   const status=$v(stId).value;
+  const municipioReferencia=v15Municipio($v(munId)?.value);
   const user=uniqueUsers().find(u=>String(u.email).toLowerCase()===String(email).toLowerCase())||{};
-  const data={...user,email,perfil,status,updatedBy:v7User.email,updatedAt:serverTimestamp()};
+  const data={...user,email,perfil,status,municipioReferencia,updatedBy:v7User.email,updatedAt:serverTimestamp()};
   await setDoc(doc(db,'usuarios',emailKey(email)),data,{merge:true});
   if(user.uid) await setDoc(doc(db,'usuarios',user.uid),data,{merge:true});
   auditV7('perfil_usuario_alterado',`${email}: ${perfil} / ${status}`);
@@ -983,14 +1002,15 @@ function formProp(){
   if((isNaN(lat)||isNaN(lng)) && window.map){ const c=map.getCenter(); lat=c.lat; lng=c.lng; }
   const plantioInicio=Number(document.getElementById('aPlantioIni')?.value)||0, plantioFim=Number(document.getElementById('aPlantioFim')?.value)||0;
   const colheitaInicio=Number(document.getElementById('aColheitaIni')?.value)||0, colheitaFim=Number(document.getElementById('aColheitaFim')?.value)||0;
-  return {nm, nome:nm, tp:document.getElementById('aTipo').value.trim(), tipo:document.getElementById('aTipo').value.trim(), lat, lng,
+  const municipio=v15Municipio(document.getElementById('aMunicipio')?.value||v7Profile?.municipioReferencia);
+  return {nm, nome:nm, municipio, tp:document.getElementById('aTipo').value.trim(), tipo:document.getElementById('aTipo').value.trim(), lat, lng,
     plantioInicio,plantioFim,colheitaInicio,colheitaFim,epocaPlantio:monthRangeLabel(plantioInicio,plantioFim),epocaColheita:monthRangeLabel(colheitaInicio,colheitaFim),
     end:document.getElementById('aEnd').value.trim(), endereco:document.getElementById('aEnd').value.trim(), ph:document.getElementById('aTel').value.trim(), telefone:document.getElementById('aTel').value.trim(),
     dirt:document.getElementById('aDirt').checked, dt:new Date().toLocaleString('pt-BR'), maps:`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`};
 }
 async function savePropCloud(pt){
   if(isDuplicateProp(pt)) return {duplicado:true};
-  const data={nome:pt.nm,tipo:pt.tp||'',atividade:pt.tp||'',plantioInicio:Number(pt.plantioInicio)||0,plantioFim:Number(pt.plantioFim)||0,colheitaInicio:Number(pt.colheitaInicio)||0,colheitaFim:Number(pt.colheitaFim)||0,epocaPlantio:pt.epocaPlantio||'',epocaColheita:pt.epocaColheita||'',endereco:pt.end||'',telefone:pt.ph||'',lat:pt.lat,lng:pt.lng,dirt:!!pt.dirt,maps:pt.maps,municipio:'Casa Branca',quadrante:(typeof classQ==='function'?classQ(pt.lat,pt.lng):''),origem:pt._offline?'offline_app':'app',usuario:v7User?.email||'',createdAt:serverTimestamp(),updatedAt:serverTimestamp()};
+  const data={nome:pt.nm,tipo:pt.tp||'',atividade:pt.tp||'',plantioInicio:Number(pt.plantioInicio)||0,plantioFim:Number(pt.plantioFim)||0,colheitaInicio:Number(pt.colheitaInicio)||0,colheitaFim:Number(pt.colheitaFim)||0,epocaPlantio:pt.epocaPlantio||'',epocaColheita:pt.epocaColheita||'',endereco:pt.end||'',telefone:pt.ph||'',lat:pt.lat,lng:pt.lng,dirt:!!pt.dirt,maps:pt.maps,municipio:v15Municipio(pt.municipio),quadrante:v15Municipio(pt.municipio)==='Casa Branca'?(typeof classQ==='function'?classQ(pt.lat,pt.lng):''):'',origem:pt._offline?'offline_app':'app',usuario:v7User?.email||'',createdAt:serverTimestamp(),updatedAt:serverTimestamp()};
   return await addDoc(collection(db,'propriedades_cadastradas'),data);
 }
 function renderCloudProperties(){

@@ -257,6 +257,15 @@ function togLayer(k){
   document.getElementById(btn).classList.toggle('on',lsh[k]);
 }
 function rv(){map.setView([CX,CY],10);}
+// V15 EXP: navegação territorial da 2ª Companhia. Não restringe atuação do policial.
+const V15_AREAS={
+  'Casa Branca':{center:[-21.773,-47.086],zoom:11},
+  'Santa Cruz das Palmeiras':{center:[-21.827,-47.249],zoom:11},
+  'Tambaú':{center:[-21.705,-47.274],zoom:11},
+  'Itobi':{center:[-21.737,-46.975],zoom:11},
+  '2cia':{center:[-21.765,-47.125],zoom:10}
+};
+window.setSisruralOperationalArea=function(area){ const a=V15_AREAS[area]||V15_AREAS['2cia']; map.setView(a.center,a.zoom,{animate:true}); closeSheet(); };
 
 // ── SHEET
 let shOpen=false,activeQ=1;

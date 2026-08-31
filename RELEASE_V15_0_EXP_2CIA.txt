@@ -1,0 +1,12 @@
+SISRURAL V15.0 EXPERIMENTAL — FUNDAÇÃO 2ª COMPANHIA
+
+- Expansão territorial para Casa Branca, Santa Cruz das Palmeiras, Tambaú e Itobi.
+- Município de referência por policial.
+- Login abre em Minha Área para policiais; Administrador Geral pode iniciar em Toda a 2ª Companhia.
+- Seletor Área Operacional permite navegar livremente por toda a Companhia.
+- Nova propriedade exige município e pode ser cadastrada em qualquer cidade.
+- Casa Branca permanece compatível com os quatro quadrantes atuais.
+- Novas cidades ainda NÃO receberam setores/quadrantes automáticos: isso será definido em fase posterior.
+- Nenhuma migração destrutiva do Firestore foi executada. Cadastros antigos continuam tratados como Casa Branca por compatibilidade.
+
+FASE EXPERIMENTAL: manter o backup V14.1 preservado.

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>SISRURAL V12.2 – Patrulha Rural de Casa Branca</title>
+<title>SISRURAL V15.0 EXP – Patrulha Rural da 2ª Companhia</title>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -23,7 +23,7 @@
 <div id="authGate">
   <div class="authBox">
     <div class="auth-brand"><img src="./icons/brasao-24bpmi.png" alt="Brasão do 24º BPM/I"><div><h2>PATRULHA RURAL</h2><span>24º BPM/I</span></div></div>
-    <p>Casa Branca/SP · acesso restrito</p>
+    <p>2ª Companhia do 24º BPM/I · acesso restrito</p>
     <label class="field-lbl">E-MAIL</label><input class="field-inp" id="v7Email" type="email" placeholder="seuemail@..." autocomplete="username">
     <label class="field-lbl">SENHA</label><input class="field-inp" id="v7Senha" type="password" placeholder="Senha" autocomplete="current-password">
     <div class="btn-primary" onclick="v7Login()">Entrar</div>
@@ -41,8 +41,8 @@
 <div class="topbar">
   <div class="tb-shield"><img src="./icons/brasao-24bpmi.png" alt="Brasão do 24º BPM/I"></div>
   <div class="tb-text">
-    <h1>PATRULHA RURAL DE CASA BRANCA</h1>
-    <p>2ª Companhia PM · 4 Quadrantes · 24º BPM/I · V10.2 Operacional</p>
+    <h1>PATRULHA RURAL · 2ª COMPANHIA</h1>
+    <p>Casa Branca · Santa Cruz das Palmeiras · Tambaú · Itobi · 24º BPM/I · V15.0 EXP</p>
   </div>
   <div class="tb-clock" id="clk">--:--</div>
 </div>
@@ -52,6 +52,15 @@
   <span style="font-size:10px">🏅</span>
   <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#ffd700;font-weight:700;letter-spacing:1.5px;text-shadow:0 0 12px rgba(255,215,0,.5)">Criado pelo SUBTEN PM 109139-5 POZZER</span>
   <span style="font-size:10px">🏅</span>
+</div>
+
+<!-- V15 EXP · ÁREA OPERACIONAL -->
+<div id="v15AreaBar" style="flex-shrink:0;background:#0b1220;border-bottom:1px solid rgba(34,211,238,.25);padding:6px 14px;display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap">
+  <span style="font:700 11px 'JetBrains Mono',monospace;color:#93c5fd">📍 ÁREA OPERACIONAL</span>
+  <select id="v15AreaSelect" onchange="changeOperationalArea(this.value)" style="background:#fff;color:#111827;border:1px solid #38bdf8;border-radius:8px;padding:6px 10px;font-weight:800;min-width:235px">
+    <option value="minha">Minha área</option><option value="Casa Branca">Casa Branca</option><option value="Santa Cruz das Palmeiras">Santa Cruz das Palmeiras</option><option value="Tambaú">Tambaú</option><option value="Itobi">Itobi</option><option value="2cia">Toda a 2ª Companhia</option>
+  </select>
+  <span id="v15AreaStatus" style="font:700 10px 'JetBrains Mono',monospace;color:#22d3ee">Casa Branca</span>
 </div>
 
 <!-- TABS -->
@@ -152,6 +161,9 @@
       <div id="miniMap" style="height:140px;width:100%"></div>
       <div style="background:rgba(34,197,94,.08);padding:5px 10px;font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--gr)">📍 Confirme sua posição no mapa acima</div>
     </div>
+
+    <label class="field-lbl">MUNICÍPIO *</label>
+    <select class="field-inp" id="aMunicipio"><option>Casa Branca</option><option>Santa Cruz das Palmeiras</option><option>Tambaú</option><option>Itobi</option></select>
 
     <label class="field-lbl">NOME DA FAZENDA / SÍTIO *</label>
     <input class="field-inp" id="aNome" placeholder="Ex: Faz. Santa Luzia">
@@ -262,6 +274,7 @@
     <div><label class="field-lbl">E-MAIL</label><input class="field-inp" id="polEmail" type="email"></div>
     <div><label class="field-lbl">TELEFONE</label><input class="field-inp" id="polTel"></div>
     <div><label class="field-lbl">PERFIL</label><select class="field-inp" id="polPerfil"><option>Policial</option><option>Supervisor</option><option>Administrador Geral</option></select></div>
+    <div><label class="field-lbl">MUNICÍPIO DE REFERÊNCIA</label><select class="field-inp" id="polMunicipio"><option>Casa Branca</option><option>Santa Cruz das Palmeiras</option><option>Tambaú</option><option>Itobi</option></select></div>
   </div>
   <button class="btn-primary" onclick="adminCreatePoliceProfile()">Salvar policial</button>
   <div id="polMsg" class="v7-small"></div>
