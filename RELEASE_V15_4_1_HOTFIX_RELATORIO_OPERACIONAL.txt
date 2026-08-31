@@ -1,0 +1,7 @@
+SISRURAL V15.4.1 EXP — HOTFIX RELATÓRIO OPERACIONAL
+
+Correção:
+- Corrigido erro JavaScript no botão verde “Relatório operacional”.
+- A variável de escopo “Toda a 2ª Companhia” agora é definida antes de montar o alerta de cobertura territorial.
+- Preservados os filtros por Município/Área, Quadrante, período e Policial/Propriedade.
+- Nenhuma alteração destrutiva em Firebase, visitas, propriedades, fotos, ocorrências ou histórico.
