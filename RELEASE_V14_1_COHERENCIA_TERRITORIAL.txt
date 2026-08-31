@@ -1,0 +1,6 @@
+SISRURAL V14.1 — Coerência territorial da Inteligência
+
+- O ranking principal agora mostra primeiro somente propriedades do quadrante prioritário apontado pelo IPPR.
+- Criada seção separada “Outras propriedades que exigem atenção” para os demais quadrantes.
+- Campo “Observação do comando” alterado para fundo branco e texto escuro.
+- Nenhuma alteração nas regras de Firebase, Cloudinary, visitas, ocorrências, sincronização ou autenticação.
