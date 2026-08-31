@@ -1204,11 +1204,13 @@ function v7AllPropsForReport(){
   // priorizava a base estática, fazendo o painel mostrar "0 com fotos" mesmo após upload.
   const base=(window.PROPS||[]).map(p=>({
     nome:p.nm||p.nome,tipo:p.tp||p.tipo,lat:p.lat,lng:p.lng,
-    quadrante:p.q||classQ(p.lat,p.lng),origem:'base'
+    municipio:p.municipio||'Casa Branca',
+    quadrante:p.quadrante||p.q||window.v15ClassQMunicipal?.(p.lat,p.lng,p.municipio||'Casa Branca')||classQ(p.lat,p.lng),origem:'base'
   }));
   const local=(window.userPts||[]).map(p=>({
     nome:p.nm||p.nome,tipo:p.tp||p.tipo,lat:p.lat,lng:p.lng,
-    quadrante:p.q||classQ(p.lat,p.lng),origem:'local'
+    municipio:p.municipio||'Casa Branca',
+    quadrante:p.quadrante||p.q||window.v15ClassQMunicipal?.(p.lat,p.lng,p.municipio||'Casa Branca')||classQ(p.lat,p.lng),origem:'local'
   }));
   const cloud=(v7CloudProps||[]).map(p=>({
     id:p.id,
@@ -1216,8 +1218,8 @@ function v7AllPropsForReport(){
     tipo:p.tipo||p.tp,atividade:p.atividade||p.tipo||p.tp||'',
     plantioInicio:Number(p.plantioInicio)||0,plantioFim:Number(p.plantioFim)||0,colheitaInicio:Number(p.colheitaInicio)||0,colheitaFim:Number(p.colheitaFim)||0,epocaPlantio:p.epocaPlantio||'',epocaColheita:p.epocaColheita||'',sazonalidadeConfigurada:!!p.sazonalidadeConfigurada,
     lat:p.lat,lng:p.lng,
-    quadrante:p.quadrante||classQ(p.lat,p.lng),
-    municipio:p.municipio||'',
+    municipio:p.municipio||'Casa Branca',
+    quadrante:p.quadrante||window.v15ClassQMunicipal?.(p.lat,p.lng,p.municipio||'Casa Branca')||classQ(p.lat,p.lng),
     endereco:p.endereco||'',
     telefone:p.telefone||'',
     maps:p.maps||'',
@@ -1239,13 +1241,21 @@ function v7AllPropsForReport(){
   // garantindo que cadastro sincronizado e URLs das fotos sejam usados no painel/relatório.
   [...base,...local,...cloud].forEach(p=>{
     if(!p.nome) return;
-    const k=normTxt(p.nome)+'|'+(p.quadrante||'');
+    const k=normTxt(p.municipio||'Casa Branca')+'|'+normTxt(p.nome)+'|'+(p.quadrante||'');
     m.set(k,{...(m.get(k)||{}),...p});
   });
   return [...m.values()];
 }
 
-function v7VisitQuadrante(v){ return v.quadrante || v.q || (v.lat&&v.lng?classQ(v.lat,v.lng):''); }
+function v15ReportScopeMunicipio(){
+  const a=window.V15_ACTIVE_AREA||'Casa Branca';
+  return a==='2cia'?'':a;
+}
+function v7VisitMunicipio(v){ return v.municipio || v.cidade || 'Casa Branca'; }
+function v7VisitQuadrante(v){
+  const mun=v7VisitMunicipio(v);
+  return v.quadrante || v.q || (v.lat&&v.lng?(window.v15ClassQMunicipal?.(v.lat,v.lng,mun)||classQ(v.lat,v.lng)):'');
+}
 function v7VisitPropName(v){ return v.propriedade || v.propriedadeNome || v.nome || ''; }
 function v7VisitObs(v){ return v.observacao || v.texto || ''; }
 function v7FmtDate(d){ return d?d.toLocaleDateString('pt-BR'):''; }
@@ -1271,11 +1281,13 @@ function v7UniqueVisits(list=v7Visits||[]){
   return out;
 }
 function v7PrepareVisits(){
-  return v7UniqueVisits(v7Visits||[]).map(v=>({...v,_dt:v7ToDate(v),_q:String(v7VisitQuadrante(v)||''),_prop:v7VisitPropName(v),_obs:v7VisitObs(v)}));
+  return v7UniqueVisits(v7Visits||[]).map(v=>({...v,_dt:v7ToDate(v),_municipio:v7VisitMunicipio(v),_q:String(v7VisitQuadrante(v)||''),_prop:v7VisitPropName(v),_obs:v7VisitObs(v)}));
 }
 function v7FilteredVisits(){
   const f=v7GetReportFilters();
+  const scopeMun=v15ReportScopeMunicipio();
   return v7PrepareVisits().filter(v=>{
+    if(scopeMun && v._municipio!==scopeMun) return false;
     if(f.di && (!v._dt || v._dt<f.di)) return false;
     if(f.df && (!v._dt || v._dt>f.df)) return false;
     if(f.q && String(v._q)!==String(f.q)) return false;
@@ -1288,8 +1300,9 @@ function v7FilteredVisits(){
 }
 function v7ReportStats(){
   const now=new Date();
-  const props=v7AllPropsForReport();
-  const visits=v7PrepareVisits();
+  const scopeMun=v15ReportScopeMunicipio();
+  const props=v7AllPropsForReport().filter(p=>!scopeMun||(p.municipio||'Casa Branca')===scopeMun);
+  const visits=v7PrepareVisits().filter(v=>!scopeMun||v._municipio===scopeMun);
   const filtered=v7FilteredVisits();
   const today=visits.filter(v=>v7SameDay(v._dt,now));
   const month=visits.filter(v=>v7MonthKey(v._dt)===v7MonthKey(now));
@@ -1298,15 +1311,17 @@ function v7ReportStats(){
   const filtQ={1:0,2:0,3:0,4:0}; filtered.forEach(v=>{ if(filtQ[v._q]!==undefined) filtQ[v._q]++; });
   const byUser={}; month.forEach(v=>{ const u=v.usuarioNome||v.nome||v.usuario||'Não informado'; byUser[u]=(byUser[u]||0)+1; });
   const byUserFiltered={}; filtered.forEach(v=>{ const u=v.usuarioNome||v.nome||v.usuario||'Não informado'; byUserFiltered[u]=(byUserFiltered[u]||0)+1; });
-  const visitedNames=new Set(visits.map(v=>normTxt(v._prop)).filter(Boolean));
-  const never=props.filter(p=>!visitedNames.has(normTxt(p.nome)));
+  const visitKey=v=>normTxt(v._municipio||'Casa Branca')+'|'+normTxt(v._prop);
+  const propKey=p=>normTxt(p.municipio||'Casa Branca')+'|'+normTxt(p.nome);
+  const visitedNames=new Set(visits.map(visitKey).filter(Boolean));
+  const never=props.filter(p=>!visitedNames.has(propKey(p)));
   const olderDays=(days)=>props.filter(p=>{
-    const n=normTxt(p.nome); const pv=visits.filter(v=>normTxt(v._prop)===n && v._dt).sort((a,b)=>b._dt-a._dt)[0];
+    const n=propKey(p); const pv=visits.filter(v=>visitKey(v)===n && v._dt).sort((a,b)=>b._dt-a._dt)[0];
     if(!pv) return false;
     return (now-pv._dt)/(1000*60*60*24)>days;
   });
   const latestByProp=new Map();
-  visits.filter(v=>v._prop&&v._dt).sort((a,b)=>b._dt-a._dt).forEach(v=>{ const k=normTxt(v._prop); if(!latestByProp.has(k)) latestByProp.set(k,v); });
+  visits.filter(v=>v._prop&&v._dt).sort((a,b)=>b._dt-a._dt).forEach(v=>{ const k=visitKey(v); if(!latestByProp.has(k)) latestByProp.set(k,v); });
   return {props,visits,filtered,today,month,byQ,todayQ,filtQ,byUser,byUserFiltered,never,older30:olderDays(30),older60:olderDays(60),older90:olderDays(90),latestByProp};
 }
 function v7BarLine(label,n,max){
@@ -1465,13 +1480,15 @@ function v13PriorityColor(score){ return score>=75?'#dc2626':score>=55?'#f97316'
 function v13OccurrenceDate(o){ const d=new Date(String(o.dataLocal||o.createdAtLocal||'')); return isNaN(d)?null:d; }
 function v13IntelligenceData(){
   const st=v7ReportStats(), now=new Date(), month=now.getMonth()+1;
-  const props=st.props||[], visits=st.visits||[], occ=(v7Occurrences||[]).map(o=>({...o,_dt:v13OccurrenceDate(o)}));
+  const scopeMun=v15ReportScopeMunicipio();
+  const props=st.props||[], visits=st.visits||[], occ=(v7Occurrences||[]).map(o=>({...o,_dt:v13OccurrenceDate(o),_municipio:o.municipio||'Casa Branca'})).filter(o=>!scopeMun||o._municipio===scopeMun);
+  const propKey=p=>normTxt(p.municipio||'Casa Branca')+'|'+normTxt(p.nome);
   const qData=[1,2,3,4].map(q=>{
     const qp=props.filter(p=>String(p.quadrante)===String(q)), qv=visits.filter(v=>String(v._q)===String(q));
     const recent=qv.filter(v=>v._dt && (now-v._dt)<=30*86400000), visited30=new Set(recent.map(v=>normTxt(v._prop)));
     const coverage30=qp.length?Math.round(qp.filter(p=>visited30.has(normTxt(p.nome))).length/qp.length*100):0;
-    const never=qp.filter(p=>!st.latestByProp.has(normTxt(p.nome))).length;
-    const overdue=qp.filter(p=>{const v=st.latestByProp.get(normTxt(p.nome));return !v||v13DaysSince(v._dt,now)>30}).length;
+    const never=qp.filter(p=>!st.latestByProp.has(propKey(p))).length;
+    const overdue=qp.filter(p=>{const v=st.latestByProp.get(propKey(p));return !v||v13DaysSince(v._dt,now)>30}).length;
     const planting=qp.filter(p=>monthInRange(month,p.plantioInicio,p.plantioFim)).length, harvest=qp.filter(p=>monthInRange(month,p.colheitaInicio,p.colheitaFim)).length;
     const situAttention=recent.filter(v=>['movimentacao elevada','propriedade desocupada','atencao recomendada'].includes(normTxt(v.situacaoObservada).toLowerCase())).length;
     const recentOccurrences=occ.filter(o=>String(o.quadrante||'')===String(q) && o._dt && (now-o._dt)<=90*86400000);
@@ -1481,11 +1498,11 @@ function v13IntelligenceData(){
     const score=Math.round(covRisk*.35+overdueRisk*.25+seasonalRisk*.20+fieldRisk*.05+occurrenceRisk*.15);
     return {q,qp,qv,recent,coverage30,never,overdue,planting,harvest,situAttention,recentOccurrences,covRisk,overdueRisk,seasonalRisk,fieldRisk,occurrenceRisk,score,label:v13PriorityLabel(score)};
   }).sort((a,b)=>b.score-a.score);
-  const propRows=props.map(p=>{ const last=st.latestByProp.get(normTxt(p.nome)),days=last?v13DaysSince(last._dt,now):9999,planting=monthInRange(month,p.plantioInicio,p.plantioFim),harvest=monthInRange(month,p.colheitaInicio,p.colheitaFim); let score=days===9999?60:Math.min(60,Math.round(days/90*60)); if(planting)score+=12;if(harvest)score+=20; const po=occ.filter(o=>normTxt(o.propriedade)===normTxt(p.nome)&&o._dt&&(now-o._dt)<=90*86400000).length; score+=Math.min(20,po*7); return {p,last,days,planting,harvest,occurrences:po,score:Math.min(100,score)}; }).sort((a,b)=>b.score-a.score);
+  const propRows=props.map(p=>{ const last=st.latestByProp.get(propKey(p)),days=last?v13DaysSince(last._dt,now):9999,planting=monthInRange(month,p.plantioInicio,p.plantioFim),harvest=monthInRange(month,p.colheitaInicio,p.colheitaFim); let score=days===9999?60:Math.min(60,Math.round(days/90*60)); if(planting)score+=12;if(harvest)score+=20; const po=occ.filter(o=>normTxt(o.propriedade)===normTxt(p.nome)&&normTxt(o._municipio)===normTxt(p.municipio||'Casa Branca')&&o._dt&&(now-o._dt)<=90*86400000).length; score+=Math.min(20,po*7); return {p,last,days,planting,harvest,occurrences:po,score:Math.min(100,score)}; }).sort((a,b)=>b.score-a.score);
   return {st,qData,propRows,occ,now,month};
 }
 function v13FiveW2H(top,d){
-  const names=top.qp.filter(p=>{const v=d.st.latestByProp.get(normTxt(p.nome));return !v||v13DaysSince(v._dt,d.now)>30}).slice(0,8).map(p=>p.nome);
+  const names=top.qp.filter(p=>{const v=d.st.latestByProp.get(normTxt(p.municipio||'Casa Branca')+'|'+normTxt(p.nome));return !v||v13DaysSince(v._dt,d.now)>30}).slice(0,8).map(p=>p.nome);
   const why=[`${top.coverage30}% de cobertura nos últimos 30 dias`,`${top.overdue} propriedade(s) sem visita há mais de 30 dias`];
   if(top.harvest)why.push(`${top.harvest} em período de colheita`); if(top.planting)why.push(`${top.planting} em período de plantio`); if(top.recentOccurrences.length)why.push(`${top.recentOccurrences.length} ocorrência(s) territorial(is) nos últimos 90 dias`);
   return {what:'Avaliar intensificação de visitas preventivas e pontos de observação',why:why.join('; '),where:`${v7QLabel(top.q)}${names.length?' — priorizar: '+names.join(', '):''}`,when:'Próximos 7 dias, conforme disponibilidade operacional',who:'Equipe definida pelo comando',how:'Roteiro direcionado às propriedades com maior intervalo sem visita, sazonalidade e ocorrências recentes, associado a pontos de observação no quadrante',howmuch:`Meta sugerida: ${Math.min(8,Math.max(3,top.overdue))} visitas prioritárias e até 2 pontos de observação`};
@@ -1500,17 +1517,18 @@ function v14OccurrencePanel(d){
 window.v14SaveDecision=async(status)=>{
   if(!isAdminGeral())return alert('Acesso exclusivo dos Administradores.');
   const d=v13IntelligenceData(),top=d.qData[0],w=v13FiveW2H(top,d),obs=($v('v14DecisionObs')?.value||'').trim();
-  try{ await addDoc(collection(db,'planos_inteligencia'),{status,quadrante:top.q,quadranteNome:v7QLabel(top.q),ippr:top.score,nivel:top.label,plano:w,observacaoComando:obs,usuario:v7User?.email||'',usuarioNome:v7Profile?.nome||v7User?.email||'',createdAt:serverTimestamp(),createdAtLocal:new Date().toISOString()}); await auditV7('decisao_inteligencia',`${status} · ${v7QLabel(top.q)} · IPPR ${top.score}`); const m=$v('v14DecisionMsg');if(m)m.innerHTML='<b style="color:#15803d">✅ Decisão registrada no histórico da inteligência.</b>'; }catch(e){alert('Não foi possível registrar a decisão: '+e.message);}
+  try{ await addDoc(collection(db,'planos_inteligencia'),{status,municipio:v15ReportScopeMunicipio()||'Toda a 2ª Companhia',quadrante:top.q,quadranteNome:v7QLabel(top.q),ippr:top.score,nivel:top.label,plano:w,observacaoComando:obs,usuario:v7User?.email||'',usuarioNome:v7Profile?.nome||v7User?.email||'',createdAt:serverTimestamp(),createdAtLocal:new Date().toISOString()}); await auditV7('decisao_inteligencia',`${status} · ${v7QLabel(top.q)} · IPPR ${top.score}`); const m=$v('v14DecisionMsg');if(m)m.innerHTML='<b style="color:#15803d">✅ Decisão registrada no histórico da inteligência.</b>'; }catch(e){alert('Não foi possível registrar a decisão: '+e.message);}
 };
 window.openRuralIntelligence=()=>{
   if(!isAdminGeral()) return alert('Inteligência Operacional Rural: acesso exclusivo dos Administradores.');
+  if((window.V15_ACTIVE_AREA||'Casa Branca')==='2cia') return alert('Para o IPPR por quadrante, selecione primeiro um município. A visão consolidada da 2ª Companhia será a próxima camada gerencial.');
   const d=v13IntelligenceData(),top=d.qData[0],w=v13FiveW2H(top,d),el=$v('v7IntelContent');
   const qcards=d.qData.map(x=>`<div class="v7-card" style="border-left:5px solid ${v13PriorityColor(x.score)}"><div style="display:flex;justify-content:space-between;gap:8px"><b>${v7QLabel(x.q)}</b><b style="color:${v13PriorityColor(x.score)}">IPPR ${x.score} · ${x.label}</b></div><div class="v7-small">Cobertura 30d: ${x.coverage30}% · +30d sem visita: ${x.overdue}/${x.qp.length} · Plantio: ${x.planting} · Colheita: ${x.harvest} · Ocorrências 90d: ${x.recentOccurrences.length}</div></div>`).join('');
   const topQuadrantRows=d.propRows.filter(x=>String(x.p.quadrante)===String(top.q)).slice(0,10);
   const otherAttentionRows=d.propRows.filter(x=>String(x.p.quadrante)!==String(top.q)).slice(0,10);
   const priority=topQuadrantRows.map((x,i)=>`<tr><td>${i+1}</td><td>${x.p.nome}</td><td>${v7QLabel(x.p.quadrante)}</td><td>${x.days===9999?'Nunca':x.days+' dias'}</td><td>${x.harvest?'Colheita ':''}${x.planting?'Plantio':''}</td><td>${x.occurrences}</td><td><b>${x.score}</b></td></tr>`).join('');
   const otherPriority=otherAttentionRows.map((x,i)=>`<tr><td>${i+1}</td><td>${x.p.nome}</td><td>${v7QLabel(x.p.quadrante)}</td><td>${x.days===9999?'Nunca':x.days+' dias'}</td><td>${x.harvest?'Colheita ':''}${x.planting?'Plantio':''}</td><td>${x.occurrences}</td><td><b>${x.score}</b></td></tr>`).join('');
-  el.innerHTML=`<div class="v14-intel"><div class="v7-card v14-explain"><b>🧠 IPPR V2 — Índice de Prioridade de Policiamento Rural</b><div class="v7-small">Baixa cobertura 30d (35%) + atraso de visitas (25%) + plantio/colheita (20%) + situações de atenção em campo (5%) + ocorrências territoriais 90d (15%). É apoio à decisão; não determina emprego automático de efetivo.</div></div><h3>🚨 Painel de ocorrências rurais</h3>${v14OccurrencePanel(d)}<h3>Prioridade por quadrante</h3>${qcards}<h3>5W2H sugerido · ${v7QLabel(top.q)}</h3><div class="v7-card v14-plan"><b>WHAT — O quê?</b><br>${w.what}<hr><b>WHY — Por quê?</b><br>${w.why}<hr><b>WHERE — Onde?</b><br>${w.where}<hr><b>WHEN — Quando?</b><br>${w.when}<hr><b>WHO — Quem?</b><br>${w.who}<hr><b>HOW — Como?</b><br>${w.how}<hr><b>HOW MUCH — Quanto?</b><br>${w.howmuch}</div><div class="v7-card"><b>Decisão do comando</b><div class="v7-small">Registre a decisão gerencial sobre a recomendação. Isso não altera automaticamente escalas ou emprego de efetivo.</div><textarea id="v14DecisionObs" class="field-inp" style="min-height:65px" placeholder="Observação do comando (opcional)"></textarea><div class="v14-actions"><button onclick="v14SaveDecision('APROVADO')">✅ Aprovar</button><button onclick="v14SaveDecision('AJUSTAR')">✏️ Ajustar</button><button onclick="v14SaveDecision('DESCONSIDERADO')">➖ Desconsiderar</button></div><div id="v14DecisionMsg" class="v7-small"></div></div><h3>Propriedades prioritárias · ${v7QLabel(top.q)}</h3><div class="v7-small v141-list-note">Primeiro são apresentadas as propriedades do quadrante apontado pelo IPPR como prioridade operacional.</div><div style="overflow:auto"><table class="v14-table"><tr><th>#</th><th>Propriedade</th><th>Quadrante</th><th>Última visita</th><th>Sazonalidade</th><th>Ocorr. 90d</th><th>Prioridade</th></tr>${priority||'<tr><td colspan="7">Nenhuma propriedade disponível neste quadrante.</td></tr>'}</table></div><h3>Outras propriedades que exigem atenção</h3><div class="v7-small v141-list-note">Ranking complementar dos demais quadrantes, sem substituir a prioridade territorial definida acima.</div><div style="overflow:auto"><table class="v14-table"><tr><th>#</th><th>Propriedade</th><th>Quadrante</th><th>Última visita</th><th>Sazonalidade</th><th>Ocorr. 90d</th><th>Prioridade</th></tr>${otherPriority||'<tr><td colspan="7">Nenhuma outra propriedade exige atenção no momento.</td></tr>'}</table></div><div class="v7-card"><b>Ciclo de gestão</b><div class="v7-small">Diagnosticar → Planejar (5W2H) → Decidir → Executar → Medir cobertura/visitas → Reavaliar IPPR. A decisão operacional permanece com o comando.</div></div></div>`;
+  el.innerHTML=`<div class="v14-intel"><div class="v7-card v14-explain"><b>🧠 IPPR V2 — Índice de Prioridade de Policiamento Rural · ${window.V15_ACTIVE_AREA||'Casa Branca'}</b><div class="v7-small">Baixa cobertura 30d (35%) + atraso de visitas (25%) + plantio/colheita (20%) + situações de atenção em campo (5%) + ocorrências territoriais 90d (15%). É apoio à decisão; não determina emprego automático de efetivo.</div></div><h3>🚨 Painel de ocorrências rurais</h3>${v14OccurrencePanel(d)}<h3>Prioridade por quadrante</h3>${qcards}<h3>5W2H sugerido · ${v7QLabel(top.q)}</h3><div class="v7-card v14-plan"><b>WHAT — O quê?</b><br>${w.what}<hr><b>WHY — Por quê?</b><br>${w.why}<hr><b>WHERE — Onde?</b><br>${w.where}<hr><b>WHEN — Quando?</b><br>${w.when}<hr><b>WHO — Quem?</b><br>${w.who}<hr><b>HOW — Como?</b><br>${w.how}<hr><b>HOW MUCH — Quanto?</b><br>${w.howmuch}</div><div class="v7-card"><b>Decisão do comando</b><div class="v7-small">Registre a decisão gerencial sobre a recomendação. Isso não altera automaticamente escalas ou emprego de efetivo.</div><textarea id="v14DecisionObs" class="field-inp" style="min-height:65px" placeholder="Observação do comando (opcional)"></textarea><div class="v14-actions"><button onclick="v14SaveDecision('APROVADO')">✅ Aprovar</button><button onclick="v14SaveDecision('AJUSTAR')">✏️ Ajustar</button><button onclick="v14SaveDecision('DESCONSIDERADO')">➖ Desconsiderar</button></div><div id="v14DecisionMsg" class="v7-small"></div></div><h3>Propriedades prioritárias · ${v7QLabel(top.q)}</h3><div class="v7-small v141-list-note">Primeiro são apresentadas as propriedades do quadrante apontado pelo IPPR como prioridade operacional.</div><div style="overflow:auto"><table class="v14-table"><tr><th>#</th><th>Propriedade</th><th>Quadrante</th><th>Última visita</th><th>Sazonalidade</th><th>Ocorr. 90d</th><th>Prioridade</th></tr>${priority||'<tr><td colspan="7">Nenhuma propriedade disponível neste quadrante.</td></tr>'}</table></div><h3>Outras propriedades que exigem atenção</h3><div class="v7-small v141-list-note">Ranking complementar dos demais quadrantes, sem substituir a prioridade territorial definida acima.</div><div style="overflow:auto"><table class="v14-table"><tr><th>#</th><th>Propriedade</th><th>Quadrante</th><th>Última visita</th><th>Sazonalidade</th><th>Ocorr. 90d</th><th>Prioridade</th></tr>${otherPriority||'<tr><td colspan="7">Nenhuma outra propriedade exige atenção no momento.</td></tr>'}</table></div><div class="v7-card"><b>Ciclo de gestão</b><div class="v7-small">Diagnosticar → Planejar (5W2H) → Decidir → Executar → Medir cobertura/visitas → Reavaliar IPPR. A decisão operacional permanece com o comando.</div></div></div>`;
   $v('v7IntelModal').classList.add('open');
 };
 

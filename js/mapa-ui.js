@@ -404,7 +404,7 @@ function selQ(id){
     const a=parseInt(qid)===id;
     p.setStyle({fillOpacity:a?.25:.10,weight:a?2.5:1.5,opacity:a?1:.7});
   });
-  document.getElementById('pName').textContent=qd.nome;
+  document.getElementById('pName').textContent=(window.V15_ACTIVE_AREA&&window.V15_ACTIVE_AREA!=='2cia'?window.V15_ACTIVE_AREA+' · ':'')+qd.nome;
   document.getElementById('pName').style.color=col;
   document.getElementById('pArea').textContent=qd.km.area;
   document.getElementById('pDiag').textContent=qd.km.diag;
@@ -413,12 +413,12 @@ function selQ(id){
   const props=PROPS.filter(p=>p.q===id && (activeMun==='2cia'||(p.municipio||'Casa Branca')===activeMun));
   const cloudPropsForQuad=(window.v7CloudProps||[]).filter(p=>{
     const lat=parseFloat(p.lat), lng=parseFloat(p.lng);
-    const q=p.quadrante||p.q||(typeof classQ==='function'?classQ(lat,lng):'');
+    const q=p.quadrante||p.q||window.v15ClassQMunicipal?.(lat,lng,p.municipio||'Casa Branca')||(typeof classQ==='function'?classQ(lat,lng):'');
     const mun=p.municipio||'Casa Branca'; return String(q)===String(id) && (activeMun==='2cia'||mun===activeMun);
   });
   const localPropsForQuad=(window.userPts||[]).filter(p=>{
     const lat=parseFloat(p.lat), lng=parseFloat(p.lng);
-    const q=p.quadrante||p.q||(typeof classQ==='function'?classQ(lat,lng):'');
+    const q=p.quadrante||p.q||window.v15ClassQMunicipal?.(lat,lng,p.municipio||'Casa Branca')||(typeof classQ==='function'?classQ(lat,lng):'');
     const mun=p.municipio||'Casa Branca'; return String(q)===String(id) && (activeMun==='2cia'||mun===activeMun);
   });
   document.getElementById('pProps').textContent=props.length + cloudPropsForQuad.length + localPropsForQuad.length;

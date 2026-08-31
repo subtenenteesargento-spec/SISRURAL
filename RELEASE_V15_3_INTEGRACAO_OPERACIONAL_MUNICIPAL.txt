@@ -1,0 +1,13 @@
+SISRURAL V15.3 EXP — INTEGRAÇÃO OPERACIONAL MUNICIPAL
+
+1. Relatórios, produtividade e indicadores passam a respeitar o município atualmente selecionado.
+2. Visitas antigas sem município continuam tratadas como Casa Branca, preservando o histórico.
+3. Propriedades base permanecem vinculadas a Casa Branca; novos cadastros usam município e quadrante municipal.
+4. IPPR/5W2H passa a analisar somente o município ativo, evitando mistura de Q1/Q2/Q3/Q4 de cidades diferentes.
+5. Ocorrências territoriais são filtradas por município na Inteligência Operacional.
+6. Decisões de Inteligência passam a gravar também o município analisado.
+7. Rodapé do setor passa a identificar o município junto ao quadrante selecionado.
+8. Classificação de quadrante para propriedades em nuvem/local usa a malha municipal ativa.
+9. Em Toda a 2ª Companhia, o IPPR por quadrante solicita a seleção de um município para evitar consolidação territorial incorreta.
+
+Nenhuma migração destrutiva foi executada no Firestore.
