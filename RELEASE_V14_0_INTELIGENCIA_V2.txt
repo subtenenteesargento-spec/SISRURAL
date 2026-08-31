@@ -1,0 +1,10 @@
+SISRURAL V14.0 — Inteligência Operacional V2
+
+- Preserva funcionalidades existentes.
+- Painel de ocorrências rurais: 30/60/90 dias, natureza e quadrante.
+- IPPR V2 incorpora ocorrências territoriais recentes.
+- Prioridade de propriedades considera ocorrências dos últimos 90 dias.
+- 5W2H gerencial.
+- Decisão do comando: Aprovar / Ajustar / Desconsiderar, registrada no Firestore em planos_inteligencia e na auditoria.
+- Inteligência permanece exclusiva para Administradores Gerais.
+- Interface da inteligência em tema claro.
