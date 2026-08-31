@@ -1,0 +1,12 @@
+SISRURAL V15.2 EXP — QUADRANTES MUNICIPAIS
+
+- Malhas municipais carregadas da API oficial de Malhas Geográficas do IBGE.
+- Cada município é recortado em quatro setores operacionais: Alfa, Bravo, Charlie e Delta.
+- Ao selecionar Casa Branca, Santa Cruz das Palmeiras, Tambaú ou Itobi, somente os quadrantes daquele município são desenhados.
+- A visão “Toda a 2ª Companhia” exibe os quatro limites municipais integrados para supervisão/gerência.
+- Propriedades e pontos passam a respeitar o município ativo na visualização.
+- Novos cadastros recebem município e quadrante municipal.
+- Policial permanece vinculado ao município definido pelo Administrador; supervisão/gerência pode alternar áreas.
+- Nenhuma migração destrutiva foi executada no Firestore.
+
+Observação: se a API do IBGE estiver temporariamente indisponível, o app utiliza uma moldura territorial de contingência apenas para manter a operação, retornando à malha oficial quando disponível.

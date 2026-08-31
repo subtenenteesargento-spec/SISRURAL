@@ -71,7 +71,7 @@ const PROPS=[
 
 function classQ(lat,lng){const n=lat>MX,w=lng<MY;return n&&w?1:n&&!w?2:!n&&w?3:4;}
 window.PROPS=PROPS;
-PROPS.forEach(p=>{p.q=classQ(p.lat,p.lng);});
+PROPS.forEach(p=>{p.municipio='Casa Branca';p.q=classQ(p.lat,p.lng);});
 
 const FARM_REFS=[
   {q:1,nm:'REF-Q1 · Faz. Lagoa do Cedro',lat:-21.6920,lng:-47.1640,
@@ -105,18 +105,137 @@ const satT=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Wor
 const satLbl=L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{opacity:.8,maxZoom:19});
 let satOn=false; osmT.addTo(map);
 
-// ── QUADRANTES
+// ── QUADRANTES / MALHAS MUNICIPAIS · V15.2 EXP
+// A malha oficial é obtida da API de Malhas Geográficas do IBGE. Cada município é
+// dividido em quatro setores operacionais (Alfa/Bravo/Charlie/Delta) pelo eixo médio
+// do próprio território, e os polígonos são recortados pelo limite municipal.
 const quadsG=L.layerGroup().addTo(map);
+const municipalG=L.layerGroup().addTo(map);
 const qPoly={};
-[[1,[[N,W],[N,MY],[MX,MY],[MX,W]]],[2,[[N,MY],[N,E],[MX,E],[MX,MY]]],[3,[[MX,W],[MX,MY],[S,MY],[S,W]]],[4,[[MX,MY],[MX,E],[S,E],[S,MY]]]].forEach(([id,c])=>{
-  const col=QC[id-1],qd=QDATA[id-1];
-  const p=L.polygon(c,{color:col,weight:2,fillColor:col,fillOpacity:.10,dashArray:'6 4',opacity:.85});
-  p.on('click',()=>{selQ(id);openSheet();});
-  p.bindPopup(`<div class="pt" style="color:${col}">Q${id} – ${['ALFA','BRAVO','CHARLIE','DELTA'][id-1]}</div><div class="ps">~${qd.km.area} km² · diagonal ${qd.km.diag} km</div><div class="pr"><span>Extensão</span><span>${qd.km.ns}km N-S × ${qd.km.lo}km L-O</span></div>`,{maxWidth:240});
-  quadsG.addLayer(p); qPoly[id]=p;
-});
-L.polyline([[N,MY],[S,MY]],{color:'#fff',weight:1,opacity:.25,dashArray:'8 5'}).addTo(quadsG);
-L.polyline([[MX,W],[MX,E]],{color:'#fff',weight:1,opacity:.25,dashArray:'8 5'}).addTo(quadsG);
+const V15_MUNICIPAL_CFG={
+  'Casa Branca':{code:'3510807',center:[-21.773,-47.086],zoom:11,area:864.225,fallback:[[-22.000,-47.280],[-21.570,-46.900]]},
+  'Santa Cruz das Palmeiras':{code:'3546306',center:[-21.827,-47.249],zoom:11,area:295.330,fallback:[[-21.990,-47.390],[-21.680,-47.120]]},
+  'Tambaú':{code:'3553302',center:[-21.705,-47.274],zoom:11,area:561.788,fallback:[[-21.930,-47.470],[-21.500,-47.080]]},
+  'Itobi':{code:'3523800',center:[-21.737,-46.975],zoom:12,area:138.986,fallback:[[-21.850,-47.080],[-21.620,-46.850]]}
+};
+window.V15_ACTIVE_AREA='Casa Branca';
+window.V15_ACTIVE_QDATA=QDATA;
+window.V15_MUNICIPAL_CACHE={};
+
+function v15GeoCoords(g){
+  const out=[]; const walk=x=>{if(!Array.isArray(x))return; if(typeof x[0]==='number'&&typeof x[1]==='number')out.push(x); else x.forEach(walk)};
+  walk(g?.coordinates); return out;
+}
+function v15BoundsFromGeoJSON(fc){
+  let minLng=Infinity,maxLng=-Infinity,minLat=Infinity,maxLat=-Infinity;
+  (fc?.features||[]).forEach(f=>v15GeoCoords(f.geometry).forEach(([lng,lat])=>{minLng=Math.min(minLng,lng);maxLng=Math.max(maxLng,lng);minLat=Math.min(minLat,lat);maxLat=Math.max(maxLat,lat);}));
+  return Number.isFinite(minLat)?{minLat,maxLat,minLng,maxLng}:null;
+}
+function v15ClipRing(ring,b){
+  let pts=(ring||[]).slice();
+  const clip=(arr,inside,intersect)=>{const o=[];if(!arr.length)return o;let S=arr[arr.length-1];for(const E of arr){const Ein=inside(E),Sin=inside(S);if(Ein){if(!Sin)o.push(intersect(S,E));o.push(E);}else if(Sin)o.push(intersect(S,E));S=E;}return o;};
+  const vx=(S,E,x)=>{const d=E[0]-S[0];const t=Math.abs(d)<1e-12?0:(x-S[0])/d;return [x,S[1]+t*(E[1]-S[1])];};
+  const hy=(S,E,y)=>{const d=E[1]-S[1];const t=Math.abs(d)<1e-12?0:(y-S[1])/d;return [S[0]+t*(E[0]-S[0]),y];};
+  pts=clip(pts,p=>p[0]>=b.minLng,(S,E)=>vx(S,E,b.minLng));
+  pts=clip(pts,p=>p[0]<=b.maxLng,(S,E)=>vx(S,E,b.maxLng));
+  pts=clip(pts,p=>p[1]>=b.minLat,(S,E)=>hy(S,E,b.minLat));
+  pts=clip(pts,p=>p[1]<=b.maxLat,(S,E)=>hy(S,E,b.maxLat));
+  if(pts.length>=3){const a=pts[0],z=pts[pts.length-1];if(a[0]!==z[0]||a[1]!==z[1])pts.push([...a]);}
+  return pts;
+}
+function v15ClipGeometry(geom,b){
+  if(!geom)return null;
+  const clipPoly=poly=>{const rings=(poly||[]).map(r=>v15ClipRing(r,b)).filter(r=>r.length>=4);return rings.length?rings:null;};
+  if(geom.type==='Polygon'){const c=clipPoly(geom.coordinates);return c?{type:'Polygon',coordinates:c}:null;}
+  if(geom.type==='MultiPolygon'){const c=geom.coordinates.map(clipPoly).filter(Boolean);return c.length?{type:'MultiPolygon',coordinates:c}:null;}
+  return null;
+}
+function v15QuadrantBox(bounds,id){
+  const midLat=(bounds.minLat+bounds.maxLat)/2,midLng=(bounds.minLng+bounds.maxLng)/2;
+  return id===1?{minLat:midLat,maxLat:bounds.maxLat,minLng:bounds.minLng,maxLng:midLng}:
+         id===2?{minLat:midLat,maxLat:bounds.maxLat,minLng:midLng,maxLng:bounds.maxLng}:
+         id===3?{minLat:bounds.minLat,maxLat:midLat,minLng:bounds.minLng,maxLng:midLng}:
+                {minLat:bounds.minLat,maxLat:midLat,minLng:midLng,maxLng:bounds.maxLng};
+}
+function v15BuildQData(municipio,bounds){
+  const cfg=V15_MUNICIPAL_CFG[municipio], ns=Math.max(1,(bounds.maxLat-bounds.minLat)*111.1), lo=Math.max(1,(bounds.maxLng-bounds.minLng)*103.5);
+  const names=['Q1 – ALFA · NOROESTE','Q2 – BRAVO · NORDESTE','Q3 – CHARLIE · SUDOESTE','Q4 – DELTA · SUDESTE'];
+  return names.map((nome,i)=>({id:i+1,nome,km:{ns:(ns/2).toFixed(1),lo:(lo/2).toFixed(1),area:Math.round((cfg?.area||0)/4),diag:(Math.hypot(ns/2,lo/2)).toFixed(1)},divisas:[`Município: ${municipio}`,`Setor ${['Alfa','Bravo','Charlie','Delta'][i]} · ${['Noroeste','Nordeste','Sudoeste','Sudeste'][i]}`],roads:[],roadKeys:[],dirt:[]}));
+}
+async function v15FetchMunicipalGeo(municipio){
+  if(window.V15_MUNICIPAL_CACHE[municipio])return window.V15_MUNICIPAL_CACHE[municipio];
+  const cfg=V15_MUNICIPAL_CFG[municipio]; if(!cfg)return null;
+  const urls=[
+    `https://servicodados.ibge.gov.br/api/v3/malhas/municipios/${cfg.code}?formato=application/vnd.geo+json&qualidade=minima`,
+    `https://servicodados.ibge.gov.br/api/v3/malhas/municipios/${cfg.code}?formato=application/geo+json&qualidade=minima`
+  ];
+  for(const url of urls){try{const r=await fetch(url,{cache:'force-cache'});if(!r.ok)continue;const j=await r.json();if(j?.type==='FeatureCollection'&&j.features?.length){window.V15_MUNICIPAL_CACHE[municipio]=j;return j;}}catch(e){console.warn('SISRURAL: malha IBGE indisponível',municipio,e);}}
+  return null;
+}
+function v15FallbackFeature(municipio){
+  const [[s,w],[n,e]]=V15_MUNICIPAL_CFG[municipio].fallback;
+  return {type:'FeatureCollection',features:[{type:'Feature',properties:{nome:municipio,fallback:true},geometry:{type:'Polygon',coordinates:[[[w,s],[e,s],[e,n],[w,n],[w,s]]]}}]};
+}
+function v15UpdateTabs(municipio){
+  const subs=['NOROESTE','NORDESTE','SUDOESTE','SUDESTE'];
+  const isCompany=municipio==='2ª Companhia';
+  const tabs=document.getElementById('v15QuadrantTabs'); if(tabs)tabs.style.display=isCompany?'none':'';
+  [1,2,3,4].forEach(i=>{
+    const t=document.getElementById('tab'+i);if(!t)return;
+    const sub=t.querySelector('.qtab-sub');if(sub)sub.textContent=subs[i-1];
+    const badge=t.querySelector('.pb'); if(badge&&municipio!=='Casa Branca'){badge.textContent='● SETOR';badge.className='pb pN';}
+    t.title=`${municipio} · Q${i}`;
+  });
+}
+function v15ApplyMapLayerContext(area){
+  const casa=area==='Casa Branca'||area==='2cia';
+  [roadsG,dirtG,refsG].forEach(g=>{try{if(casa){if(!map.hasLayer(g))g.addTo(map);}else if(map.hasLayer(g))g.remove();}catch(e){}});
+  try{propsG.clearLayers(); if(casa)propMks.forEach(m=>propsG.addLayer(m));}catch(e){}
+  // Nuvem e pontos locais são redesenhados respeitando município ativo.
+  try{cloudPtsG.clearLayers();window.cloudPropMks={};(window.v7CloudProps||[]).forEach(p=>renderCloudPt(p,p.id));}catch(e){}
+  try{userPtsG.clearLayers();(window.userPts||[]).forEach((p,i)=>renderPt(p,i));}catch(e){}
+}
+async function v15RenderArea(area){
+  window.V15_ACTIVE_AREA=area;
+  quadsG.clearLayers(); municipalG.clearLayers(); Object.keys(qPoly).forEach(k=>delete qPoly[k]); closeSheet();
+  v15ApplyMapLayerContext(area);
+  if(area==='2cia'){
+    let union=null;
+    for(const municipio of Object.keys(V15_MUNICIPAL_CFG)){
+      const fc=(await v15FetchMunicipalGeo(municipio))||v15FallbackFeature(municipio);
+      const layer=L.geoJSON(fc,{style:{color:'#facc15',weight:2,fillColor:'#0ea5e9',fillOpacity:.045,dashArray:'7 5'}}).bindTooltip(municipio,{sticky:true,direction:'center',className:'v15-municipio-tip'}).addTo(municipalG);
+      const b=layer.getBounds(); union=union?union.extend(b):L.latLngBounds(b);
+    }
+    window.V15_ACTIVE_QDATA=QDATA; v15UpdateTabs('2ª Companhia');
+    if(union?.isValid())map.fitBounds(union,{padding:[35,35],animate:true});
+    return;
+  }
+  const fc=(await v15FetchMunicipalGeo(area))||v15FallbackFeature(area), bounds=v15BoundsFromGeoJSON(fc);
+  if(!bounds){const a=V15_MUNICIPAL_CFG[area];map.setView(a.center,a.zoom);return;}
+  window.V15_ACTIVE_QDATA=v15BuildQData(area,bounds); v15UpdateTabs(area);
+  L.geoJSON(fc,{style:{color:'#facc15',weight:2.2,fillOpacity:0,dashArray:'8 5'}}).bindTooltip(area,{sticky:true}).addTo(municipalG);
+  for(let id=1;id<=4;id++){
+    const qb=v15QuadrantBox(bounds,id), features=[];
+    (fc.features||[]).forEach(f=>{const g=v15ClipGeometry(f.geometry,qb);if(g)features.push({type:'Feature',properties:{q:id,municipio:area},geometry:g});});
+    const qfc={type:'FeatureCollection',features},col=QC[id-1],qd=window.V15_ACTIVE_QDATA[id-1];
+    const layer=L.geoJSON(qfc,{style:{color:col,weight:2,fillColor:col,fillOpacity:.12,dashArray:'6 4',opacity:.9}});
+    layer.on('click',()=>{selQ(id);openSheet();});
+    layer.bindPopup(`<div class="pt" style="color:${col}">${area} · Q${id} – ${['ALFA','BRAVO','CHARLIE','DELTA'][id-1]}</div><div class="ps">Setor operacional municipal · ~${qd.km.area} km²</div>`,{maxWidth:260});
+    layer.addTo(quadsG); qPoly[id]=layer;
+  }
+  const lb=L.geoJSON(fc).getBounds(); if(lb.isValid())map.fitBounds(lb,{padding:[35,35],animate:true});
+  selQ(1); closeSheet();
+}
+window.v15ClassQMunicipal=function(lat,lng,municipio){
+  municipio=municipio||window.V15_ACTIVE_AREA||'Casa Branca';
+  if(municipio==='2cia')municipio='Casa Branca';
+  const fc=window.V15_MUNICIPAL_CACHE[municipio],cfg=V15_MUNICIPAL_CFG[municipio];
+  let b=fc?v15BoundsFromGeoJSON(fc):null;
+  if(!b&&cfg){const [[s,w],[n,e]]=cfg.fallback;b={minLat:s,maxLat:n,minLng:w,maxLng:e};}
+  if(!b)return classQ(lat,lng);
+  const midLat=(b.minLat+b.maxLat)/2,midLng=(b.minLng+b.maxLng)/2,north=lat>midLat,west=lng<midLng;
+  return north&&west?1:north&&!west?2:!north&&west?3:4;
+};
 
 // ── RODOVIAS
 const RDS={
@@ -207,6 +326,7 @@ try{const r=localStorage.getItem('sisrural_pm_v1');if(r)userPts=JSON.parse(r);}c
 function savePts(){try{localStorage.setItem('sisrural_pm_v1',JSON.stringify(userPts));}catch(e){}}
 
 function renderPt(p,i){
+  const municipio=p.municipio||'Casa Branca'; const activeMun=window.V15_ACTIVE_AREA||'Casa Branca'; if(activeMun!=='2cia'&&municipio!==activeMun)return;
   const col='#22c55e';
   const mk=L.marker([p.lat,p.lng],{icon:L.divIcon({className:'',
     html:`<div style="position:relative;display:inline-block"><div style="background:rgba(7,12,23,.96);border:2px solid ${col};border-radius:9px;padding:3px 8px;display:flex;align-items:center;gap:4px;box-shadow:0 0 12px ${col}44;white-space:nowrap"><span style="font-size:13px">📌</span><span style="font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;color:${col}">${p.nm}</span></div><div style="position:absolute;bottom:-5px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid ${col}"></div></div>`,
@@ -223,7 +343,10 @@ function renderCloudPt(p,id){
   const end=p.end||p.endereco||'';
   const ph=p.ph||p.telefone||'';
   const maps=p.maps||`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
-  const q=typeof classQ==='function'?classQ(lat,lng):'';
+  const municipio=p.municipio||'Casa Branca';
+  const activeMun=window.V15_ACTIVE_AREA||'Casa Branca';
+  if(activeMun!=='2cia'&&municipio!==activeMun)return;
+  const q=p.quadrante||window.v15ClassQMunicipal?.(lat,lng,municipio)||(typeof classQ==='function'?classQ(lat,lng):'');
   const mk=L.marker([lat,lng],{icon:L.divIcon({className:'',
     html:`<div style="position:relative;display:inline-block"><div style="background:rgba(7,12,23,.96);border:2px solid ${col};border-radius:9px;padding:3px 8px;display:flex;align-items:center;gap:4px;box-shadow:0 0 12px ${col}44;white-space:nowrap"><span style="font-size:13px">☁️</span><span style="font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;color:${col}">${nm}</span></div><div style="position:absolute;bottom:-5px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid ${col}"></div></div>`,
     iconAnchor:[55,35]})});
@@ -256,16 +379,9 @@ function togLayer(k){
   const btn={roads:'bRoads',props:'bProps',refs:'bRef',dirt:'bDirt',user:'bUser'}[k];
   document.getElementById(btn).classList.toggle('on',lsh[k]);
 }
-function rv(){map.setView([CX,CY],10);}
-// V15 EXP: navegação territorial da 2ª Companhia. Não restringe atuação do policial.
-const V15_AREAS={
-  'Casa Branca':{center:[-21.773,-47.086],zoom:11},
-  'Santa Cruz das Palmeiras':{center:[-21.827,-47.249],zoom:11},
-  'Tambaú':{center:[-21.705,-47.274],zoom:11},
-  'Itobi':{center:[-21.737,-46.975],zoom:11},
-  '2cia':{center:[-21.765,-47.125],zoom:10}
-};
-window.setSisruralOperationalArea=function(area){ const a=V15_AREAS[area]||V15_AREAS['2cia']; map.setView(a.center,a.zoom,{animate:true}); closeSheet(); };
+function rv(){window.setSisruralOperationalArea?.(window.V15_ACTIVE_AREA||'Casa Branca');}
+// V15.2 EXP: a seleção territorial redesenha a malha e os quadrantes do município ativo.
+window.setSisruralOperationalArea=function(area){ return v15RenderArea(area||'2cia'); };
 
 // ── SHEET
 let shOpen=false,activeQ=1;
@@ -282,7 +398,7 @@ document.getElementById('sheet').addEventListener('touchend',e=>{
 
 function selQ(id){
   activeQ=id;
-  const col=QC[id-1],qd=QDATA[id-1];
+  const col=QC[id-1],qd=(window.V15_ACTIVE_QDATA||QDATA)[id-1];
   [1,2,3,4].forEach(q=>document.getElementById('tab'+q).classList.toggle('active',q===id));
   Object.entries(qPoly).forEach(([qid,p])=>{
     const a=parseInt(qid)===id;
@@ -293,16 +409,17 @@ function selQ(id){
   document.getElementById('pArea').textContent=qd.km.area;
   document.getElementById('pDiag').textContent=qd.km.diag;
   document.getElementById('sheet').style.setProperty('--qc',col);
-  const props=PROPS.filter(p=>p.q===id);
+  const activeMun=window.V15_ACTIVE_AREA||'Casa Branca';
+  const props=PROPS.filter(p=>p.q===id && (activeMun==='2cia'||(p.municipio||'Casa Branca')===activeMun));
   const cloudPropsForQuad=(window.v7CloudProps||[]).filter(p=>{
     const lat=parseFloat(p.lat), lng=parseFloat(p.lng);
     const q=p.quadrante||p.q||(typeof classQ==='function'?classQ(lat,lng):'');
-    return String(q)===String(id);
+    const mun=p.municipio||'Casa Branca'; return String(q)===String(id) && (activeMun==='2cia'||mun===activeMun);
   });
   const localPropsForQuad=(window.userPts||[]).filter(p=>{
     const lat=parseFloat(p.lat), lng=parseFloat(p.lng);
     const q=p.quadrante||p.q||(typeof classQ==='function'?classQ(lat,lng):'');
-    return String(q)===String(id);
+    const mun=p.municipio||'Casa Branca'; return String(q)===String(id) && (activeMun==='2cia'||mun===activeMun);
   });
   document.getElementById('pProps').textContent=props.length + cloudPropsForQuad.length + localPropsForQuad.length;
   document.getElementById('sDivisas').innerHTML=qd.divisas.map(d=>`<div class="dtag">${d}</div>`).join('');
@@ -333,8 +450,8 @@ function selQ(id){
     return `<div class="prop-card" onclick="zUserProp(${idx})"><div class="prop-ico-w" style="border-color:#22c55e">📌</div><div class="prop-info"><div class="prop-name">${nm}</div><div class="prop-type">${tp} · aparelho</div><div class="prop-meta"><span style="font-size:7px;background:rgba(34,197,94,.1);color:#22c55e;border-radius:3px;padding:1px 4px">📌 local/pendente</span></div><div class="prop-addr">${end}</div><a class="nav-btn" href="${maps}" target="_blank" onclick="event.stopPropagation()">📍 Navegar no Maps</a></div><div class="prop-arrow">›</div></div>`;
   }).join('');
   document.getElementById('sProps').innerHTML=(baseHtml+cloudHtml+localHtml)||`<div style="padding:16px;text-align:center;color:var(--mu);font-size:10px;font-family:'JetBrains Mono',monospace">Nenhuma prop. cadastrada neste setor</div>`;
-  const bx={1:[[N,W],[MX,MY]],2:[[N,MY],[MX,E]],3:[[MX,W],[S,MY]],4:[[MX,MY],[S,E]]};
-  map.fitBounds(bx[id],{padding:[60,60],animate:true});
+  const qlayer=qPoly[id];
+  if(qlayer&&typeof qlayer.getBounds==='function'&&qlayer.getBounds().isValid()) map.fitBounds(qlayer.getBounds(),{padding:[60,60],animate:true});
   openSheet();
 }
 
@@ -455,7 +572,9 @@ function salvar(){
   if(isNaN(lat)||isNaN(lng)){msg.style.cssText='display:block;background:rgba(239,68,68,.15);color:#ef4444';msg.textContent='⚠️ Coordenadas inválidas. Use o GPS ou insira manualmente.';return;}
   const pt={nm,tp:document.getElementById('aTipo').value.trim(),lat,lng,
     end:document.getElementById('aEnd').value.trim(),ph:document.getElementById('aTel').value.trim(),
-    dirt:document.getElementById('aDirt').checked,dt:new Date().toLocaleString('pt-BR')};
+    dirt:document.getElementById('aDirt').checked,dt:new Date().toLocaleString('pt-BR'),
+    municipio:(document.getElementById('aMunicipio')?.value||window.V15_ACTIVE_AREA||'Casa Branca')};
+  pt.q=window.v15ClassQMunicipal?.(lat,lng,pt.municipio)||classQ(lat,lng);
   userPts.push(pt);savePts();renderPt(pt,userPts.length-1);
   try{ if(document.getElementById('sheet')?.classList.contains('open')) selQ(activeQ||classQ(lat,lng)); }catch(e){}
   map.setView([lat,lng],15,{animate:true});

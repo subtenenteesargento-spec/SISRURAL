@@ -80,8 +80,20 @@ window.changeOperationalArea=function(value){
   const area=value==='minha'?minha:value;
   const st=$v('v15AreaStatus'); if(st) st.textContent=area==='2cia'?'Toda a 2ª Companhia':area;
   try{window.setSisruralOperationalArea?.(area);}catch(e){console.warn(e);}
-  if(v15CanChangeArea()) localStorage.setItem('sisrural_v15_area',value);
+  if(v15CanChangeArea()) localStorage.setItem('sisrural_v15_area',value); setTimeout(v152SyncPropertyMunicipio,120);
 };
+
+function v152SyncPropertyMunicipio(){
+  const el=$v('aMunicipio'); if(!el)return;
+  const minha=v15Municipio(v7Profile?.municipioReferencia);
+  if(v15CanChangeArea()){
+    el.disabled=false;
+    const ativa=window.V15_ACTIVE_AREA;
+    if(V15_MUNICIPIOS.includes(ativa))el.value=ativa;
+  }else{
+    el.value=minha; el.disabled=true; el.title=`Município vinculado ao cadastro: ${minha}`;
+  }
+}
 function v15ApplyInitialArea(){
   const sel=$v('v15AreaSelect'); if(!sel)return;
   const minha=v15Municipio(v7Profile?.municipioReferencia);
@@ -1033,7 +1045,7 @@ function formProp(){
 }
 async function savePropCloud(pt){
   if(isDuplicateProp(pt)) return {duplicado:true};
-  const data={nome:pt.nm,tipo:pt.tp||'',atividade:pt.tp||'',plantioInicio:Number(pt.plantioInicio)||0,plantioFim:Number(pt.plantioFim)||0,colheitaInicio:Number(pt.colheitaInicio)||0,colheitaFim:Number(pt.colheitaFim)||0,epocaPlantio:pt.epocaPlantio||'',epocaColheita:pt.epocaColheita||'',endereco:pt.end||'',telefone:pt.ph||'',lat:pt.lat,lng:pt.lng,dirt:!!pt.dirt,maps:pt.maps,municipio:v15Municipio(pt.municipio),quadrante:v15Municipio(pt.municipio)==='Casa Branca'?(typeof classQ==='function'?classQ(pt.lat,pt.lng):''):'',origem:pt._offline?'offline_app':'app',usuario:v7User?.email||'',createdAt:serverTimestamp(),updatedAt:serverTimestamp()};
+  const data={nome:pt.nm,tipo:pt.tp||'',atividade:pt.tp||'',plantioInicio:Number(pt.plantioInicio)||0,plantioFim:Number(pt.plantioFim)||0,colheitaInicio:Number(pt.colheitaInicio)||0,colheitaFim:Number(pt.colheitaFim)||0,epocaPlantio:pt.epocaPlantio||'',epocaColheita:pt.epocaColheita||'',endereco:pt.end||'',telefone:pt.ph||'',lat:pt.lat,lng:pt.lng,dirt:!!pt.dirt,maps:pt.maps,municipio:v15Municipio(pt.municipio),quadrante:(window.v15ClassQMunicipal?.(pt.lat,pt.lng,v15Municipio(pt.municipio))||(typeof classQ==='function'?classQ(pt.lat,pt.lng):'')),origem:pt._offline?'offline_app':'app',usuario:v7User?.email||'',createdAt:serverTimestamp(),updatedAt:serverTimestamp()};
   return await addDoc(collection(db,'propriedades_cadastradas'),data);
 }
 function renderCloudProperties(){
