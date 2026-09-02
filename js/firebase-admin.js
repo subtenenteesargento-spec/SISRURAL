@@ -161,6 +161,19 @@ function generateTemporarySecret(){
     return 'Sr!'+Date.now().toString(36)+Math.random().toString(36).slice(2)+'9a';
   }
 }
+// SISRURAL V15.6 - Controle territorial por perfil
+function sisruralApplyTerritorialAccess(userData){
+  const perfil=String(userData?.perfil||'').toLowerCase();
+  const municipio=String(userData?.municipio||'').trim();
+  return {
+    isPolicial: perfil==='policial',
+    municipio,
+    bloqueiaTrocaArea: perfil==='policial' && !!municipio,
+    areaInicial: perfil==='policial' ? municipio : 'Toda a 2ª Companhia'
+  };
+}
+window.sisruralApplyTerritorialAccess=sisruralApplyTerritorialAccess;
+
 async function createAuthUserForPolice(email,nome){
   const appName='sisrural-create-'+Date.now()+'-'+Math.random().toString(36).slice(2);
   const app2=initializeApp(firebaseConfig, appName);
@@ -670,7 +683,7 @@ window.approveReq=async(id)=>{
   const r=v7Requests.find(x=>x.id===id); if(!r)return; 
   const perfil=prompt('Perfil do usuário: Policial, Supervisor ou Administrador Geral','Policial')||'Policial'; 
   const email=String(r.email||'').trim().toLowerCase();
-  const data={nome:r.nome,email,re:r.re,graduacao:r.graduacao,telefone:r.telefone,perfil,status:'Ativo',companhia:APP_INFO.companhia,approvedBy:v7User.email,approvedAt:serverTimestamp()}; 
+  const data={nome:r.nome,email,re:r.re,graduacao:r.graduacao,telefone:r.telefone,municipio:r.municipio||'',perfil,status:'Ativo',companhia:APP_INFO.companhia,approvedBy:v7User.email,approvedAt:serverTimestamp()}; 
   await setDoc(doc(db,'usuarios',emailKey(email)),data,{merge:true}); 
   await setDoc(doc(db,'solicitacoes_acesso',id),{status:'Aprovado',perfilAprovado:perfil,municipio:r.municipio||'',approvedBy:v7User.email,approvedAt:serverTimestamp()},{merge:true}); 
   let authMsg='';

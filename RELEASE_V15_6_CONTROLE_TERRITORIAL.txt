@@ -1,0 +1,6 @@
+SISRURAL V15.6 EXP - CONTROLE TERRITORIAL
+
+- Usuário aprovado passa a manter o município vinculado.
+- Criada base para aplicar bloqueio de área por perfil.
+- Policial: área inicial conforme município cadastrado.
+- Supervisão/Administradores: visão ampliada.
