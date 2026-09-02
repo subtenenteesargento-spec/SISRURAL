@@ -646,12 +646,14 @@ window.sendAccessRequest=async()=>{
       graduacao:$v('reqGrad').value.trim(),
       email:$v('reqEmail').value.trim().toLowerCase(),
       telefone:$v('reqTel').value.trim(),
+      municipio:$v('reqMunicipio')?.value || '',
       status:'Pendente',
       createdAt:serverTimestamp()
     };
     if(!data.nome) throw Error('Informe o nome.');
     if(!data.re) throw Error('Informe o RE.');
     if(!data.email) throw Error('Informe o e-mail.');
+    if(!data.municipio) throw Error('Selecione o município.');
     btnMsg.innerHTML='<span style="color:#facc15">Enviando solicitação...</span>';
     await addDoc(collection(db,'solicitacoes_acesso'),data);
     btnMsg.innerHTML='<span style="color:#4ade80">Solicitação enviada. O administrador verá no painel ADMIN.</span>';
@@ -670,7 +672,7 @@ window.approveReq=async(id)=>{
   const email=String(r.email||'').trim().toLowerCase();
   const data={nome:r.nome,email,re:r.re,graduacao:r.graduacao,telefone:r.telefone,perfil,status:'Ativo',companhia:APP_INFO.companhia,approvedBy:v7User.email,approvedAt:serverTimestamp()}; 
   await setDoc(doc(db,'usuarios',emailKey(email)),data,{merge:true}); 
-  await setDoc(doc(db,'solicitacoes_acesso',id),{status:'Aprovado',perfilAprovado:perfil,approvedBy:v7User.email,approvedAt:serverTimestamp()},{merge:true}); 
+  await setDoc(doc(db,'solicitacoes_acesso',id),{status:'Aprovado',perfilAprovado:perfil,municipio:r.municipio||'',approvedBy:v7User.email,approvedAt:serverTimestamp()},{merge:true}); 
   let authMsg='';
   try{
     const cr=await createAuthUserForPolice(email,r.nome||email);
