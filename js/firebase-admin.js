@@ -591,9 +591,35 @@ function showLogged(){
   const b=$v('bAdmin'); if(b) b.style.display=canOpenAdminPanel()?'flex':'none'; setTimeout(v15ApplyInitialArea,250);
 }
 function showLogin(){ $v('authGate').classList.remove('hidden'); $v('userPill').style.display='none'; const b=$v('bAdmin'); if(b) b.style.display='none'; }
+
+// V15.8.1 - Registro inicial de dispositivo (modo observação)
+// Nesta fase apenas registra; o bloqueio será ativado após homologação.
+async function v15RegistrarDispositivo(usuario){
+  try{
+    const id = btoa(
+      (navigator.userAgent||'') + '|' +
+      (screen.width||'') + 'x' + (screen.height||'')
+    ).replace(/=/g,'').slice(0,80);
+
+    await setDoc(doc(db,'dispositivos_acesso', id), {
+      usuarioUid: usuario.uid,
+      email: usuario.email || '',
+      navegador: navigator.userAgent || '',
+      plataforma: navigator.platform || '',
+      resolucao: `${screen.width||0}x${screen.height||0}`,
+      primeiroAcesso: serverTimestamp(),
+      ultimoAcesso: serverTimestamp(),
+      status: 'Pendente'
+    }, {merge:true});
+
+  }catch(err){
+    console.warn('Registro de dispositivo não realizado:', err);
+  }
+}
+
 window.v7Login=async()=>{
   const msg=$v('v7LoginMsg'); msg.style.display='none';
-  try{ await signInWithEmailAndPassword(auth,$v('v7Email').value.trim(),$v('v7Senha').value); }
+  try{ const cred=await signInWithEmailAndPassword(auth,$v('v7Email').value.trim(),$v('v7Senha').value); await v15RegistrarDispositivo(cred.user); }
   catch(e){ msg.style.display='block'; msg.textContent = e.code==='auth/invalid-credential'?'E-mail ou senha incorretos.':e.message; }
 };
 window.v7ForgotPassword=async()=>{
