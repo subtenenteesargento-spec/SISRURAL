@@ -1729,12 +1729,38 @@ function v13FiveW2H(top,d){
   if(top.harvest)why.push(`${top.harvest} em período de colheita`);
   let what='Avaliar intensificação de visitas preventivas e pontos de observação';
   if(recentOcc.length) what=`Reforçar o policiamento preventivo e a presença ostensiva no ${v7QLabel(top.q)}, considerando ocorrência recente de ${natureSummary||'natureza não informada'}`;
-  let where=`${v7QLabel(top.q)}${names.length?' — priorizar: '+names.join(', '):''}`;
-  if(uniquePlaces.length) where+=`${names.length?' · ': ' — '}local(is) relacionado(s) à ocorrência: ${uniquePlaces.join(', ')}`;
+  let where=`${v7QLabel(top.q)}`;
+  if(uniquePlaces.length) where+=` — ocorrência(s) vinculada(s): ${uniquePlaces.join(', ')}`;
+  if(names.length) where+=`${uniquePlaces.length?' · ': ' — '}priorizar também: ${names.join(', ')}`;
   let how='Roteiro direcionado às propriedades com maior intervalo sem visita, sazonalidade e ocorrências recentes, associado a pontos de observação no quadrante';
   if(recentOcc.length) how+=`. Considerar a natureza ${natureSummary||'registrada'} e os locais relacionados à ocorrência no planejamento das passagens e pontos de observação`;
   return {what,why:why.join('; '),where,when:'Próximos 7 dias, conforme disponibilidade operacional',who:'Equipe definida pelo comando',how,howmuch:`Meta sugerida: ${Math.min(8,Math.max(3,top.overdue))} visitas prioritárias e até 2 pontos de observação`};
 }
+window.v14FocusOccurrence=async function(id){
+  const o=(v7Occurrences||[]).find(x=>String(x.id)===String(id));
+  if(!o) return alert('Ocorrência não localizada.');
+  const prop=(v7CloudProps||[]).find(p=>String(p.id)===String(o.propriedadeId));
+  const propName=o.propriedade||prop?.nome||'Propriedade não informada';
+  closeV7Modal('v7IntelModal');
+  setTimeout(()=>{
+    if(prop && window.zCloudProp){
+      window.zCloudProp(prop.id);
+      return;
+    }
+    const baseIdx=(window.PROPS||[]).findIndex(p=>
+      normTxt(p.nm||p.nome||'')===normTxt(propName)
+    );
+    if(baseIdx>=0 && window.zProp){
+      window.zProp(baseIdx);
+      return;
+    }
+    if(o.lat!=null && o.lng!=null){
+      alert(`A ocorrência está registrada em ${propName}, porém a propriedade não está disponível no mapa nesta sessão.`);
+      return;
+    }
+    alert(`A ocorrência está vinculada a ${propName}.`);
+  },180);
+};
 function v14OccurrencePanel(d){
   const esc=x=>String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const windows=[30,60,90].map(days=>({days,list:d.occ.filter(o=>o._dt&&o._dt<=d.now&&(d.now-o._dt)<=days*86400000)}));
@@ -1749,7 +1775,7 @@ function v14OccurrencePanel(d){
     const q=v7QLabel(o.quadrante||prop?.quadrante||'');
     const date=o._dt?o._dt.toLocaleDateString('pt-BR'):(o.dataLocal||'');
     const time=o.horaLocal?` · ${esc(o.horaLocal)}`:'';
-    return `<div class="v14-occ-card"><div class="v14-occ-head"><b>🚨 ${esc(o.natureza||'Outros')}</b><span>${esc(date)}${time}</span></div><div class="v14-occ-prop">🏠 ${esc(propName)}</div><div class="v7-small">${esc(mun)} · ${esc(q||'Quadrante não informado')}${o.bopm?` · BOPM: ${esc(o.bopm)}`:''}</div>${o.observacao?`<div class="v14-occ-obs">${esc(o.observacao)}</div>`:''}</div>`;
+    return `<div class="v14-occ-card"><div class="v14-occ-head"><b>🚨 ${esc(o.natureza||'Outros')}</b><span>${esc(date)}${time}</span></div><div class="v14-occ-prop">🏠 ${esc(propName)}</div><div class="v7-small">${esc(mun)} · ${esc(q||'Quadrante não informado')}${o.bopm?` · BOPM: ${esc(o.bopm)}`:''}</div>${o.observacao?`<div class="v14-occ-obs">${esc(o.observacao)}</div>`:''}<button onclick="v14FocusOccurrence('${esc(o.id)}')" style="margin-top:8px;width:100%;background:#0f766e;color:#fff;border:1px solid #14b8a6;border-radius:8px;padding:8px;font-weight:800;cursor:pointer">📍 Ver ocorrência no mapa</button></div>`;
   }).join(''):'<div class="v7-card">Nenhuma ocorrência registrada nos últimos 90 dias.</div>';
   return `<div class="v14-kpis"><div class="v14-kpi"><b>${windows[0].list.length}</b><span>Ocorrências 30d</span></div><div class="v14-kpi"><b>${windows[1].list.length}</b><span>Ocorrências 60d</span></div><div class="v14-kpi"><b>${windows[2].list.length}</b><span>Ocorrências 90d</span></div><div class="v14-kpi"><b>${esc(topNature[0]?.[0]||'Sem registros')}</b><span>Natureza mais frequente</span></div></div><div class="v14-grid"><div class="v7-card"><b>Por natureza · 90 dias</b>${topNature.length?topNature.map(([n,c])=>`<div class="v14-row"><span>${esc(n)}</span><b>${c}</b></div>`).join(''):'<div class="v7-small">Nenhuma ocorrência registrada no período.</div>'}</div><div class="v7-card"><b>Por quadrante · 90 dias</b>${q90.map(x=>`<div class="v14-row"><span>${v7QLabel(x.q)}</span><b>${x.n}</b></div>`).join('')}</div></div><div class="v7-card v14-occ-list"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>📍 Ocorrências recentes e propriedade</b><span class="v7-small">até 10 registros · 90 dias</span></div><div class="v7-small" style="margin:4px 0 8px">A propriedade vinculada aparece em destaque para facilitar a localização exata do fato no planejamento.</div>${occurrenceRows}</div>`;
 }
