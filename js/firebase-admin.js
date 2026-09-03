@@ -18,7 +18,7 @@ const $v=id=>document.getElementById(id);
 const emailKey = email => String(email||'').toLowerCase().replace(/[^a-z0-9]/g,'_');
 const DEVICE_KEY='sisrural_device_id_v2';
 const DEVICE_COOKIE='sisrural_device_id_v2';
-const DEVICE_SCHEMA_VERSION='15.10';
+const DEVICE_SCHEMA_VERSION='15.12';
 function readDeviceCookie(){
   try{ const m=document.cookie.match(/(?:^|; )sisrural_device_id_v2=([^;]+)/); return m?decodeURIComponent(m[1]):''; }catch(e){ return ''; }
 }
@@ -167,7 +167,7 @@ async function registerCurrentDevice(){
       appVersao:DEVICE_SCHEMA_VERSION,status,
       chaveIdentidade:deviceIdentityKey(info),
       primeiroAcesso:old.primeiroAcesso||serverTimestamp(),ultimoAcesso:serverTimestamp(),
-      observacao:'V15.10 - identidade determinística + reaproveitamento de dispositivo autorizado'
+      observacao:'V15.12 - identidade determinística + 1 policial = 1 dispositivo autorizado'
     },{merge:true});
     return {status,docId,deviceId,erro:null};
   }catch(e){
@@ -972,6 +972,22 @@ function renderDevicesList(){
 window.saveDeviceStatus=async(id,selId)=>{
   if(!isAdminGeral()) return alert('Somente Administrador Geral pode gerenciar dispositivos.');
   const status=$v(selId)?.value||'Pendente';
+  const alvo=(v7Devices||[]).find(d=>String(d.docId||d.deviceId)===String(id))||{};
+
+  // Regra V15.12: policial pode ter somente UM dispositivo autorizado.
+  // Administradores/Supervisores continuam livres dessa restrição.
+  if(status==='Autorizado' && perfilNorm(alvo.perfil)==='policial' && alvo.usuarioUid){
+    const outros=(v7Devices||[]).filter(d=>String(d.usuarioUid||'')===String(alvo.usuarioUid) && String(d.docId||d.deviceId)!==String(id) && d.status==='Autorizado');
+    if(outros.length){
+      const ok=confirm(`Este policial já possui ${outros.length} dispositivo(s) autorizado(s).\n\nAo autorizar este aparelho, os demais serão REVOGADOS para manter a regra de 1 policial = 1 dispositivo autorizado.\n\nDeseja continuar?`);
+      if(!ok) return;
+      for(const outro of outros){
+        await setDoc(doc(db,'dispositivos_acesso',outro.docId||outro.deviceId),{status:'Revogado',updatedBy:v7User.email,updatedAt:serverTimestamp(),revogadoPor:v7User.email,revogadoEm:serverTimestamp(),revogadoMotivo:'V15.12 - substituição por novo dispositivo autorizado'},{merge:true});
+        await auditV7('dispositivo_status_alterado',`${outro.docId||outro.deviceId}: Revogado · substituído pelo dispositivo ${id}`);
+      }
+    }
+  }
+
   await setDoc(doc(db,'dispositivos_acesso',id),{status,updatedBy:v7User.email,updatedAt:serverTimestamp(),...(status==='Autorizado'?{aprovadoPor:v7User.email,aprovadoEm:serverTimestamp()}:{})},{merge:true});
   await auditV7('dispositivo_status_alterado',`${id}: ${status}`);
   alert(`Dispositivo marcado como ${status}. ${v7SecurityConfig?.bloqueioDispositivosAtivo?'Modo estrito ativo: a regra será aplicada ao próximo login do policial.':'Modo observação: ainda não bloqueia policiais pendentes.'}`);

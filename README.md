@@ -1,3 +1,5 @@
+SISRURAL V15.12 EXP — segurança de dispositivo consolidada (1 policial = 1 dispositivo autorizado)
+
 # SISRURAL V10.3 - Campo Fix
 
 - Corrige criação de usuário no Firebase Authentication pelo painel ADMIN com senha provisória Sisrural@2026.
