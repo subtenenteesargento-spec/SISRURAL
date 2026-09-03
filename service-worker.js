@@ -1,4 +1,4 @@
-const CACHE_NAME='sisrural-v15-8-4-exp';
+const CACHE_NAME='sisrural-v15-8-5-exp';
 const APP_SHELL=[
   './','./index.html','./offline.html','./manifest.webmanifest','./config.firebase.js',
   './css/app.css','./css/premium.css',

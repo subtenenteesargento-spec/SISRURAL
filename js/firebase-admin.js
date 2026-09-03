@@ -1736,11 +1736,22 @@ function v13FiveW2H(top,d){
   return {what,why:why.join('; '),where,when:'Próximos 7 dias, conforme disponibilidade operacional',who:'Equipe definida pelo comando',how,howmuch:`Meta sugerida: ${Math.min(8,Math.max(3,top.overdue))} visitas prioritárias e até 2 pontos de observação`};
 }
 function v14OccurrencePanel(d){
+  const esc=x=>String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const windows=[30,60,90].map(days=>({days,list:d.occ.filter(o=>o._dt&&o._dt<=d.now&&(d.now-o._dt)<=days*86400000)}));
   const byNature={}; windows[2].list.forEach(o=>{const n=o.natureza||'Outros';byNature[n]=(byNature[n]||0)+1;});
   const topNature=Object.entries(byNature).sort((a,b)=>b[1]-a[1]).slice(0,6);
   const q90=[1,2,3,4].map(q=>({q,n:windows[2].list.filter(o=>String(o.quadrante)===String(q)).length}));
-  return `<div class="v14-kpis"><div class="v14-kpi"><b>${windows[0].list.length}</b><span>Ocorrências 30d</span></div><div class="v14-kpi"><b>${windows[1].list.length}</b><span>Ocorrências 60d</span></div><div class="v14-kpi"><b>${windows[2].list.length}</b><span>Ocorrências 90d</span></div><div class="v14-kpi"><b>${topNature[0]?.[0]||'Sem registros'}</b><span>Natureza mais frequente</span></div></div><div class="v14-grid"><div class="v7-card"><b>Por natureza · 90 dias</b>${topNature.length?topNature.map(([n,c])=>`<div class="v14-row"><span>${n}</span><b>${c}</b></div>`).join(''):'<div class="v7-small">Nenhuma ocorrência registrada no período.</div>'}</div><div class="v7-card"><b>Por quadrante · 90 dias</b>${q90.map(x=>`<div class="v14-row"><span>${v7QLabel(x.q)}</span><b>${x.n}</b></div>`).join('')}</div></div>`;
+  const recent=windows[2].list.slice().sort((a,b)=>b._dt-a._dt).slice(0,10);
+  const occurrenceRows=recent.length?recent.map(o=>{
+    const prop=(d.st.props||[]).find(p=>String(p.id)===String(o.propriedadeId))||null;
+    const propName=o.propriedade||prop?.nome||'Propriedade não informada';
+    const mun=o._municipio||o.municipio||prop?.municipio||'Casa Branca';
+    const q=v7QLabel(o.quadrante||prop?.quadrante||'');
+    const date=o._dt?o._dt.toLocaleDateString('pt-BR'):(o.dataLocal||'');
+    const time=o.horaLocal?` · ${esc(o.horaLocal)}`:'';
+    return `<div class="v14-occ-card"><div class="v14-occ-head"><b>🚨 ${esc(o.natureza||'Outros')}</b><span>${esc(date)}${time}</span></div><div class="v14-occ-prop">🏠 ${esc(propName)}</div><div class="v7-small">${esc(mun)} · ${esc(q||'Quadrante não informado')}${o.bopm?` · BOPM: ${esc(o.bopm)}`:''}</div>${o.observacao?`<div class="v14-occ-obs">${esc(o.observacao)}</div>`:''}</div>`;
+  }).join(''):'<div class="v7-card">Nenhuma ocorrência registrada nos últimos 90 dias.</div>';
+  return `<div class="v14-kpis"><div class="v14-kpi"><b>${windows[0].list.length}</b><span>Ocorrências 30d</span></div><div class="v14-kpi"><b>${windows[1].list.length}</b><span>Ocorrências 60d</span></div><div class="v14-kpi"><b>${windows[2].list.length}</b><span>Ocorrências 90d</span></div><div class="v14-kpi"><b>${esc(topNature[0]?.[0]||'Sem registros')}</b><span>Natureza mais frequente</span></div></div><div class="v14-grid"><div class="v7-card"><b>Por natureza · 90 dias</b>${topNature.length?topNature.map(([n,c])=>`<div class="v14-row"><span>${esc(n)}</span><b>${c}</b></div>`).join(''):'<div class="v7-small">Nenhuma ocorrência registrada no período.</div>'}</div><div class="v7-card"><b>Por quadrante · 90 dias</b>${q90.map(x=>`<div class="v14-row"><span>${v7QLabel(x.q)}</span><b>${x.n}</b></div>`).join('')}</div></div><div class="v7-card v14-occ-list"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>📍 Ocorrências recentes e propriedade</b><span class="v7-small">até 10 registros · 90 dias</span></div><div class="v7-small" style="margin:4px 0 8px">A propriedade vinculada aparece em destaque para facilitar a localização exata do fato no planejamento.</div>${occurrenceRows}</div>`;
 }
 window.v14SaveDecision=async(status)=>{
   if(!isAdminGeral())return alert('Acesso exclusivo dos Administradores.');

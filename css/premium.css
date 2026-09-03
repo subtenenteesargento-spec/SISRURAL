@@ -792,3 +792,5 @@ body{
 #v7IntelModal #v14DecisionObs::placeholder{color:#64748b!important;font-weight:500!important}
 #v7IntelModal #v14DecisionObs:focus{border-color:#2563eb!important;box-shadow:0 0 0 3px rgba(37,99,235,.12)!important}
 #v7IntelModal .v141-list-note{margin:-4px 0 8px 0;color:#475569!important}
+
+.v14-occ-list{margin-top:8px}.v14-occ-card{border:1px solid #cbd5e1;border-radius:9px;padding:9px;margin:7px 0;background:#f8fafc}.v14-occ-head{display:flex;justify-content:space-between;gap:8px;align-items:center;color:#0f172a}.v14-occ-head span{font-size:11px;color:#64748b;white-space:nowrap}.v14-occ-prop{margin-top:5px;font-size:15px;font-weight:800;color:#0f172a}.v14-occ-obs{margin-top:5px;padding-top:5px;border-top:1px solid #e2e8f0;color:#334155;font-size:12px}@media(max-width:700px){.v14-occ-head{align-items:flex-start;flex-direction:column}.v14-occ-head span{white-space:normal}}
