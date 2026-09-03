@@ -18,6 +18,7 @@ const $v=id=>document.getElementById(id);
 const emailKey = email => String(email||'').toLowerCase().replace(/[^a-z0-9]/g,'_');
 const DEVICE_KEY='sisrural_device_id_v2';
 const DEVICE_COOKIE='sisrural_device_id_v2';
+const DEVICE_SCHEMA_VERSION='15.10';
 function readDeviceCookie(){
   try{ const m=document.cookie.match(/(?:^|; )sisrural_device_id_v2=([^;]+)/); return m?decodeURIComponent(m[1]):''; }catch(e){ return ''; }
 }
@@ -65,9 +66,26 @@ function devicePlatformInfo(){
     online:navigator.onLine!==false
   };
 }
-function currentDeviceDocId(){
-  const raw=getSisruralDeviceId().replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,120);
-  return `${String(v7User?.uid||'anon').replace(/[^a-zA-Z0-9_-]/g,'_')}__${raw}`;
+function deviceIdentityKey(info){
+  // Identidade determinística do aparelho/sessão física. Não depende de
+  // localStorage/cookies para localizar o registro já autorizado.
+  const raw=[
+    String(info.userAgent||'').trim(),
+    String(info.plataforma||''),
+    String(info.tela||''),
+    String(info.timezone||''),
+    String(info.idioma||''),
+    String(info.cpuCores||''),
+    String(info.memoriaGB||''),
+    String(info.touchPoints||0)
+  ].join('|');
+  let h=2166136261;
+  for(let i=0;i<raw.length;i++){ h^=raw.charCodeAt(i); h=Math.imul(h,16777619); }
+  return (h>>>0).toString(16).padStart(8,'0');
+}
+function currentDeviceDocId(info){
+  const uid=String(v7User?.uid||'anon').replace(/[^a-zA-Z0-9_-]/g,'_');
+  return `${uid}__device_${deviceIdentityKey(info||devicePlatformInfo())}`;
 }
 async function loadSecurityConfig(){
   try{
@@ -82,20 +100,23 @@ async function registerCurrentDevice(){
   try{
     const info=devicePlatformInfo();
     let deviceId=getSisruralDeviceId();
-    let docId=currentDeviceDocId();
+    let docId=currentDeviceDocId(info);
     let ref=doc(db,'dispositivos_acesso',docId);
     let snap=await getDoc(ref);
     let old=snap.exists()?snap.data():{};
 
-    // Reconhecimento robusto: se o armazenamento local foi perdido, procura
-    // primeiro um dispositivo AUTORIZADO do mesmo usuário com a mesma
-    // assinatura do aparelho. Isso evita transformar o mesmo PC/PWA em novo
-    // dispositivo a cada login.
-    if(!snap.exists()){
+    // Se o registro local/determinístico já existe, preservar o estado.
+    // A única exceção é Pendente: nesse caso procuramos um aparelho já
+    // AUTORIZADO do mesmo usuário que corresponda ao mesmo equipamento.
+    // Isso corrige o cenário em que o navegador perdeu o ID anterior e
+    // deixou um registro Pendente duplicado a cada entrada.
+    if(old.status!=='Revogado'){
       try{
-        const legacySnap=await getDocs(query(collection(db,'dispositivos_acesso'),where('usuarioUid','==',v7User.uid)));
+        const legacySnap=await getDocs(query(
+          collection(db,'dispositivos_acesso'),
+          where('usuarioUid','==',v7User.uid)
+        ));
         const rows=legacySnap.docs.map(d=>({docId:d.id,...(d.data()||{})}));
-        const fp=deviceFingerprint(info);
         const score=(x)=>{
           let n=0;
           if(String(x.userAgent||x.navegador||'')===String(info.userAgent||''))n+=4;
@@ -104,29 +125,31 @@ async function registerCurrentDevice(){
           if(String(x.timezone||'')===String(info.timezone||''))n+=1;
           if(String(x.idioma||'')===String(info.idioma||''))n+=1;
           if(Number(x.cpuCores||0)===Number(info.cpuCores||0)&&info.cpuCores)n+=1;
+          if(Number(x.memoriaGB||0)===Number(info.memoriaGB||0)&&info.memoriaGB)n+=1;
           if(Number(x.touchPoints||0)===Number(info.touchPoints||0))n+=1;
           return n;
         };
-        const authorized=rows.filter(x=>x.status==='Autorizado').sort((a,b)=>score(b)-score(a))[0];
-        const candidate=authorized || rows.filter(x=>x.status!=='Revogado').sort((a,b)=>score(b)-score(a))[0];
-        if(candidate && score(candidate)>=5){
-          // Adota o identificador já confiável; não cria um segundo aparelho.
-          const adoptedId=String(candidate.deviceId||'');
-          if(adoptedId){
-            deviceId=adoptedId;
-            try{localStorage.setItem(DEVICE_KEY,deviceId);}catch(e){}
-            writeDeviceCookie(deviceId);
-            docId=currentDeviceDocId();
-            ref=doc(db,'dispositivos_acesso',docId);
-            snap=await getDoc(ref);
-            old=snap.exists()?snap.data():candidate;
-            // Migração do registro antigo para a chave estável atual.
-            if(!snap.exists() && candidate.docId!==docId){
-              old={...candidate,deviceId,deviceDocId:docId};
-            }
-          }
+        const fp=deviceIdentityKey(info);
+        const same=rows.filter(x=>x.status!=='Revogado').sort((a,b)=>score(b)-score(a));
+        const authorized=same.find(x=>x.status==='Autorizado' && score(x)>=6);
+        const candidate=authorized || (!snap.exists()?same.find(x=>score(x)>=6):null);
+
+        // Se o registro atual está Pendente e existe um autorizado que é o
+        // mesmo aparelho, adota o dispositivo confiável em vez de criar outro.
+        if(candidate && String(candidate.deviceId||'') && (old.status==='Pendente' || !snap.exists())){
+          deviceId=String(candidate.deviceId);
+          try{localStorage.setItem(DEVICE_KEY,deviceId);}catch(e){}
+          writeDeviceCookie(deviceId);
+          docId=currentDeviceDocId(info);
+          ref=doc(db,'dispositivos_acesso',docId);
+          snap=await getDoc(ref);
+          old=snap.exists()?snap.data():candidate;
+          old={...candidate,...old,deviceId,deviceDocId:docId};
+          old.status='Autorizado';
+          old.dispositivoMigradoDe=candidate.docId||null;
+          old.chaveIdentidade=fp;
         }
-      }catch(e){ console.warn('Reconhecimento de dispositivo legado indisponível.',e); }
+      }catch(e){ console.warn('Reconhecimento de dispositivo confiável indisponível.',e); }
     }
 
     const status=old.status||'Pendente';
@@ -141,9 +164,10 @@ async function registerCurrentDevice(){
       tela:info.tela,viewport:info.viewport,resolucao:info.tela,timezone:info.timezone,
       cpuCores:info.cpuCores,memoriaGB:info.memoriaGB,touchPoints:info.touchPoints,
       modo:info.modo,online:info.online,
-      appVersao:'15.8.4',status,
+      appVersao:DEVICE_SCHEMA_VERSION,status,
+      chaveIdentidade:deviceIdentityKey(info),
       primeiroAcesso:old.primeiroAcesso||serverTimestamp(),ultimoAcesso:serverTimestamp(),
-      observacao:'V15.8.4 - identificação persistente e migração de dispositivo confiável'
+      observacao:'V15.10 - identidade determinística + reaproveitamento de dispositivo autorizado'
     },{merge:true});
     return {status,docId,deviceId,erro:null};
   }catch(e){
@@ -151,6 +175,7 @@ async function registerCurrentDevice(){
     return {status:'Pendente',erro:e};
   }
 }
+
 function isPlainPolice(){ return perfilNorm(v7Profile?.perfil)==='policial'; }
 async function enforceDeviceSecurity(device){
   // Administradores e Supervisores não ficam sujeitos ao bloqueio de dispositivo,
