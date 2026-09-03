@@ -16,17 +16,32 @@ const ADMIN = ADMIN_EMAIL || 'ferpozzer@gmail.com';
 const ADMIN_EMAILS = Array.from(new Set([String(ADMIN).toLowerCase(),'ferpozzer@gmail.com',...(Array.isArray(ADMIN_EMAILS_FIXOS)?ADMIN_EMAILS_FIXOS:[]).map(e=>String(e).toLowerCase())]));
 const $v=id=>document.getElementById(id);
 const emailKey = email => String(email||'').toLowerCase().replace(/[^a-z0-9]/g,'_');
-const DEVICE_KEY='sisrural_device_id_v1';
+const DEVICE_KEY='sisrural_device_id_v2';
+const DEVICE_COOKIE='sisrural_device_id_v2';
+function readDeviceCookie(){
+  try{ const m=document.cookie.match(/(?:^|; )sisrural_device_id_v2=([^;]+)/); return m?decodeURIComponent(m[1]):''; }catch(e){ return ''; }
+}
+function writeDeviceCookie(id){
+  try{ document.cookie=`${DEVICE_COOKIE}=${encodeURIComponent(id)}; Max-Age=31536000; Path=/; SameSite=Lax`; }catch(e){}
+}
 function getSisruralDeviceId(){
   try{
-    let id=localStorage.getItem(DEVICE_KEY);
+    let id=localStorage.getItem(DEVICE_KEY)||readDeviceCookie();
     if(!id){
       const raw=(globalThis.crypto?.randomUUID?.() || ('dev-'+Date.now()+'-'+Math.random().toString(36).slice(2)));
       id='sis-'+raw;
-      localStorage.setItem(DEVICE_KEY,id);
     }
+    try{localStorage.setItem(DEVICE_KEY,id);}catch(e){}
+    writeDeviceCookie(id);
     return id;
-  }catch(e){ return 'sessao-'+Date.now()+'-'+Math.random().toString(36).slice(2); }
+  }catch(e){
+    const c=readDeviceCookie();
+    if(c)return c;
+    return 'sessao-'+Date.now()+'-'+Math.random().toString(36).slice(2);
+  }
+}
+function deviceFingerprint(info){
+  return [info.userAgent,info.plataforma,info.tela,info.timezone,info.idioma,info.cpuCores||'',info.memoriaGB||'',info.touchPoints||0].join('|');
 }
 function devicePlatformInfo(){
   const ua=navigator.userAgent||'';
@@ -65,27 +80,53 @@ async function loadSecurityConfig(){
 async function registerCurrentDevice(){
   if(!v7User) return {status:'Pendente',erro:null};
   try{
-    const deviceId=getSisruralDeviceId(), docId=currentDeviceDocId();
     const info=devicePlatformInfo();
-    const ref=doc(db,'dispositivos_acesso',docId);
-    let snap=await getDoc(ref), old=snap.exists()?snap.data():{};
+    let deviceId=getSisruralDeviceId();
+    let docId=currentDeviceDocId();
+    let ref=doc(db,'dispositivos_acesso',docId);
+    let snap=await getDoc(ref);
+    let old=snap.exists()?snap.data():{};
 
-    // Compatibilidade: procura registros antigos do mesmo usuário/equipamento
-    // para não transformar um aparelho já autorizado em "Pendente" após a atualização.
+    // Reconhecimento robusto: se o armazenamento local foi perdido, procura
+    // primeiro um dispositivo AUTORIZADO do mesmo usuário com a mesma
+    // assinatura do aparelho. Isso evita transformar o mesmo PC/PWA em novo
+    // dispositivo a cada login.
     if(!snap.exists()){
       try{
-        const legacyQ=query(
-          collection(db,'dispositivos_acesso'),
-          where('usuarioUid','==',v7User.uid)
-        );
-        const legacySnap=await getDocs(legacyQ);
-        for(const d of legacySnap.docs){
-          const x=d.data()||{};
-          const sameUserAgent=String(x.navegador||x.userAgent||'')===String(info.userAgent||'');
-          const sameResolution=String(x.resolucao||x.tela||'')===String(info.tela||'');
-          if(sameUserAgent && sameResolution){ old={...x}; break; }
+        const legacySnap=await getDocs(query(collection(db,'dispositivos_acesso'),where('usuarioUid','==',v7User.uid)));
+        const rows=legacySnap.docs.map(d=>({docId:d.id,...(d.data()||{})}));
+        const fp=deviceFingerprint(info);
+        const score=(x)=>{
+          let n=0;
+          if(String(x.userAgent||x.navegador||'')===String(info.userAgent||''))n+=4;
+          if(String(x.plataforma||'')===String(info.plataforma||''))n+=2;
+          if(String(x.tela||x.resolucao||'')===String(info.tela||''))n+=2;
+          if(String(x.timezone||'')===String(info.timezone||''))n+=1;
+          if(String(x.idioma||'')===String(info.idioma||''))n+=1;
+          if(Number(x.cpuCores||0)===Number(info.cpuCores||0)&&info.cpuCores)n+=1;
+          if(Number(x.touchPoints||0)===Number(info.touchPoints||0))n+=1;
+          return n;
+        };
+        const authorized=rows.filter(x=>x.status==='Autorizado').sort((a,b)=>score(b)-score(a))[0];
+        const candidate=authorized || rows.filter(x=>x.status!=='Revogado').sort((a,b)=>score(b)-score(a))[0];
+        if(candidate && score(candidate)>=5){
+          // Adota o identificador já confiável; não cria um segundo aparelho.
+          const adoptedId=String(candidate.deviceId||'');
+          if(adoptedId){
+            deviceId=adoptedId;
+            try{localStorage.setItem(DEVICE_KEY,deviceId);}catch(e){}
+            writeDeviceCookie(deviceId);
+            docId=currentDeviceDocId();
+            ref=doc(db,'dispositivos_acesso',docId);
+            snap=await getDoc(ref);
+            old=snap.exists()?snap.data():candidate;
+            // Migração do registro antigo para a chave estável atual.
+            if(!snap.exists() && candidate.docId!==docId){
+              old={...candidate,deviceId,deviceDocId:docId};
+            }
+          }
         }
-      }catch(e){ console.warn('Compatibilidade de dispositivo legado indisponível.',e); }
+      }catch(e){ console.warn('Reconhecimento de dispositivo legado indisponível.',e); }
     }
 
     const status=old.status||'Pendente';
@@ -100,9 +141,9 @@ async function registerCurrentDevice(){
       tela:info.tela,viewport:info.viewport,resolucao:info.tela,timezone:info.timezone,
       cpuCores:info.cpuCores,memoriaGB:info.memoriaGB,touchPoints:info.touchPoints,
       modo:info.modo,online:info.online,
-      appVersao:'15.8.2',status,
+      appVersao:'15.8.4',status,
       primeiroAcesso:old.primeiroAcesso||serverTimestamp(),ultimoAcesso:serverTimestamp(),
-      observacao:'V15.8.2 - dispositivo confiável'
+      observacao:'V15.8.4 - identificação persistente e migração de dispositivo confiável'
     },{merge:true});
     return {status,docId,deviceId,erro:null};
   }catch(e){
@@ -1666,12 +1707,15 @@ function v13IntelligenceData(){
     const situAttention=recent.filter(v=>['movimentacao elevada','propriedade desocupada','atencao recomendada'].includes(normTxt(v.situacaoObservada).toLowerCase())).length;
     const recentOccurrences=occ.filter(o=>String(o.quadrante||'')===String(q) && o._dt && (now-o._dt)<=90*86400000);
     const covRisk=100-coverage30, overdueRisk=qp.length?Math.round(overdue/qp.length*100):0;
-    const seasonalRisk=qp.length?Math.min(100,Math.round(((planting+harvest*1.5)/(qp.length*1.5))*100)):0;
-    const fieldRisk=Math.min(100,situAttention*25), occurrenceRisk=Math.min(100,recentOccurrences.length*20);
-    const score=Math.round(covRisk*.35+overdueRisk*.25+seasonalRisk*.20+fieldRisk*.05+occurrenceRisk*.15);
+    const seasonalRisk=qp.length?Math.min(100,Math.round((harvest/qp.length)*100)):0;
+    const fieldRisk=Math.min(100,situAttention*25);
+    const occurrenceWeights={'roubo':100,'roubo de veiculo':100,'disparo de arma de fogo':95,'furto de veiculo':90,'furto de gado/animais':90,'furto de maquinas/equipamentos/insumos agricolas':90,'furto':80,'invasao/violacao de propriedade':75,'entorpecentes':70,'dano':60,'outros':50};
+    const occurrenceRisk=recentOccurrences.length?Math.min(100,Math.round(recentOccurrences.reduce((sum,o)=>sum+(occurrenceWeights[normTxt(o.natureza||'Outros').toLowerCase()]||50),0)/Math.max(1,Math.min(recentOccurrences.length,3)))):0;
+    // Ocorrência territorial é o principal fator do IPPR; plantio não aumenta mais a pontuação.
+    const score=Math.round(covRisk*.25+overdueRisk*.20+seasonalRisk*.10+fieldRisk*.05+occurrenceRisk*.40);
     return {q,qp,qv,recent,coverage30,never,overdue,planting,harvest,situAttention,recentOccurrences,covRisk,overdueRisk,seasonalRisk,fieldRisk,occurrenceRisk,score,label:v13PriorityLabel(score)};
   }).sort((a,b)=>b.score-a.score);
-  const propRows=props.map(p=>{ const last=st.latestByProp.get(propKey(p)),days=last?v13DaysSince(last._dt,now):9999,planting=monthInRange(month,p.plantioInicio,p.plantioFim),harvest=monthInRange(month,p.colheitaInicio,p.colheitaFim); let score=days===9999?60:Math.min(60,Math.round(days/90*60)); if(planting)score+=12;if(harvest)score+=20; const po=occ.filter(o=>normTxt(o.propriedade)===normTxt(p.nome)&&normTxt(o._municipio)===normTxt(p.municipio||'Casa Branca')&&o._dt&&(now-o._dt)<=90*86400000).length; score+=Math.min(20,po*7); return {p,last,days,planting,harvest,occurrences:po,score:Math.min(100,score)}; }).sort((a,b)=>b.score-a.score);
+  const propRows=props.map(p=>{ const last=st.latestByProp.get(propKey(p)),days=last?v13DaysSince(last._dt,now):9999,planting=monthInRange(month,p.plantioInicio,p.plantioFim),harvest=monthInRange(month,p.colheitaInicio,p.colheitaFim); let score=days===9999?50:Math.min(50,Math.round(days/90*50)); if(harvest)score+=10; const propOcc=occ.filter(o=>normTxt(o.propriedade)===normTxt(p.nome)&&normTxt(o._municipio)===normTxt(p.municipio||'Casa Branca')&&o._dt&&o._dt<=now&&(now-o._dt)<=90*86400000); const po=propOcc.length; const occurrenceWeights={'roubo':100,'roubo de veiculo':100,'disparo de arma de fogo':95,'furto de veiculo':90,'furto de gado/animais':90,'furto de maquinas/equipamentos/insumos agricolas':90,'furto':80,'invasao/violacao de propriedade':75,'entorpecentes':70,'dano':60,'outros':50}; const occurrenceScore=po?Math.min(60,Math.round(propOcc.reduce((sum,o)=>sum+(occurrenceWeights[normTxt(o.natureza||'Outros').toLowerCase()]||50),0))):0; score=Math.min(100,score+occurrenceScore); return {p,last,days,planting,harvest,occurrences:po,score}; }).sort((a,b)=>b.score-a.score);
   return {st,qData,propRows,occ,now,month};
 }
 function v13FiveW2H(top,d){
@@ -1681,10 +1725,8 @@ function v13FiveW2H(top,d){
   const natureSummary=Object.entries(natureCount).sort((a,b)=>b[1]-a[1]).map(([n,c])=>`${n}${c>1?' ('+c+')':''}`).join(', ');
   const occurrencePlaces=recentOcc.map(o=>o.propriedade||'local não informado').filter(Boolean);
   const uniquePlaces=[...new Set(occurrencePlaces)].slice(0,5);
-  const why=[`${top.coverage30}% de cobertura nos últimos 30 dias`,`${top.overdue} propriedade(s) sem visita há mais de 30 dias`];
+  const why=[]; if(recentOcc.length)why.push(`${recentOcc.length} ocorrência(s) territorial(is) nos últimos 90 dias: ${natureSummary||'registro(s)'}`); why.push(`${top.coverage30}% de cobertura nos últimos 30 dias`,`${top.overdue} propriedade(s) sem visita há mais de 30 dias`);
   if(top.harvest)why.push(`${top.harvest} em período de colheita`);
-  if(top.planting)why.push(`${top.planting} em período de plantio`);
-  if(recentOcc.length)why.push(`${recentOcc.length} ocorrência(s) territorial(is) nos últimos 90 dias: ${natureSummary||'registro(s)'}`);
   let what='Avaliar intensificação de visitas preventivas e pontos de observação';
   if(recentOcc.length) what=`Reforçar o policiamento preventivo e a presença ostensiva no ${v7QLabel(top.q)}, considerando ocorrência recente de ${natureSummary||'natureza não informada'}`;
   let where=`${v7QLabel(top.q)}${names.length?' — priorizar: '+names.join(', '):''}`;
@@ -1694,7 +1736,7 @@ function v13FiveW2H(top,d){
   return {what,why:why.join('; '),where,when:'Próximos 7 dias, conforme disponibilidade operacional',who:'Equipe definida pelo comando',how,howmuch:`Meta sugerida: ${Math.min(8,Math.max(3,top.overdue))} visitas prioritárias e até 2 pontos de observação`};
 }
 function v14OccurrencePanel(d){
-  const windows=[30,60,90].map(days=>({days,list:d.occ.filter(o=>o._dt&&(d.now-o._dt)<=days*86400000)}));
+  const windows=[30,60,90].map(days=>({days,list:d.occ.filter(o=>o._dt&&o._dt<=d.now&&(d.now-o._dt)<=days*86400000)}));
   const byNature={}; windows[2].list.forEach(o=>{const n=o.natureza||'Outros';byNature[n]=(byNature[n]||0)+1;});
   const topNature=Object.entries(byNature).sort((a,b)=>b[1]-a[1]).slice(0,6);
   const q90=[1,2,3,4].map(q=>({q,n:windows[2].list.filter(o=>String(o.quadrante)===String(q)).length}));
@@ -1714,7 +1756,7 @@ window.openRuralIntelligence=()=>{
   const otherAttentionRows=d.propRows.filter(x=>String(x.p.quadrante)!==String(top.q)).slice(0,10);
   const priority=topQuadrantRows.map((x,i)=>`<tr><td>${i+1}</td><td>${x.p.nome}</td><td>${v7QLabel(x.p.quadrante)}</td><td>${x.days===9999?'Nunca':x.days+' dias'}</td><td>${x.harvest?'Colheita ':''}${x.planting?'Plantio':''}</td><td>${x.occurrences}</td><td><b>${x.score}</b></td></tr>`).join('');
   const otherPriority=otherAttentionRows.map((x,i)=>`<tr><td>${i+1}</td><td>${x.p.nome}</td><td>${v7QLabel(x.p.quadrante)}</td><td>${x.days===9999?'Nunca':x.days+' dias'}</td><td>${x.harvest?'Colheita ':''}${x.planting?'Plantio':''}</td><td>${x.occurrences}</td><td><b>${x.score}</b></td></tr>`).join('');
-  el.innerHTML=`<div class="v14-intel"><div class="v7-card v14-explain"><b>🧠 IPPR V2 — Índice de Prioridade de Policiamento Rural · ${window.V15_ACTIVE_AREA||'Casa Branca'}</b><div class="v7-small">Baixa cobertura 30d (35%) + atraso de visitas (25%) + plantio/colheita (20%) + situações de atenção em campo (5%) + ocorrências territoriais 90d (15%). É apoio à decisão; não determina emprego automático de efetivo.</div></div><h3>🚨 Painel de ocorrências rurais</h3>${v14OccurrencePanel(d)}<h3>Prioridade por quadrante</h3>${qcards}<h3>5W2H sugerido · ${v7QLabel(top.q)}</h3><div class="v7-card v14-plan"><b>WHAT — O quê?</b><br>${w.what}<hr><b>WHY — Por quê?</b><br>${w.why}<hr><b>WHERE — Onde?</b><br>${w.where}<hr><b>WHEN — Quando?</b><br>${w.when}<hr><b>WHO — Quem?</b><br>${w.who}<hr><b>HOW — Como?</b><br>${w.how}<hr><b>HOW MUCH — Quanto?</b><br>${w.howmuch}</div><div class="v7-card"><b>Decisão do comando</b><div class="v7-small">Registre a decisão gerencial sobre a recomendação. Isso não altera automaticamente escalas ou emprego de efetivo.</div><textarea id="v14DecisionObs" class="field-inp" style="min-height:65px" placeholder="Observação do comando (opcional)"></textarea><div class="v14-actions"><button onclick="v14SaveDecision('APROVADO')">✅ Aprovar</button><button onclick="v14SaveDecision('AJUSTAR')">✏️ Ajustar</button><button onclick="v14SaveDecision('DESCONSIDERADO')">➖ Desconsiderar</button></div><div id="v14DecisionMsg" class="v7-small"></div></div><h3>Propriedades prioritárias · ${v7QLabel(top.q)}</h3><div class="v7-small v141-list-note">Primeiro são apresentadas as propriedades do quadrante apontado pelo IPPR como prioridade operacional.</div><div style="overflow:auto"><table class="v14-table"><tr><th>#</th><th>Propriedade</th><th>Quadrante</th><th>Última visita</th><th>Sazonalidade</th><th>Ocorr. 90d</th><th>Prioridade</th></tr>${priority||'<tr><td colspan="7">Nenhuma propriedade disponível neste quadrante.</td></tr>'}</table></div><h3>Outras propriedades que exigem atenção</h3><div class="v7-small v141-list-note">Ranking complementar dos demais quadrantes, sem substituir a prioridade territorial definida acima.</div><div style="overflow:auto"><table class="v14-table"><tr><th>#</th><th>Propriedade</th><th>Quadrante</th><th>Última visita</th><th>Sazonalidade</th><th>Ocorr. 90d</th><th>Prioridade</th></tr>${otherPriority||'<tr><td colspan="7">Nenhuma outra propriedade exige atenção no momento.</td></tr>'}</table></div><div class="v7-card"><b>Ciclo de gestão</b><div class="v7-small">Diagnosticar → Planejar (5W2H) → Decidir → Executar → Medir cobertura/visitas → Reavaliar IPPR. A decisão operacional permanece com o comando.</div></div></div>`;
+  el.innerHTML=`<div class="v14-intel"><div class="v7-card v14-explain"><b>🧠 IPPR V2 — Índice de Prioridade de Policiamento Rural · ${window.V15_ACTIVE_AREA||'Casa Branca'}</b><div class="v7-small">Ocorrências territoriais 90d (40%) + baixa cobertura 30d (25%) + atraso de visitas (20%) + colheita (10%) + situações de atenção em campo (5%). Plantio não aumenta a prioridade do IPPR. É apoio à decisão; não determina emprego automático de efetivo.</div></div><h3>🚨 Painel de ocorrências rurais</h3>${v14OccurrencePanel(d)}<h3>Prioridade por quadrante</h3>${qcards}<h3>5W2H sugerido · ${v7QLabel(top.q)}</h3><div class="v7-card v14-plan"><b>WHAT — O quê?</b><br>${w.what}<hr><b>WHY — Por quê?</b><br>${w.why}<hr><b>WHERE — Onde?</b><br>${w.where}<hr><b>WHEN — Quando?</b><br>${w.when}<hr><b>WHO — Quem?</b><br>${w.who}<hr><b>HOW — Como?</b><br>${w.how}<hr><b>HOW MUCH — Quanto?</b><br>${w.howmuch}</div><div class="v7-card"><b>Decisão do comando</b><div class="v7-small">Registre a decisão gerencial sobre a recomendação. Isso não altera automaticamente escalas ou emprego de efetivo.</div><textarea id="v14DecisionObs" class="field-inp" style="min-height:65px" placeholder="Observação do comando (opcional)"></textarea><div class="v14-actions"><button onclick="v14SaveDecision('APROVADO')">✅ Aprovar</button><button onclick="v14SaveDecision('AJUSTAR')">✏️ Ajustar</button><button onclick="v14SaveDecision('DESCONSIDERADO')">➖ Desconsiderar</button></div><div id="v14DecisionMsg" class="v7-small"></div></div><h3>Propriedades prioritárias · ${v7QLabel(top.q)}</h3><div class="v7-small v141-list-note">Primeiro são apresentadas as propriedades do quadrante apontado pelo IPPR como prioridade operacional.</div><div style="overflow:auto"><table class="v14-table"><tr><th>#</th><th>Propriedade</th><th>Quadrante</th><th>Última visita</th><th>Sazonalidade</th><th>Ocorr. 90d</th><th>Prioridade</th></tr>${priority||'<tr><td colspan="7">Nenhuma propriedade disponível neste quadrante.</td></tr>'}</table></div><h3>Outras propriedades que exigem atenção</h3><div class="v7-small v141-list-note">Ranking complementar dos demais quadrantes, sem substituir a prioridade territorial definida acima.</div><div style="overflow:auto"><table class="v14-table"><tr><th>#</th><th>Propriedade</th><th>Quadrante</th><th>Última visita</th><th>Sazonalidade</th><th>Ocorr. 90d</th><th>Prioridade</th></tr>${otherPriority||'<tr><td colspan="7">Nenhuma outra propriedade exige atenção no momento.</td></tr>'}</table></div><div class="v7-card"><b>Ciclo de gestão</b><div class="v7-small">Diagnosticar → Planejar (5W2H) → Decidir → Executar → Medir cobertura/visitas → Reavaliar IPPR. A decisão operacional permanece com o comando.</div></div></div>`;
   $v('v7IntelModal').classList.add('open');
 };
 
