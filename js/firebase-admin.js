@@ -659,8 +659,13 @@ async function v15RegistrarDispositivo(usuario){
 
 window.v7Login=async()=>{
   const msg=$v('v7LoginMsg'); msg.style.display='none';
-  try{ const cred=await signInWithEmailAndPassword(auth,$v('v7Email').value.trim(),$v('v7Senha').value); await v15RegistrarDispositivo(cred.user); }
-  catch(e){ msg.style.display='block'; msg.textContent = e.code==='auth/invalid-credential'?'E-mail ou senha incorretos.':e.message; }
+  try{
+    // V15.8.3: NÃO registrar aqui pelo identificador legado.
+    // O onAuthStateChanged faz o registro/consulta no identificador estável
+    // sisrural_device_id_v1. O registro legado sobrescrevia um dispositivo
+    // já autorizado como Pendente a cada login e fazia o Modo Proteção bloquear o policial.
+    await signInWithEmailAndPassword(auth,$v('v7Email').value.trim(),$v('v7Senha').value);
+  }catch(e){ msg.style.display='block'; msg.textContent = e.code==='auth/invalid-credential'?'E-mail ou senha incorretos.':e.message; }
 };
 window.v7ForgotPassword=async()=>{
   const msg=$v('v7LoginMsg');
@@ -1638,7 +1643,14 @@ window.saveRuralOccurrence=async()=>{
 function v13DaysSince(date, now=new Date()){ if(!date) return 9999; return Math.max(0,Math.floor((now-date)/(86400000))); }
 function v13PriorityLabel(score){ return score>=75?'CRÍTICA':score>=55?'ALTA':score>=30?'MODERADA':'BAIXA'; }
 function v13PriorityColor(score){ return score>=75?'#dc2626':score>=55?'#f97316':score>=30?'#eab308':'#22c55e'; }
-function v13OccurrenceDate(o){ const d=new Date(String(o.dataLocal||o.createdAtLocal||'')); return isNaN(d)?null:d; }
+function v13OccurrenceDate(o){
+  const raw=String(o.dataLocal||o.createdAtLocal||'').trim();
+  if(!raw) return null;
+  // Datas do formulário (YYYY-MM-DD) são tratadas como data local, evitando
+  // deslocamento de dia por UTC no cálculo dos 30/60/90 dias.
+  if(/^\d{4}-\d{2}-\d{2}$/.test(raw)){ const [y,m,d]=raw.split('-').map(Number); return new Date(y,m-1,d); }
+  const d=new Date(raw); return isNaN(d)?null:d;
+}
 function v13IntelligenceData(){
   const st=v7ReportStats(), now=new Date(), month=now.getMonth()+1;
   const scopeMun=v15ReportScopeMunicipio();
@@ -1664,9 +1676,22 @@ function v13IntelligenceData(){
 }
 function v13FiveW2H(top,d){
   const names=top.qp.filter(p=>{const v=d.st.latestByProp.get(normTxt(p.municipio||'Casa Branca')+'|'+normTxt(p.nome));return !v||v13DaysSince(v._dt,d.now)>30}).slice(0,8).map(p=>p.nome);
+  const recentOcc=top.recentOccurrences||[];
+  const natureCount={}; recentOcc.forEach(o=>{const n=String(o.natureza||'Outros').trim()||'Outros';natureCount[n]=(natureCount[n]||0)+1;});
+  const natureSummary=Object.entries(natureCount).sort((a,b)=>b[1]-a[1]).map(([n,c])=>`${n}${c>1?' ('+c+')':''}`).join(', ');
+  const occurrencePlaces=recentOcc.map(o=>o.propriedade||'local não informado').filter(Boolean);
+  const uniquePlaces=[...new Set(occurrencePlaces)].slice(0,5);
   const why=[`${top.coverage30}% de cobertura nos últimos 30 dias`,`${top.overdue} propriedade(s) sem visita há mais de 30 dias`];
-  if(top.harvest)why.push(`${top.harvest} em período de colheita`); if(top.planting)why.push(`${top.planting} em período de plantio`); if(top.recentOccurrences.length)why.push(`${top.recentOccurrences.length} ocorrência(s) territorial(is) nos últimos 90 dias`);
-  return {what:'Avaliar intensificação de visitas preventivas e pontos de observação',why:why.join('; '),where:`${v7QLabel(top.q)}${names.length?' — priorizar: '+names.join(', '):''}`,when:'Próximos 7 dias, conforme disponibilidade operacional',who:'Equipe definida pelo comando',how:'Roteiro direcionado às propriedades com maior intervalo sem visita, sazonalidade e ocorrências recentes, associado a pontos de observação no quadrante',howmuch:`Meta sugerida: ${Math.min(8,Math.max(3,top.overdue))} visitas prioritárias e até 2 pontos de observação`};
+  if(top.harvest)why.push(`${top.harvest} em período de colheita`);
+  if(top.planting)why.push(`${top.planting} em período de plantio`);
+  if(recentOcc.length)why.push(`${recentOcc.length} ocorrência(s) territorial(is) nos últimos 90 dias: ${natureSummary||'registro(s)'}`);
+  let what='Avaliar intensificação de visitas preventivas e pontos de observação';
+  if(recentOcc.length) what=`Reforçar o policiamento preventivo e a presença ostensiva no ${v7QLabel(top.q)}, considerando ocorrência recente de ${natureSummary||'natureza não informada'}`;
+  let where=`${v7QLabel(top.q)}${names.length?' — priorizar: '+names.join(', '):''}`;
+  if(uniquePlaces.length) where+=`${names.length?' · ': ' — '}local(is) relacionado(s) à ocorrência: ${uniquePlaces.join(', ')}`;
+  let how='Roteiro direcionado às propriedades com maior intervalo sem visita, sazonalidade e ocorrências recentes, associado a pontos de observação no quadrante';
+  if(recentOcc.length) how+=`. Considerar a natureza ${natureSummary||'registrada'} e os locais relacionados à ocorrência no planejamento das passagens e pontos de observação`;
+  return {what,why:why.join('; '),where,when:'Próximos 7 dias, conforme disponibilidade operacional',who:'Equipe definida pelo comando',how,howmuch:`Meta sugerida: ${Math.min(8,Math.max(3,top.overdue))} visitas prioritárias e até 2 pontos de observação`};
 }
 function v14OccurrencePanel(d){
   const windows=[30,60,90].map(days=>({days,list:d.occ.filter(o=>o._dt&&(d.now-o._dt)<=days*86400000)}));
