@@ -2,7 +2,7 @@
 import { firebaseConfig, ADMIN_EMAIL, APP_INFO, ADMIN_EMAILS_FIXOS } from '../config.firebase.js';
 import { initializeApp, deleteApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
-import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, addDoc, onSnapshot, serverTimestamp, query, orderBy, where } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
+import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, addDoc, getDocs, onSnapshot, serverTimestamp, query, orderBy, where } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
 import { getStorage, ref as storageRef, getBlob } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js';
 
 const firebaseApp = initializeApp(firebaseConfig);
@@ -63,16 +63,31 @@ async function loadSecurityConfig(){
   return v7SecurityConfig;
 }
 async function registerCurrentDevice(){
-  if(!v7User) return {status:'Pendente'};
+  if(!v7User) return {status:'Pendente',erro:null};
   try{
     const deviceId=getSisruralDeviceId(), docId=currentDeviceDocId();
     const info=devicePlatformInfo();
     const ref=doc(db,'dispositivos_acesso',docId);
     let snap=await getDoc(ref), old=snap.exists()?snap.data():{};
-    // Compatibilidade com a Fase A: reaproveita eventual autorização do ID antigo.
+
+    // Compatibilidade: procura registros antigos do mesmo usuário/equipamento
+    // para não transformar um aparelho já autorizado em "Pendente" após a atualização.
     if(!snap.exists()){
-      try{const legacy=await getDoc(doc(db,'dispositivos_acesso',deviceId)); if(legacy.exists()) old={...legacy.data(),...old};}catch(e){}
+      try{
+        const legacyQ=query(
+          collection(db,'dispositivos_acesso'),
+          where('usuarioUid','==',v7User.uid)
+        );
+        const legacySnap=await getDocs(legacyQ);
+        for(const d of legacySnap.docs){
+          const x=d.data()||{};
+          const sameUserAgent=String(x.navegador||x.userAgent||'')===String(info.userAgent||'');
+          const sameResolution=String(x.resolucao||x.tela||'')===String(info.tela||'');
+          if(sameUserAgent && sameResolution){ old={...x}; break; }
+        }
+      }catch(e){ console.warn('Compatibilidade de dispositivo legado indisponível.',e); }
     }
+
     const status=old.status||'Pendente';
     await setDoc(ref,{
       deviceId,deviceDocId:docId,
@@ -80,26 +95,51 @@ async function registerCurrentDevice(){
       email:String(v7User.email||'').toLowerCase(),
       nome:v7Profile?.nome||v7User.email||'',re:v7Profile?.re||'',perfil:v7Profile?.perfil||'Policial',
       municipioReferencia:v15Municipio(v7Profile?.municipioReferencia),
-      plataforma:info.plataforma,userAgent:info.userAgent,idioma:info.idioma,idiomas:info.idiomas,
-      tela:info.tela,viewport:info.viewport,timezone:info.timezone,cpuCores:info.cpuCores,memoriaGB:info.memoriaGB,
-      touchPoints:info.touchPoints,modo:info.modo,online:info.online,
-      appVersao:'15.5 EXP',status,
+      plataforma:info.plataforma,userAgent:info.userAgent,navegador:info.userAgent,
+      idioma:info.idioma,idiomas:info.idiomas,
+      tela:info.tela,viewport:info.viewport,resolucao:info.tela,timezone:info.timezone,
+      cpuCores:info.cpuCores,memoriaGB:info.memoriaGB,touchPoints:info.touchPoints,
+      modo:info.modo,online:info.online,
+      appVersao:'15.8.2',status,
       primeiroAcesso:old.primeiroAcesso||serverTimestamp(),ultimoAcesso:serverTimestamp(),
-      observacao:'Fase B - inventário de dispositivo e preparação para acesso confiável'
+      observacao:'V15.8.2 - dispositivo confiável'
     },{merge:true});
-    return {status,docId,deviceId};
-  }catch(e){ console.warn('SISRURAL: falha ao registrar dispositivo.',e); return {status:'Pendente',erro:e}; }
+    return {status,docId,deviceId,erro:null};
+  }catch(e){
+    console.error('SISRURAL: falha ao registrar/consultar dispositivo.',e);
+    return {status:'Pendente',erro:e};
+  }
 }
 function isPlainPolice(){ return perfilNorm(v7Profile?.perfil)==='policial'; }
 async function enforceDeviceSecurity(device){
+  // Administradores e Supervisores não ficam sujeitos ao bloqueio de dispositivo,
+  // pois precisam administrar e recuperar acessos.
   if(!isPlainPolice()) return true;
-  if(!v7SecurityConfig?.bloqueioDispositivosAtivo){
-    if(device?.status==='Revogado'){ alert('Acesso negado: este dispositivo foi revogado pelo Administrador.'); await signOut(auth); return false; }
+
+  // Se a consulta ao dispositivo falhou, não mascarar erro como "aparelho novo".
+  // Em modo estrito, impedir a entrada e orientar a tentativa novamente.
+  if(device?.erro){
+    if(v7SecurityConfig?.bloqueioDispositivosAtivo){
+      alert('Não foi possível verificar a autorização deste dispositivo.\n\nVerifique sua conexão e tente novamente. Se o problema persistir, procure o Administrador Geral.');
+      await signOut(auth);
+      return false;
+    }
     return true;
   }
+
+  // Revogado é sempre bloqueado, inclusive no modo observação.
+  if(device?.status==='Revogado'){
+    alert('Acesso negado: este dispositivo foi revogado pelo Administrador.');
+    await signOut(auth);
+    return false;
+  }
+
+  if(!v7SecurityConfig?.bloqueioDispositivosAtivo) return true;
+
   if(device?.status!=='Autorizado'){
-    alert(device?.status==='Revogado'?'Acesso negado: dispositivo revogado.':'Este aparelho está PENDENTE de autorização. Solicite ao Administrador Geral a liberação deste dispositivo.');
-    await signOut(auth); return false;
+    alert('Este aparelho está PENDENTE de autorização. Solicite ao Administrador Geral a liberação deste dispositivo.');
+    await signOut(auth);
+    return false;
   }
   return true;
 }
