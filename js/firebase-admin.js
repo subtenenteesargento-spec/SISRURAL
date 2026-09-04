@@ -1045,7 +1045,7 @@ window.goToPropertySearchResult=(key)=>{ window.closePropertySearch(); if(String
 window.openPropertyAdminManager=()=>{ if(!isAdminGeral())return alert('Somente Administrador Geral.'); const inp=$v('adminPropSearch'); if(inp)inp.value=''; $v('v7PropertyAdminModal')?.classList.add('open'); renderAdminPropertyManager(); };
 window.renderAdminPropertyManager=()=>{
   if(!isAdminGeral())return; const q=normTxt($v('adminPropSearch')?.value||''); let arr=adminPropertyRows(); if(q)arr=arr.filter(p=>normTxt([p.nome,p.tipo,p.endereco,'Q'+p.quadrante].join(' ')).includes(q)); arr=arr.slice(0,120); const el=$v('adminPropList'); if(!el)return;
-  el.innerHTML=arr.map(p=>`<div class="v7-card" style="margin:6px 0"><div style="display:flex;justify-content:space-between;gap:8px"><div><b>${String(p.nome).replace(/[<>]/g,'')}</b><div class="v7-small">${v7QLabel(p.quadrante)} · ${p.source==='base'?'Cadastro-base':'Nuvem'}<br>${String(p.tipo||'').replace(/[<>]/g,'')}</div></div><div style="display:grid;gap:5px;min-width:126px"><button class="btn-primary" style="margin:0" onclick="openPropertyCorrection('${p.key}')">✏️ Retificar</button>${p.source==='cloud'?`<button class="btn-secondary" style="margin:0;border-color:#ef4444;color:#b91c1c" onclick="mergeDeleteDuplicateProperty('${p.id}')">🗑️ Duplicidade</button>`:''}</div></div></div>`).join('')||'<div class="v7-card">Nenhum cadastro localizado.</div>';
+  el.innerHTML=arr.map(p=>`<div class="v7-card" style="margin:6px 0"><div style="display:flex;justify-content:space-between;gap:8px"><div><b>${String(p.nome).replace(/[<>]/g,'')}</b><div class="v7-small">${v7QLabel(p.quadrante)} · ${p.source==='base'?'Cadastro-base':'Nuvem'}<br>${String(p.tipo||'').replace(/[<>]/g,'')}</div></div><div style="display:grid;gap:5px;min-width:126px"><button class="btn-primary" style="margin:0" onclick="openPropertyCorrection('${p.key}')">✏️ Retificar</button><button class="btn-secondary" style="margin:0" onclick="openLocationCorrection('${p.key}')">📍 Localização</button>${p.source==='cloud'?`<button class="btn-secondary" style="margin:0;border-color:#ef4444;color:#b91c1c" onclick="mergeDeleteDuplicateProperty('${p.id}')">🗑️ Duplicidade</button>`:''}</div></div></div>`).join('')||'<div class="v7-card">Nenhum cadastro localizado.</div>';
 };
 window.openPropertyCorrection=async(key)=>{
   if(!isAdminGeral())return alert('Somente Administrador Geral.'); let p=adminPropertyRows().find(x=>x.key===key); if(!p)return alert('Cadastro não localizado.');
@@ -1064,6 +1064,111 @@ window.savePropertyCorrection=async()=>{
     if(meta.source==='base' && Number.isInteger(Number(meta.baseIndex))){ const b=(window.PROPS||[])[Number(meta.baseIndex)]; if(b){b.nm=nome;b.tp=data.tipo||b.tp;b.end=data.endereco||b.end;b.ph=data.telefone;window.refreshBasePropertyPopup?.(Number(meta.baseIndex));} }
     await auditV7('propriedade_retificada',`${meta.oldName} → ${nome}`); $v('propCorrectionMsg').textContent='✅ Cadastro retificado e histórico preservado.'; setTimeout(()=>{$v('v7PropertyCorrectionModal')?.classList.remove('open');renderAdminPropertyManager();},700);
   }catch(e){$v('propCorrectionMsg').textContent='⚠️ '+(e.message||e);}
+};
+
+// ── AUDITORIA DE LOCALIZAÇÃO · V15.14 EXP
+function locFmtMeters(m){
+  if(m==null||!Number.isFinite(Number(m))) return '—';
+  m=Number(m); return m<1000?`${Math.round(m)} m`:`${(m/1000).toFixed(1).replace('.',',')} km`;
+}
+function locEscape(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function locStatusStyle(st){
+  if(st==='ok')return 'color:#15803d;background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.35)';
+  if(st==='warn')return 'color:#b45309;background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.35)';
+  if(st==='bad')return 'color:#b91c1c;background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.35)';
+  return 'color:#475569;background:rgba(148,163,184,.12);border-color:rgba(148,163,184,.35)';
+}
+let locationAuditRows=[];
+window.openLocationAudit=async()=>{
+  if(!isAdminGeral())return alert('Somente Administrador Geral.');
+  $v('v7LocationAuditModal')?.classList.add('open');
+  const el=$v('locationAuditList'),sum=$v('locationAuditSummary');
+  if(el)el.innerHTML='<div class="v7-card">⏳ Analisando coordenadas contra as malhas municipais...</div>';
+  if(sum)sum.textContent='Aguarde...';
+  const rows=adminPropertyRows();
+  const out=[];
+  for(const p of rows){
+    try{ const a=await (window.v15AssessPropertyLocation?.(p.lat,p.lng,p.source==='base'?'Casa Branca':(findCloudMunicipality(p)||'Casa Branca'))); out.push({...p,assessment:a}); }
+    catch(e){ out.push({...p,assessment:{status:'unknown',label:'⚪ Não avaliada',distanceMeters:null,municipio:p.source==='base'?'Casa Branca':'—'}}); }
+  }
+  locationAuditRows=out;
+  renderLocationAudit();
+};
+function findCloudMunicipality(p){
+  const c=(v7CloudProps||[]).find(x=>String(x.id)===String(p.id));
+  return c?.municipio||p.municipio||'Casa Branca';
+}
+window.renderLocationAudit=()=>{
+  const el=$v('locationAuditList'),sum=$v('locationAuditSummary'); if(!el)return;
+  const q=normTxt($v('locationAuditSearch')?.value||'');
+  const only=$v('locationAuditOnlyIssues')?.checked;
+  let arr=locationAuditRows.slice();
+  if(q)arr=arr.filter(p=>normTxt([p.nome,p.tipo,p.endereco,p.municipio,v7QLabel(p.quadrante)].join(' ')).includes(q));
+  if(only)arr=arr.filter(p=>p.assessment?.status==='warn'||p.assessment?.status==='bad');
+  const counts=locationAuditRows.reduce((a,p)=>{a[p.assessment?.status||'unknown']=(a[p.assessment?.status||'unknown']||0)+1;return a;},{ok:0,warn:0,bad:0,unknown:0});
+  if(sum)sum.innerHTML=`🟢 ${counts.ok} compatíveis &nbsp; 🟡 ${counts.warn} para conferir &nbsp; 🔴 ${counts.bad} suspeitas${counts.unknown?` &nbsp; ⚪ ${counts.unknown} não avaliadas`:''}`;
+  el.innerHTML=arr.map((p,i)=>{
+    const a=p.assessment||{}; const lat=Number(p.lat),lng=Number(p.lng);
+    const muni=p.source==='base'?'Casa Branca':(findCloudMunicipality(p)||'Casa Branca');
+    const key=locEscape(p.key);
+    return `<div class="v7-card" style="margin:6px 0;border-left:4px solid ${a.status==='ok'?'#22c55e':a.status==='warn'?'#f59e0b':a.status==='bad'?'#ef4444':'#94a3b8'}"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div><b>${locEscape(p.nome)}</b><div class="v7-small">${locEscape(muni)} · ${v7QLabel(p.quadrante)} · ${locEscape(p.source==='base'?'Cadastro-base':'Nuvem')}<br>GPS: ${Number.isFinite(lat)?lat.toFixed(6):'—'}, ${Number.isFinite(lng)?lng.toFixed(6):'—'}<br>${a.label||'⚪ Não avaliada'}${a.distanceMeters!=null&&!a.inside?` · ${locFmtMeters(a.distanceMeters)} da divisa`:''}</div></div><span style="font-size:10px;font-weight:800;padding:4px 7px;border:1px solid;border-radius:8px;white-space:nowrap;${locStatusStyle(a.status)}">${a.status==='ok'?'OK':a.status==='warn'?'CONFERIR':a.status==='bad'?'SUSPEITA':'N/D'}</span></div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px"><button class="btn-secondary" style="margin:0" onclick="openLocationCorrection('${key}')">📍 Ver / corrigir</button><button class="btn-secondary" style="margin:0" onclick="window.open('https://www.google.com/maps?q=${lat},${lng}','_blank')">🗺️ Google Maps</button></div></div>`;
+  }).join('')||'<div class="v7-card">Nenhuma propriedade encontrada.</div>';
+};
+window.openLocationCorrection=async(key)=>{
+  if(!isAdminGeral())return alert('Somente Administrador Geral.');
+  let p=adminPropertyRows().find(x=>x.key===key); if(!p)return alert('Cadastro não localizado.');
+  if(p.source==='base'){
+    const cp=await findOrCreateCloudPropertyForBase(p.baseIndex); p={...p,cloudId:cp.id};
+  }else p={...p,cloudId:p.id};
+  const muni=p.source==='base'?'Casa Branca':(findCloudMunicipality(p)||'Casa Branca');
+  const a=await (window.v15AssessPropertyLocation?.(p.lat,p.lng,muni)||{status:'unknown',label:'⚪ Não avaliada'});
+  $v('locationCorrectionKey').value=JSON.stringify({key:p.key,source:p.source,baseIndex:p.baseIndex??null,cloudId:p.cloudId,oldLat:p.lat,oldLng:p.lng,municipio:muni});
+  $v('locationCorrectionLat').value=Number(p.lat).toFixed(6); $v('locationCorrectionLng').value=Number(p.lng).toFixed(6);
+  $v('locationCorrectionName').textContent=p.nome||'Propriedade'; $v('locationCorrectionMunicipio').textContent=muni; $v('locationCorrectionStatus').innerHTML=a.label+(a.distanceMeters!=null&&!a.inside?` · ${locFmtMeters(a.distanceMeters)} da divisa`: ''); $v('locationCorrectionMsg').textContent='';
+  initLocationCorrectionMap(Number(p.lat),Number(p.lng)); $v('v7PropertyLocationModal')?.classList.add('open');
+};
+let locationCorrectionMap=null,locationCorrectionMarker=null;
+function initLocationCorrectionMap(lat,lng){
+  const wrap=$v('locationCorrectionMap'); if(!wrap)return;
+  setTimeout(()=>{
+    if(locationCorrectionMap){locationCorrectionMap.setView([lat,lng],15);locationCorrectionMarker?.setLatLng([lat,lng]);return;}
+    locationCorrectionMap=L.map('locationCorrectionMap',{center:[lat,lng],zoom:15,zoomControl:true,attributionControl:false});
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19}).addTo(locationCorrectionMap);
+    locationCorrectionMarker=L.marker([lat,lng],{draggable:true}).addTo(locationCorrectionMap);
+    locationCorrectionMarker.on('dragend',()=>setLocationCorrectionFromPoint(locationCorrectionMarker.getLatLng()));
+    locationCorrectionMap.on('click',e=>{locationCorrectionMarker.setLatLng(e.latlng);setLocationCorrectionFromPoint(e.latlng);});
+    setLocationCorrectionFromPoint({lat,lng},true);
+  },100);
+}
+function setLocationCorrectionFromPoint(ll,silent){
+  const lat=Number(ll.lat),lng=Number(ll.lng); $v('locationCorrectionLat').value=lat.toFixed(6); $v('locationCorrectionLng').value=lng.toFixed(6);
+  if(!silent){ $v('locationCorrectionMsg').textContent='📍 Nova posição selecionada. Confira o marcador antes de salvar.'; }
+}
+window.refreshLocationCorrectionAssessment=async()=>{
+  const meta=JSON.parse($v('locationCorrectionKey').value||'{}'); const lat=parseFloat($v('locationCorrectionLat').value),lng=parseFloat($v('locationCorrectionLng').value); if(!Number.isFinite(lat)||!Number.isFinite(lng))return;
+  const a=await (window.v15AssessPropertyLocation?.(lat,lng,meta.municipio)||{status:'unknown',label:'⚪ Não avaliada'}); $v('locationCorrectionStatus').innerHTML=a.label+(a.distanceMeters!=null&&!a.inside?` · ${locFmtMeters(a.distanceMeters)} da divisa`: '');
+  if(locationCorrectionMap){locationCorrectionMap.setView([lat,lng],15);locationCorrectionMarker?.setLatLng([lat,lng]);}
+};
+window.savePropertyLocation=async()=>{
+  if(!isAdminGeral())return alert('Somente Administrador Geral.');
+  let meta; try{meta=JSON.parse($v('locationCorrectionKey').value||'{}')}catch(e){return alert('Cadastro inválido.');}
+  const lat=parseFloat($v('locationCorrectionLat').value),lng=parseFloat($v('locationCorrectionLng').value); if(!Number.isFinite(lat)||!Number.isFinite(lng))return alert('Informe latitude e longitude válidas.');
+  const a=await (window.v15AssessPropertyLocation?.(lat,lng,meta.municipio)||{status:'unknown',label:'⚪ Não avaliada'});
+  if((a.status==='warn'||a.status==='bad')&&!confirm(`${a.label}\n\nA posição está ${a.distanceMeters!=null?locFmtMeters(a.distanceMeters)+' da divisa':''}.\n\nDeseja salvar mesmo assim?`))return;
+  const maps=`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+  const q=window.v15ClassQMunicipal?.(lat,lng,meta.municipio)||'';
+  const data={lat,lng,maps,quadrante:q,locationAuditStatus:a.status,locationAuditDistanceM:Number.isFinite(a.distanceMeters)?Math.round(a.distanceMeters):null,locationAuditSource:a.source||'SISRURAL',locationReviewed:true,locationReviewedBy:v7User.email,locationReviewedAt:serverTimestamp(),updatedAt:serverTimestamp()};
+  try{
+    await setDoc(doc(db,'propriedades_cadastradas',meta.cloudId),data,{merge:true});
+    // Mantém ocorrências territoriais vinculadas à propriedade na mesma coordenada corrigida.
+    for(const o of (v7Occurrences||[])){
+      if(String(o.propriedadeId||'')===String(meta.cloudId)){ await setDoc(doc(db,'ocorrencias_rurais',o.id),{lat,lng,updatedAt:serverTimestamp()},{merge:true}); }
+    }
+    if(meta.source==='base'&&Number.isInteger(Number(meta.baseIndex))){const b=(window.PROPS||[])[Number(meta.baseIndex)];if(b){b.lat=lat;b.lng=lng;b.gmaps=maps;b.q=q;window.refreshBasePropertyPopup?.(Number(meta.baseIndex));}}
+    await auditV7('localizacao_propriedade_corrigida',`${$v('locationCorrectionName').textContent}: ${meta.oldLat},${meta.oldLng} → ${lat},${lng} · ${a.status}`);
+    $v('locationCorrectionMsg').innerHTML='✅ Localização salva e registrada na auditoria.';
+    setTimeout(()=>{ $v('v7PropertyLocationModal')?.classList.remove('open'); renderLocationAudit(); renderAdminPropertyManager(); },700);
+  }catch(e){$v('locationCorrectionMsg').textContent='⚠️ Não foi possível salvar: '+(e.message||e);}
 };
 function duplicateCandidates(dup){
   const rows=adminPropertyRows().filter(p=>!(p.source==='cloud'&&String(p.id)===String(dup.id)));
@@ -1276,7 +1381,7 @@ function formProp(){
 }
 async function savePropCloud(pt){
   if(isDuplicateProp(pt)) return {duplicado:true};
-  const data={nome:pt.nm,tipo:pt.tp||'',atividade:pt.tp||'',plantioInicio:Number(pt.plantioInicio)||0,plantioFim:Number(pt.plantioFim)||0,colheitaInicio:Number(pt.colheitaInicio)||0,colheitaFim:Number(pt.colheitaFim)||0,epocaPlantio:pt.epocaPlantio||'',epocaColheita:pt.epocaColheita||'',endereco:pt.end||'',telefone:pt.ph||'',lat:pt.lat,lng:pt.lng,dirt:!!pt.dirt,maps:pt.maps,municipio:v15Municipio(pt.municipio),quadrante:(window.v15ClassQMunicipal?.(pt.lat,pt.lng,v15Municipio(pt.municipio))||(typeof classQ==='function'?classQ(pt.lat,pt.lng):'')),origem:pt._offline?'offline_app':'app',usuario:v7User?.email||'',createdAt:serverTimestamp(),updatedAt:serverTimestamp()};
+  const muni=v15Municipio(pt.municipio); const audit=pt._locationAssessment||null; const data={nome:pt.nm,tipo:pt.tp||'',atividade:pt.tp||'',plantioInicio:Number(pt.plantioInicio)||0,plantioFim:Number(pt.plantioFim)||0,colheitaInicio:Number(pt.colheitaInicio)||0,colheitaFim:Number(pt.colheitaFim)||0,epocaPlantio:pt.epocaPlantio||'',epocaColheita:pt.epocaColheita||'',endereco:pt.end||'',telefone:pt.ph||'',lat:pt.lat,lng:pt.lng,dirt:!!pt.dirt,maps:pt.maps,municipio:muni,quadrante:(window.v15ClassQMunicipal?.(pt.lat,pt.lng,muni)||(typeof classQ==='function'?classQ(pt.lat,pt.lng):'')),origem:pt._offline?'offline_app':'app',usuario:v7User?.email||'',locationAuditStatus:audit?.status||'unknown',locationAuditDistanceM:Number.isFinite(audit?.distanceMeters)?Math.round(audit.distanceMeters):null,locationAuditSource:audit?.source||'SISRURAL',locationReviewed:!!(audit&&(audit.status==='warn'||audit.status==='bad')),createdAt:serverTimestamp(),updatedAt:serverTimestamp()};
   return await addDoc(collection(db,'propriedades_cadastradas'),data);
 }
 function renderCloudProperties(){
@@ -1373,6 +1478,15 @@ window.salvar=async function(){
     msg.innerHTML='⚠️ Este ponto parece já estar cadastrado ou pendente. O SISRURAL evitou duplicidade.';
     return;
   }
+  let locationAssessment=null;
+  try{
+    locationAssessment=await (window.v15AssessPropertyLocation?.(pt.lat,pt.lng,pt.municipio)||null);
+    if(locationAssessment && (locationAssessment.status==='warn'||locationAssessment.status==='bad')){
+      const dist=locationAssessment.distanceMeters!=null?locFmtMeters(locationAssessment.distanceMeters):'uma distância não determinada';
+      const ok=confirm(`${locationAssessment.label}\n\nMunicípio informado: ${pt.municipio}\nDistância aproximada da divisa: ${dist}\n\nConfira o marcador no mapa antes de continuar.\n\nDeseja salvar mesmo assim?`);
+      if(!ok)return;
+    }
+  }catch(e){ console.warn('SISRURAL: auditoria de localização indisponível no cadastro.',e); }
   if(btn){ btn.disabled=true; btn.dataset.old=btn.innerHTML; btn.innerHTML='⏳ Salvando...'; btn.style.opacity='.65'; }
   const finish=(html,ok=true)=>{
     msg.style.cssText=`display:block;background:${ok?'rgba(34,197,94,.15)':'rgba(245,158,11,.15)'};color:${ok?'#22c55e':'#f59e0b'};line-height:1.35`;
@@ -1382,7 +1496,7 @@ window.salvar=async function(){
   };
   if(v7User && navigator.onLine){
     try{
-      const r=await savePropCloud(pt); await auditV7(r?.duplicado?'propriedade_duplicada_ignorada':'propriedade_cadastrada',pt.nm);
+      const r=await savePropCloud({...pt,_locationAssessment:locationAssessment}); await auditV7(r?.duplicado?'propriedade_duplicada_ignorada':'propriedade_cadastrada',pt.nm);
       if(r?.duplicado){ finish('⚠️ Este ponto já existia no sistema. Não foi cadastrado novamente.',false); return; }
       let fotoMsg='';
       if(selectedPhotos.length && r?.id){
@@ -1401,7 +1515,7 @@ window.salvar=async function(){
       setTimeout(closeAdd,1800);
     }catch(e){
       let photoBatchId=''; if(selectedPhotos.length){photoBatchId='photo-'+Date.now()+'-'+Math.random().toString(36).slice(2); try{await queuePropertyPhotos(photoBatchId,selectedPhotos,'');}catch(err){console.warn(err);} }
-      const added=pushPendingPropOnce({...pt, erro:e.message, _offline:true, _photoBatchId:photoBatchId});
+      const added=pushPendingPropOnce({...pt, erro:e.message, _offline:true, _photoBatchId:photoBatchId, _locationAssessment:locationAssessment});
       if(added){ userPts.push(pt); savePts(); renderPt(pt,userPts.length-1); }
       try{ if(document.getElementById('sheet')?.classList.contains('open')) selQ(activeQ||classQ(pt.lat,pt.lng)); }catch(e){}
       finish(`🟡 <b>SEM INTERNET / SEM ENVIO</b><br>Cadastro salvo no aparelho.<br>Quando o celular voltar a ter sinal, o SISRURAL enviará automaticamente.<br><b>Não clique novamente.</b>`,false);
@@ -1409,7 +1523,7 @@ window.salvar=async function(){
     }
   } else {
     let photoBatchId=''; if(selectedPhotos.length){photoBatchId='photo-'+Date.now()+'-'+Math.random().toString(36).slice(2); try{await queuePropertyPhotos(photoBatchId,selectedPhotos,'');}catch(err){console.warn(err);} }
-    const added=pushPendingPropOnce({...pt,_offline:true,_photoBatchId:photoBatchId});
+    const added=pushPendingPropOnce({...pt,_offline:true,_photoBatchId:photoBatchId,_locationAssessment:locationAssessment});
     if(added){ userPts.push(pt); savePts(); renderPt(pt,userPts.length-1); }
     try{ if(document.getElementById('sheet')?.classList.contains('open')) selQ(activeQ||classQ(pt.lat,pt.lng)); }catch(e){}
     finish(`🟡 <b>SEM INTERNET</b><br>"${pt.nm}" foi salvo no aparelho.<br>Quando voltar o sinal, o SISRURAL fará o envio automático.<br><b>Não é necessário clicar novamente.</b>`,false);

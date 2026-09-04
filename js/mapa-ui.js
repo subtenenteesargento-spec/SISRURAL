@@ -237,6 +237,69 @@ window.v15ClassQMunicipal=function(lat,lng,municipio){
   return north&&west?1:north&&!west?2:!north&&west?3:4;
 };
 
+// ── AUDITORIA DE LOCALIZAÇÃO · V15.14 EXP
+// Valida a coordenada contra a malha municipal real (IBGE) quando disponível.
+// Não altera dados automaticamente. Perto da divisa = conferência; distante = suspeita.
+function v15PointInRing(lat,lng,ring){
+  let inside=false;
+  for(let i=0,j=ring.length-1;i<ring.length;j=i++){
+    const xi=+ring[i][0], yi=+ring[i][1], xj=+ring[j][0], yj=+ring[j][1];
+    const hit=((yi>lat)!==(yj>lat)) && (lng < (xj-xi)*(lat-yi)/(yj-yi||1e-15)+xi);
+    if(hit)inside=!inside;
+  }
+  return inside;
+}
+function v15PointInPolygon(lat,lng,coords){
+  if(!Array.isArray(coords)||!coords.length)return false;
+  if(!v15PointInRing(lat,lng,coords[0]))return false;
+  for(let i=1;i<coords.length;i++) if(v15PointInRing(lat,lng,coords[i]))return false;
+  return true;
+}
+function v15PointInGeometry(lat,lng,geom){
+  if(!geom)return false;
+  if(geom.type==='Polygon')return v15PointInPolygon(lat,lng,geom.coordinates);
+  if(geom.type==='MultiPolygon')return geom.coordinates.some(p=>v15PointInPolygon(lat,lng,p));
+  return false;
+}
+function v15SegDistMeters(lat,lng,a,b){
+  const R=6371000, rad=Math.PI/180, cos=Math.cos(lat*rad);
+  const ax=(+a[0]-lng)*rad*cos*R, ay=(+a[1]-lat)*rad*R;
+  const bx=(+b[0]-lng)*rad*cos*R, by=(+b[1]-lat)*rad*R;
+  const dx=bx-ax,dy=by-ay, den=dx*dx+dy*dy;
+  const t=den?Math.max(0,Math.min(1,-(ax*dx+ay*dy)/den)):0;
+  return Math.hypot(ax+dx*t,ay+dy*t);
+}
+function v15GeometryEdgeDistance(lat,lng,geom){
+  let min=Infinity;
+  const ringDist=ring=>{for(let i=1;i<ring.length;i++)min=Math.min(min,v15SegDistMeters(lat,lng,ring[i-1],ring[i]));};
+  if(geom?.type==='Polygon')geom.coordinates.forEach(ringDist);
+  if(geom?.type==='MultiPolygon')geom.coordinates.forEach(poly=>poly.forEach(ringDist));
+  return min;
+}
+function v15FallbackDistance(lat,lng,b){
+  const latM=111100, lngM=111100*Math.cos(lat*Math.PI/180);
+  const dx=lat<b.minLat?(b.minLat-lat)*latM:lat>b.maxLat?(lat-b.maxLat)*latM:0;
+  const dy=lng<b.minLng?(b.minLng-lng)*lngM:lng>b.maxLng?(lng-b.maxLng)*lngM:0;
+  return Math.hypot(dx,dy);
+}
+window.v15AssessPropertyLocation=async function(lat,lng,municipio){
+  lat=Number(lat);lng=Number(lng);const allowed=['Casa Branca','Santa Cruz das Palmeiras','Tambaú','Itobi'];municipio=allowed.includes(String(municipio||''))?String(municipio):'Casa Branca';
+  if(!Number.isFinite(lat)||!Number.isFinite(lng)||!municipio||municipio==='2cia')return {status:'unknown',label:'⚪ Não avaliada',distanceMeters:null,inside:false,municipio};
+  const fc=(await v15FetchMunicipalGeo(municipio))||v15FallbackFeature(municipio);
+  const real=!!(fc&&!fc.features?.some(f=>f.properties?.fallback));
+  const inside=(fc?.features||[]).some(f=>v15PointInGeometry(lat,lng,f.geometry));
+  if(inside)return {status:'ok',label:'🟢 Localização compatível',distanceMeters:0,inside:true,municipio,source:real?'IBGE':'referência aproximada'};
+  let d=Infinity;
+  (fc?.features||[]).forEach(f=>{d=Math.min(d,v15GeometryEdgeDistance(lat,lng,f.geometry));});
+  if(!Number.isFinite(d)){
+    const cfg=V15_MUNICIPAL_CFG[municipio];
+    if(cfg){const [[s,w],[n,e]]=cfg.fallback;d=v15FallbackDistance(lat,lng,{minLat:s,maxLat:n,minLng:w,maxLng:e});}
+  }
+  const status=d<=5000?'warn':'bad';
+  return {status,label:status==='warn'?'🟡 Próxima da divisa · conferir':'🔴 Localização suspeita · distante',distanceMeters:d,inside:false,municipio,source:real?'IBGE':'referência aproximada'};
+};
+
+
 // ── RODOVIAS
 const RDS={
   sp340N:{nm:'SP-340 Norte (→ Mococa)',c:'#fbbf24',w:4,pts:[[-21.618,-47.140],[-21.660,-47.110],[-21.695,-47.094],[-21.735,-47.090],[-21.777,-47.085],[-21.840,-47.037],[-21.890,-46.993]]},
